@@ -4,6 +4,11 @@ import type { Scenario } from "@/domain/scenario";
 
 import { completeSessionOnServer } from "./complete-session-api";
 import { mapRealtimeCredentials } from "./credentials";
+import { evaluateLocalScenarioProgress } from "./evaluate-local-progress";
+import {
+  fetchSessionProgressFromServer,
+  type ServerScenarioProgressSnapshot,
+} from "./fetch-session-progress-api";
 import {
   createConversationSessionId,
   createOpeningTranscript,
@@ -20,6 +25,8 @@ import type {
 type ConversationStore = ConversationViewState & {
   selectScenario: (scenario: Scenario) => void;
   startSession: (scenario: Scenario) => Promise<void>;
+  refreshScenarioProgress: () => void;
+  syncSessionProgressFromServer: () => Promise<void>;
   requestEndSession: () => Promise<void>;
   teardownSession: () => Promise<void>;
   reset: () => void;
@@ -33,7 +40,10 @@ const initialState: ConversationViewState = {
   connectionStatus: "idle",
   turnStatus: "idle",
   transcripts: [],
+  scenarioProgress: null,
+  progressSource: "unknown",
   endingState: "none",
+  endingSuggestionReason: null,
   errorMessage: null,
 };
 
@@ -56,7 +66,10 @@ function isSessionEpochCurrent(get: StoreGet, epoch: number): boolean {
 
 function isSessionEnding(get: StoreGet): boolean {
   const { endingState } = get();
-  return endingState === "user_requested" || endingState === "completed";
+  return (
+    endingState === "user_requested" ||
+    endingState === "completed"
+  );
 }
 
 function setConnectionStatus(set: StoreSet, connectionStatus: ConnectionStatus) {
@@ -69,6 +82,69 @@ function setTurnStatus(set: StoreSet, turnStatus: TurnStatus) {
 
 function setEndingState(set: StoreSet, endingState: EndingState) {
   set({ endingState });
+}
+
+function maybeSuggestEnding(
+  set: StoreSet,
+  get: StoreGet,
+  shouldSuggestEnding: boolean,
+): void {
+  if (shouldSuggestEnding && get().endingState === "none") {
+    setEndingState(set, "ai_suggested");
+  }
+}
+
+function toLocalScenarioProgress(
+  progress: ServerScenarioProgressSnapshot,
+): ConversationViewState["scenarioProgress"] {
+  return {
+    completedGoalIds: progress.completedGoalIds,
+    missingGoalIds: progress.missingGoalIds,
+    shouldSuggestEnding: progress.shouldSuggestEnding,
+    endingSuggestionReason: progress.endingSuggestionReason,
+    offTopic: progress.offTopic,
+    currentStageId: progress.currentStageId,
+  };
+}
+
+function applyServerScenarioProgress(
+  set: StoreSet,
+  get: StoreGet,
+  progress: ServerScenarioProgressSnapshot,
+): void {
+  set({
+    scenarioProgress: toLocalScenarioProgress(progress),
+    endingSuggestionReason: progress.endingSuggestionReason,
+    progressSource: "server",
+  });
+  maybeSuggestEnding(set, get, progress.shouldSuggestEnding);
+}
+
+function applyLocalScenarioProgress(set: StoreSet, get: StoreGet): void {
+  const { selectedScenario, session, transcripts, progressSource } = get();
+  if (!selectedScenario || !session || session.status !== "active") {
+    return;
+  }
+
+  if (progressSource === "server") {
+    return;
+  }
+
+  const progress = evaluateLocalScenarioProgress({
+    scenario: selectedScenario,
+    sessionId: session.id,
+    startedAt: session.startedAt,
+    endedAt: session.endedAt,
+    transcripts,
+    previousCompletedGoalIds: get().scenarioProgress?.completedGoalIds,
+  });
+
+  set({
+    scenarioProgress: progress,
+    endingSuggestionReason: progress.endingSuggestionReason,
+    progressSource: progressSource === "unknown" ? "local" : progressSource,
+  });
+  maybeSuggestEnding(set, get, progress.shouldSuggestEnding);
 }
 
 function shouldStopMockSession(connectionStatus: ConnectionStatus): boolean {
@@ -120,7 +196,10 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       connectionStatus: "connecting",
       turnStatus: "idle",
       transcripts: [],
+      scenarioProgress: null,
+      progressSource: "unknown",
       endingState: "none",
+      endingSuggestionReason: null,
       errorMessage: null,
     });
 
@@ -152,6 +231,8 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       });
 
       setTurnStatus(set, "idle");
+      applyLocalScenarioProgress(set, get);
+      await get().syncSessionProgressFromServer();
     } catch {
       if (!isSessionEpochCurrent(get, epoch) || isSessionEnding(get)) {
         return;
@@ -173,8 +254,40 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
     }
   },
 
+  refreshScenarioProgress() {
+    void get().syncSessionProgressFromServer();
+  },
+
+  async syncSessionProgressFromServer() {
+    const { session, progressSource } = get();
+    if (!session || session.status !== "active") {
+      return;
+    }
+
+    if (progressSource === "local") {
+      applyLocalScenarioProgress(set, get);
+      return;
+    }
+
+    try {
+      const serverProgress = await fetchSessionProgressFromServer(session.id);
+      if (!serverProgress) {
+        set({ progressSource: "local" });
+        applyLocalScenarioProgress(set, get);
+        return;
+      }
+
+      applyServerScenarioProgress(set, get, serverProgress);
+    } catch {
+      if (progressSource === "unknown") {
+        set({ progressSource: "local" });
+      }
+      applyLocalScenarioProgress(set, get);
+    }
+  },
+
   async requestEndSession() {
-    const { session, connectionStatus, endingState } = get();
+    const { session, connectionStatus, endingState, selectedScenario } = get();
 
     if (!session || session.status !== "active") {
       return;
@@ -184,8 +297,15 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       return;
     }
 
+    if (selectedScenario && selectedScenario.exitPolicy.allowUserManualEnd === false) {
+      return;
+    }
+
     bumpSessionEpoch(set, get);
-    setEndingState(set, "user_requested");
+    set({
+      endingState: "user_requested",
+      endingSuggestionReason: null,
+    });
     setConnectionStatus(set, "disconnecting");
     setTurnStatus(set, "idle");
 

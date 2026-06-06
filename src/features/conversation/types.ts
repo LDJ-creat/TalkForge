@@ -1,7 +1,10 @@
 import type { Scenario } from "@/domain/scenario";
 import type { SessionStatus } from "@/domain/enums";
 
+import type { EndingSuggestionReason } from "@/domain/scenario-ending";
+
 import type { ConversationRealtimeCredentials } from "./credentials";
+import type { LocalScenarioProgressSnapshot } from "./evaluate-local-progress";
 
 export const CONNECTION_STATUSES = [
   "idle",
@@ -29,6 +32,11 @@ export const ENDING_STATES = [
   "completed",
 ] as const;
 export type EndingState = (typeof ENDING_STATES)[number];
+
+export const PROGRESS_SOURCES = ["unknown", "local", "server"] as const;
+export type ProgressSource = (typeof PROGRESS_SOURCES)[number];
+
+export const SCENARIO_PROGRESS_REFRESH_INTERVAL_MS = 30_000;
 
 export const TRANSCRIPT_STATUSES = ["pending", "partial", "final"] as const;
 export type TranscriptStatus = (typeof TRANSCRIPT_STATUSES)[number];
@@ -58,6 +66,9 @@ export type ConversationViewState = {
   connectionStatus: ConnectionStatus;
   turnStatus: TurnStatus;
   transcripts: TranscriptEntry[];
+  scenarioProgress: LocalScenarioProgressSnapshot | null;
+  progressSource: ProgressSource;
   endingState: EndingState;
+  endingSuggestionReason: EndingSuggestionReason | null;
   errorMessage: string | null;
 };

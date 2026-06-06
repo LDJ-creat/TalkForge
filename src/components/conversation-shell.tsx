@@ -1,11 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect } from "react";
+import Link from "next/link";
 import { useShallow } from "zustand/react/shallow";
 
 import type { Scenario } from "@/domain/scenario";
 import { useConversationStore } from "@/features/conversation";
+import { SCENARIO_PROGRESS_REFRESH_INTERVAL_MS } from "@/features/conversation/types";
 
 import { SessionStatusBar } from "./session-status-bar";
 import { TranscriptPanel } from "./transcript-panel";
@@ -22,6 +23,8 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
     turnStatus,
     transcripts,
     endingState,
+    endingSuggestionReason,
+    scenarioProgress,
     errorMessage,
   } = useConversationStore(
     useShallow((state) => ({
@@ -30,12 +33,15 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
       turnStatus: state.turnStatus,
       transcripts: state.transcripts,
       endingState: state.endingState,
+      endingSuggestionReason: state.endingSuggestionReason,
+      scenarioProgress: state.scenarioProgress,
       errorMessage: state.errorMessage,
     })),
   );
 
   const startSession = useConversationStore((state) => state.startSession);
   const requestEndSession = useConversationStore((state) => state.requestEndSession);
+  const refreshScenarioProgress = useConversationStore((state) => state.refreshScenarioProgress);
 
   useEffect(() => {
     void startSession(scenario);
@@ -45,10 +51,37 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
     };
   }, [scenario, startSession]);
 
+  useEffect(() => {
+    if (connectionStatus !== "connected" || session?.status !== "active") {
+      return;
+    }
+
+    refreshScenarioProgress();
+    const intervalId = window.setInterval(() => {
+      refreshScenarioProgress();
+    }, SCENARIO_PROGRESS_REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [connectionStatus, refreshScenarioProgress, session?.id, session?.status]);
+
   const isSessionActive = session?.status === "active";
   const isEnding =
-    connectionStatus === "disconnecting" || endingState === "user_requested";
+    connectionStatus === "disconnecting" ||
+    endingState === "user_requested";
   const isCompleted = session?.status === "completed" || endingState === "completed";
+  const showEndingSuggestion =
+    endingState === "ai_suggested" && scenarioProgress?.shouldSuggestEnding === true;
+
+  const endingSuggestionMessage =
+    endingSuggestionReason === "required_goals_complete"
+      ? "You have completed the main scenario goals. End practice when you are ready."
+      : endingSuggestionReason === "max_turns_reached"
+        ? "This session reached the turn limit. You can end practice now."
+        : endingSuggestionReason === "max_duration_reached"
+          ? "This session reached the time limit. You can end practice now."
+          : "You can end practice when you are ready.";
 
   return (
     <div className="conversation-page" data-testid="conversation-shell">
@@ -85,6 +118,11 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
             sessionStatus={session?.status}
           />
           {errorMessage ? <p className="error-banner">{errorMessage}</p> : null}
+          {showEndingSuggestion ? (
+            <p className="ending-banner ending-banner--suggestion" data-testid="ending-suggestion-banner">
+              {endingSuggestionMessage}
+            </p>
+          ) : null}
           {isCompleted ? (
             <p className="ending-banner" data-testid="session-ended-banner">
               Practice ended. Your session feedback will be ready after async processing in a
