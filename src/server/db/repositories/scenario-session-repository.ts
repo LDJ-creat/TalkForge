@@ -88,6 +88,38 @@ export async function getSessionById(db: TalkForgeDatabase, sessionId: string) {
   return row ? toSession(row) : null;
 }
 
+export async function updateSessionRealtimeProviderSessionId(
+  db: TalkForgeDatabase,
+  sessionId: string,
+  realtimeProviderSessionId: string,
+) {
+  const [row] = await db
+    .update(sessions)
+    .set({ realtimeProviderSessionId })
+    .where(eq(sessions.id, sessionId))
+    .returning();
+
+  return row ? toSession(row) : null;
+}
+
+export async function failSession(
+  db: TalkForgeDatabase,
+  sessionId: string,
+  endedAt?: string,
+) {
+  const resolvedEndedAt = endedAt ?? new Date().toISOString();
+  const [row] = await db
+    .update(sessions)
+    .set({
+      status: "failed",
+      endedAt: resolvedEndedAt,
+    })
+    .where(eq(sessions.id, sessionId))
+    .returning();
+
+  return row ? toSession(row) : null;
+}
+
 export async function completeSession(
   db: TalkForgeDatabase,
   sessionId: string,

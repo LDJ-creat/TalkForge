@@ -2,6 +2,8 @@ import { jsonError, requireRequestUserId } from "@/server/api/http";
 import { getDb } from "@/server/db/client";
 import { completeSession, getSessionById } from "@/server/db/repositories";
 import { getQueueAdapter } from "@/server/queue/provider";
+import { processEnqueuedJobsSafely } from "@/server/queue/dev-worker";
+import { logSessionLifecycle } from "@/server/observability/log";
 import { ReportServiceError } from "@/server/report/errors";
 import {
   completeSessionForUser,
@@ -27,6 +29,14 @@ export async function POST(
       ),
       { endedAt: new Date().toISOString() },
     );
+
+    logSessionLifecycle("completed", {
+      sessionId,
+      userId,
+      reportJobEnqueued: result.reportJobEnqueued,
+    });
+
+    await processEnqueuedJobsSafely();
 
     return Response.json(result);
   } catch (error) {
