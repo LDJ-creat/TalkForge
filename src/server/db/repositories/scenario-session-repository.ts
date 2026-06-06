@@ -5,6 +5,7 @@ import type { CreateSessionInput } from "@/domain/session";
 import type { TalkForgeDatabase } from "../client";
 import { fromScenario, toScenario, toSession } from "../mappers";
 import { scenarios, sessions } from "../schema";
+import { createInitialScenarioProgressForSession } from "./scenario-progress-repository";
 
 export async function listScenarios(db: TalkForgeDatabase) {
   const rows = await db.select().from(scenarios);
@@ -68,7 +69,13 @@ export async function createSession(
     })
     .returning();
 
-  return toSession(row);
+  const session = toSession(row);
+  const scenario = await getScenarioById(db, input.scenarioId);
+  if (scenario) {
+    await createInitialScenarioProgressForSession(db, session.id, scenario);
+  }
+
+  return session;
 }
 
 export async function getSessionById(db: TalkForgeDatabase, sessionId: string) {

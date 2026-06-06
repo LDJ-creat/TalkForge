@@ -1,4 +1,5 @@
 import type { ProviderIdentity } from "../types";
+import type { GoalJudgeInput, GoalJudgeResult } from "./goal-judge-types";
 import type {
   CorrectionAnalysisResult,
   CorrectionAnalyzeInput,
@@ -14,4 +15,8 @@ export interface LlmReportProvider extends ProviderIdentity {
   generateReport(input: ReportGenerateInput): Promise<ReportGenerationResult>;
 }
 
-export type LlmProvider = LlmCorrectionProvider & LlmReportProvider;
+export interface LlmGoalJudgeProvider extends ProviderIdentity {
+  evaluateGoals(input: GoalJudgeInput): Promise<GoalJudgeResult>;
+}
+
+export type LlmProvider = LlmCorrectionProvider & LlmReportProvider & LlmGoalJudgeProvider;
