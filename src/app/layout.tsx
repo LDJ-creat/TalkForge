@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { APP_NAME, APP_TAGLINE } from "@/lib/app-info";
 
+import "./conversation.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
