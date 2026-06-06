@@ -1,5 +1,7 @@
 export * from "./enums";
 export * from "./scenario";
+export * from "./scenario-prompt";
+export * from "./scenario-validation";
 export * from "./scenario-progress";
 export * from "./session";
 export * from "./turn";
