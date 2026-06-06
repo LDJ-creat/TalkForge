@@ -1,0 +1,32 @@
+:root {
+  --background: #faf7f2;
+  --foreground: #2c2825;
+  --accent: #e8a598;
+  --accent-muted: #f3d4cc;
+  --surface: #ffffff;
+  --muted: #6b6560;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  min-height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
