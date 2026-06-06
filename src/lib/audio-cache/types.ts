@@ -4,6 +4,7 @@ export type TurnAudioCacheEntry = {
   turnId: string;
   sessionId: string;
   blob: Blob;
+  durationMs: number;
   uploadStatus: TurnAudioUploadStatus;
   objectKey?: string;
   lastError?: string;
@@ -14,6 +15,7 @@ export type SaveTurnAudioCacheInput = {
   turnId: string;
   sessionId: string;
   blob: Blob;
+  durationMs: number;
 };
 
 export type TurnAudioCacheAdapter = {
