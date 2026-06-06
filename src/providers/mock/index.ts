@@ -5,6 +5,7 @@ import type { RealtimeProvider } from "../realtime/contract";
 import type { StorageProvider } from "../storage/contract";
 import type { TtsProvider } from "../tts/contract";
 import { createMockAsrProvider, type MockAsrProviderOptions } from "./asr";
+import { createMockGoalJudgeProvider } from "./goal-judge";
 import { createMockLlmProvider, type MockLlmProviderOptions } from "./llm";
 import {
   createMockPronunciationEvaluationProvider,

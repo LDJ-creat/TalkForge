@@ -26,7 +26,10 @@ export async function upsertScenarioProgress(
   sessionId: string,
   input: ScenarioProgress | UpdateScenarioProgressInput,
 ): Promise<ScenarioProgress> {
-  const updatedAt = input.updatedAt ?? new Date().toISOString();
+  const updatedAt =
+    "updatedAt" in input && input.updatedAt
+      ? input.updatedAt
+      : new Date().toISOString();
   const [row] = await db
     .insert(scenarioProgress)
     .values({

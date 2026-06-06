@@ -3,13 +3,20 @@ export const JOB_ERROR_CODES = [
   "not_found",
   "handler_missing",
   "processing",
+  "report_in_progress",
+  "provider_error",
   "timeout",
   "internal",
 ] as const;
 
 export type JobErrorCode = (typeof JOB_ERROR_CODES)[number];
 
-const RETRYABLE_CODES = new Set<JobErrorCode>(["processing", "timeout"]);
+const RETRYABLE_CODES = new Set<JobErrorCode>([
+  "processing",
+  "report_in_progress",
+  "provider_error",
+  "timeout",
+]);
 
 export type JobErrorMetadata = {
   code: JobErrorCode;
