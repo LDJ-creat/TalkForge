@@ -4,6 +4,7 @@ export * from "./pronunciation";
 export * from "./report";
 export * from "./scenario";
 export * from "./session";
+export * from "./scenario-progress";
 export * from "./shadowing";
 export * from "./storage";
 export * from "./tts";
