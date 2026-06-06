@@ -104,6 +104,45 @@ describe("conversation store", () => {
     expect(state.transcripts).toHaveLength(0);
   });
 
+  it("allows manual end after an AI ending suggestion", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
+
+    const startPromise = useConversationStore
+      .getState()
+      .startSession(coffeeOrderingScenario);
+    await vi.advanceTimersByTimeAsync(500);
+    await startPromise;
+
+    useConversationStore.setState({
+      transcripts: [
+        ...useConversationStore.getState().transcripts,
+        {
+          id: "user-turn-1",
+          role: "user",
+          text: "Could I get a medium latte with oat milk? Yes, that's correct.",
+          status: "final",
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    });
+    useConversationStore.getState().refreshScenarioProgress();
+
+    expect(useConversationStore.getState().endingState).toBe("ai_suggested");
+    expect(useConversationStore.getState().scenarioProgress?.shouldSuggestEnding).toBe(true);
+
+    const endPromise = useConversationStore.getState().requestEndSession();
+    expect(useConversationStore.getState().endingState).toBe("user_requested");
+
+    await vi.advanceTimersByTimeAsync(300);
+    await endPromise;
+
+    expect(useConversationStore.getState().endingState).toBe("completed");
+    expect(useConversationStore.getState().session?.status).toBe("completed");
+
+    vi.unstubAllGlobals();
+  });
+
   it("does not start duplicate sessions for the same active scenario", async () => {
     vi.useFakeTimers();
 

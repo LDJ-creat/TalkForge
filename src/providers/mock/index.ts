@@ -51,6 +51,7 @@ export function createMockProviderBundle(
 
 export {
   createMockAsrProvider,
+  createMockGoalJudgeProvider,
   createMockLlmProvider,
   createMockPronunciationEvaluationProvider,
   createMockRealtimeProvider,
@@ -68,6 +69,7 @@ export type {
 };
 
 export { MockAsrProvider } from "./asr";
+export { MockGoalJudgeProvider } from "./goal-judge";
 export { MockLlmProvider } from "./llm";
 export { MockPronunciationEvaluationProvider } from "./pronunciation";
 export { MockRealtimeProvider } from "./realtime";

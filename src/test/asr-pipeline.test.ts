@@ -202,6 +202,9 @@ describe("ASR transcription pipeline", () => {
     registry.handlers.evaluationFreeSpeech(async (payload) => {
       downstream.push(`evaluation:${payload.audioSegmentId}`);
     });
+    registry.handlers.scenarioProgressEvaluate(async (payload) => {
+      downstream.push(`progress:${payload.sessionId}`);
+    });
 
     const adapter = createMemoryQueueAdapter({ registry });
     const { deps } = createInMemoryAsrDeps({
@@ -216,12 +219,13 @@ describe("ASR transcription pipeline", () => {
 
     const runtime = createWorkerRuntime({ adapter, registry });
     if (runtime.mode === "memory") {
-      await runtime.processAll(2);
+      await runtime.processAll(3);
     }
 
     expect(downstream).toEqual([
       `correction:${TRANSCRIPT_ID}`,
       `evaluation:${AUDIO_SEGMENT_ID}`,
+      `progress:${SESSION_ID}`,
     ]);
   });
 
@@ -247,6 +251,9 @@ describe("ASR transcription pipeline", () => {
     registry.handlers.evaluationFreeSpeech(async (payload) => {
       downstream.push(`evaluation:${payload.audioSegmentId}`);
     });
+    registry.handlers.scenarioProgressEvaluate(async (payload) => {
+      downstream.push(`progress:${payload.sessionId}`);
+    });
 
     const adapter = createMemoryQueueAdapter({ registry });
     const { deps } = createInMemoryAsrDeps({ queueAdapter: adapter });
@@ -257,10 +264,48 @@ describe("ASR transcription pipeline", () => {
 
     const runtime = createWorkerRuntime({ adapter, registry });
     const processed =
-      runtime.mode === "memory" ? await runtime.processAll(2) : [];
+      runtime.mode === "memory" ? await runtime.processAll(3) : [];
 
-    expect(processed).toHaveLength(2);
+    expect(processed).toHaveLength(3);
     expect(processed.every((job) => job.status === "succeeded")).toBe(true);
+    expect(downstream).toEqual([
+      `correction:${TRANSCRIPT_ID}`,
+      `evaluation:${AUDIO_SEGMENT_ID}`,
+      `progress:${SESSION_ID}`,
+    ]);
+  });
+
+  it("does not enqueue scenario progress for assistant turns", async () => {
+    const registry = createWorkerRegistry();
+    const downstream: string[] = [];
+
+    registry.handlers.correctionAnalyze(async (payload) => {
+      downstream.push(`correction:${payload.transcriptId}`);
+    });
+    registry.handlers.evaluationFreeSpeech(async (payload) => {
+      downstream.push(`evaluation:${payload.audioSegmentId}`);
+    });
+    registry.handlers.scenarioProgressEvaluate(async (payload) => {
+      downstream.push(`progress:${payload.sessionId}`);
+    });
+
+    const adapter = createMemoryQueueAdapter({ registry });
+    const assistantTurn: Turn = {
+      ...baseTurn,
+      role: "assistant",
+    };
+    const { deps } = createInMemoryAsrDeps({
+      turn: assistantTurn,
+      queueAdapter: adapter,
+    });
+
+    await transcribeTurnAudio(asrPayload, deps, { attempts: 1 });
+
+    const runtime = createWorkerRuntime({ adapter, registry });
+    if (runtime.mode === "memory") {
+      await runtime.processAll(2);
+    }
+
     expect(downstream).toEqual([
       `correction:${TRANSCRIPT_ID}`,
       `evaluation:${AUDIO_SEGMENT_ID}`,
@@ -347,5 +392,6 @@ describe("ASR transcription pipeline", () => {
     expect(registry.listRegisteredJobs()).toContain("asr.transcribe");
     expect(registry.listRegisteredJobs()).toContain("correction.analyze");
     expect(registry.listRegisteredJobs()).toContain("evaluation.freeSpeech");
+    expect(registry.listRegisteredJobs()).toContain("scenarioProgress.evaluate");
   });
 });

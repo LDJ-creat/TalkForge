@@ -8,6 +8,7 @@ import type { QueueAdapter } from "@/queue/adapter";
 import {
   enqueueCorrectionAnalyzeJob,
   enqueueEvaluationFreeSpeechJob,
+  enqueueScenarioProgressEvaluateJob,
 } from "@/queue/enqueue";
 import { JobProcessingError } from "@/queue/errors";
 import type { AsrTranscribePayload } from "@/queue/payloads";
@@ -73,6 +74,7 @@ export async function transcribeTurnAudio(
       deps,
       payload,
       existingTranscript.id,
+      turn,
     );
 
     return {
@@ -108,6 +110,7 @@ export async function transcribeTurnAudio(
     deps,
     payload,
     transcript.id,
+    turn,
   );
 
   return {
@@ -121,6 +124,7 @@ async function enqueueDownstreamJobs(
   deps: AsrTranscribeTurnDeps,
   payload: AsrTranscribePayload,
   transcriptId: string,
+  turn: Turn,
 ): Promise<boolean> {
   if (!deps.queueAdapter) {
     return false;
@@ -136,6 +140,13 @@ async function enqueueDownstreamJobs(
     sessionId: payload.sessionId,
     audioSegmentId: payload.audioSegmentId,
   });
+
+  if (turn.role === "user") {
+    await enqueueScenarioProgressEvaluateJob(deps.queueAdapter, {
+      sessionId: payload.sessionId,
+      triggerTurnId: payload.turnId,
+    });
+  }
 
   return true;
 }

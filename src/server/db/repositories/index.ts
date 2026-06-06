@@ -6,7 +6,11 @@
   listScenarios,
   upsertScenario,
 } from "./scenario-session-repository";
-export { getScenarioProgressBySessionId } from "./scenario-progress-repository";
+export {
+  createInitialScenarioProgressForSession,
+  getScenarioProgressBySessionId,
+  upsertScenarioProgress,
+} from "./scenario-progress-repository";
 export {
   finalizeReport,
   getReportBySessionId,

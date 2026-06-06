@@ -5,3 +5,4 @@ export {
   type CompleteSessionResult,
   type CompleteSessionWithQueueOptions,
 } from "./complete-session";
+export { SessionServiceError } from "./errors";

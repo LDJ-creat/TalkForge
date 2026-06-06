@@ -2,13 +2,14 @@ import type { QueueAdapter } from "@/queue/adapter";
 import type { WorkerRegistry } from "@/queue/worker-types";
 import type { TalkForgeDatabase } from "@/server/db/client";
 import type { AsrProvider } from "@/providers/asr/contract";
-import type { LlmCorrectionProvider, LlmReportProvider } from "@/providers/llm/contract";
+import type { LlmCorrectionProvider, LlmGoalJudgeProvider, LlmReportProvider } from "@/providers/llm/contract";
 import type { PronunciationEvaluationProvider } from "@/providers/pronunciation/contract";
 
 import { registerAsrTranscribeWorker } from "./handlers/asr-transcribe";
 import { registerCorrectionAnalyzeWorker } from "./handlers/correction-analyze";
 import { registerEvaluationFreeSpeechWorker } from "./handlers/evaluation-free-speech";
 import { registerReportGenerateWorker } from "./handlers/report-generate";
+import { registerScenarioProgressEvaluateWorker } from "./handlers/scenario-progress-evaluate";
 
 export type RegisterP0WorkerHandlersOptions = {
   db: TalkForgeDatabase;
@@ -16,6 +17,7 @@ export type RegisterP0WorkerHandlersOptions = {
   asrProvider?: AsrProvider;
   llmCorrectionProvider?: LlmCorrectionProvider;
   llmReportProvider?: LlmReportProvider;
+  llmGoalJudgeProvider?: LlmGoalJudgeProvider;
   pronunciationProvider?: PronunciationEvaluationProvider;
 };
 
@@ -42,6 +44,11 @@ export function registerP0WorkerHandlers(
   registerReportGenerateWorker(registry, {
     db: options.db,
     llmProvider: options.llmReportProvider,
+  });
+
+  registerScenarioProgressEvaluateWorker(registry, {
+    db: options.db,
+    goalJudgeProvider: options.llmGoalJudgeProvider,
   });
 
   return registry;
