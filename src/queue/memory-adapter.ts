@@ -92,6 +92,14 @@ export function createMemoryQueueAdapter(
     }
 
     const id = enqueueOptions.jobId ?? randomUUID();
+    const existing = jobs.get(id);
+    if (
+      existing &&
+      (existing.status === "pending" || existing.status === "processing")
+    ) {
+      return toSnapshot(existing);
+    }
+
     const createdAt = timestamp();
     const record: InternalJobRecord = {
       id,
@@ -106,7 +114,9 @@ export function createMemoryQueueAdapter(
     };
 
     jobs.set(id, record);
-    pendingJobIds.push(id);
+    if (!pendingJobIds.includes(id)) {
+      pendingJobIds.push(id);
+    }
     return toSnapshot(record);
   }
 
