@@ -2,6 +2,7 @@ import { jsonError, readJsonBody, requireRequestUserId } from "@/server/api/http
 import { AudioUploadServiceError } from "@/server/storage/errors";
 import { getDb } from "@/server/db/client";
 import { getQueueAdapter } from "@/server/queue/provider";
+import { processEnqueuedJobsSafely } from "@/server/queue/dev-worker";
 import { finalizeTurnAudioUpload } from "@/server/storage/audio-upload";
 import { getStorageProvider } from "@/server/storage/provider";
 
@@ -47,6 +48,8 @@ export async function POST(
       },
       { queueAdapter: getQueueAdapter() },
     );
+
+    await processEnqueuedJobsSafely();
 
     return Response.json(result);
   } catch (error) {

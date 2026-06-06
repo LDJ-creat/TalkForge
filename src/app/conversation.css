@@ -364,6 +364,56 @@
   font-size: 0.925rem;
 }
 
+.conversation-practice-button {
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.session-report {
+  margin-top: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--accent-muted);
+}
+
+.session-report--muted {
+  color: var(--muted);
+}
+
+.session-report__title {
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+
+.session-report__summary {
+  margin-bottom: 0.85rem;
+  line-height: 1.5;
+}
+
+.session-report__section {
+  margin-top: 0.85rem;
+}
+
+.session-report__section h3 {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.session-report__list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.session-report__hint {
+  color: var(--muted);
+}
+
 .error-banner {
   margin-top: 1rem;
   padding: 0.85rem 1rem;

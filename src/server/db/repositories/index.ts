@@ -1,11 +1,14 @@
 ﻿export {
   completeSession,
   createSession,
+  failSession,
   getScenarioById,
   getSessionById,
   listScenarios,
+  updateSessionRealtimeProviderSessionId,
   upsertScenario,
 } from "./scenario-session-repository";
+export { ensureUserExists, getUserById } from "./user-repository";
 export {
   createInitialScenarioProgressForSession,
   getScenarioProgressBySessionId,

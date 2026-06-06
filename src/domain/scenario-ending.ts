@@ -175,7 +175,6 @@ export function buildScenarioProgressUpdate(input: {
     currentStageId: inferCurrentStageId(input.scenario, mergedCompletedGoalIds),
     completedGoalIds: mergedCompletedGoalIds,
     missingGoalIds: resolveMissingGoalIds(input.scenario, mergedCompletedGoalIds),
-    shouldSuggestEnding: exitEvaluation.shouldSuggestEnding,
     offTopic: input.offTopic,
     updatedAt: input.updatedAt ?? new Date().toISOString(),
     ...exitEvaluation,
