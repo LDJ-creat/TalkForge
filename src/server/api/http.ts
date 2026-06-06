@@ -1,6 +1,7 @@
-﻿import { AudioUploadServiceError } from "@/server/storage/errors";
+﻿import { REQUEST_USER_ID_HEADER } from "@/shared/request-user";
+import { AudioUploadServiceError } from "@/server/storage/errors";
 
-export const REQUEST_USER_ID_HEADER = "x-talkforge-user-id";
+export { REQUEST_USER_ID_HEADER };
 
 export function requireRequestUserId(request: Request): string {
   const userId = request.headers.get(REQUEST_USER_ID_HEADER)?.trim();
