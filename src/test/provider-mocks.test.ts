@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 
 import { ProviderError } from "@/providers/errors";
 import {
@@ -110,6 +110,14 @@ describe("MockStorageProvider", () => {
     expect(uploadTarget.headers?.["x-talkforge-visibility"]).toBe("private");
     expect(uploadTarget.uploadUrl).toContain("turn_1.webm");
 
+    expect(await provider.objectExists?.({ objectKey: uploadTarget.objectKey })).toBe(false);
+
+    await provider.writeUploadedObject({
+      objectKey: uploadTarget.objectKey,
+      body: Buffer.from("mock-audio"),
+      contentType: "audio/webm",
+    });
+
     const downloadUrl = await provider.createDownloadUrl({
       objectKey: uploadTarget.objectKey,
     });
@@ -127,8 +135,13 @@ describe("MockStorageProvider", () => {
       code: "not_found",
     });
 
-    await provider.createUploadTarget({
+    const turnTwoTarget = await provider.createUploadTarget({
       objectKey: "audio/session_1/turn_2.webm",
+      contentType: "audio/webm",
+    });
+    await provider.writeUploadedObject({
+      objectKey: turnTwoTarget.objectKey,
+      body: Buffer.from("mock-audio"),
       contentType: "audio/webm",
     });
 
@@ -263,3 +276,4 @@ describe("MockLlmProvider", () => {
     expect(result.shadowingRecommendations.length).toBeGreaterThan(0);
   });
 });
+
