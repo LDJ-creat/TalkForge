@@ -1,4 +1,5 @@
 import { createProviderError } from "../errors";
+import { buildTtsCacheKey } from "../tts/cache-key";
 import type { TtsProvider } from "../tts/contract";
 import type { TtsSynthesizeInput, TtsAudioResult } from "../tts/types";
 import { hashString } from "./utils";
@@ -71,12 +72,12 @@ export class MockTtsProvider implements TtsProvider {
   }
 
   private buildCacheKey(input: TtsSynthesizeInput): string {
-    return [
-      input.text,
-      input.voice ?? this.defaultVoice,
-      String(input.speed ?? 1),
-      input.language ?? "en",
-    ].join("|");
+    return buildTtsCacheKey({
+      text: input.text,
+      voice: input.voice ?? this.defaultVoice,
+      speed: input.speed ?? 1,
+      language: input.language ?? "en",
+    });
   }
 }
 

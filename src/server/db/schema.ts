@@ -8,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -154,19 +155,28 @@ export const corrections = pgTable("corrections", {
   confidence: doublePrecision("confidence").notNull(),
 });
 
-export const pronunciationEvaluations = pgTable("pronunciation_evaluations", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  turnId: uuid("turn_id")
-    .notNull()
-    .references(() => turns.id, { onDelete: "cascade" }),
-  mode: pronunciationModeEnum("mode").notNull(),
-  overallScore: doublePrecision("overall_score"),
-  fluencyScore: doublePrecision("fluency_score"),
-  accuracyScore: doublePrecision("accuracy_score"),
-  completenessScore: doublePrecision("completeness_score"),
-  prosodyScore: doublePrecision("prosody_score"),
-  details: jsonb("details"),
-});
+export const pronunciationEvaluations = pgTable(
+  "pronunciation_evaluations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    turnId: uuid("turn_id")
+      .notNull()
+      .references(() => turns.id, { onDelete: "cascade" }),
+    mode: pronunciationModeEnum("mode").notNull(),
+    overallScore: doublePrecision("overall_score"),
+    fluencyScore: doublePrecision("fluency_score"),
+    accuracyScore: doublePrecision("accuracy_score"),
+    completenessScore: doublePrecision("completeness_score"),
+    prosodyScore: doublePrecision("prosody_score"),
+    details: jsonb("details"),
+  },
+  (table) => ({
+    turnModeUnique: uniqueIndex("pronunciation_evaluations_turn_mode_unique").on(
+      table.turnId,
+      table.mode,
+    ),
+  }),
+);
 
 export const reports = pgTable("reports", {
   id: uuid("id").primaryKey().defaultRandom(),

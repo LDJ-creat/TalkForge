@@ -25,6 +25,12 @@ export type {
 } from "./storage/types";
 
 export type { TtsProvider } from "./tts/contract";
+export {
+  buildTtsCacheKey,
+  DEFAULT_TTS_LANGUAGE,
+  DEFAULT_TTS_SPEED,
+  DEFAULT_TTS_VOICE,
+} from "./tts/cache-key";
 export type { TtsAudioResult, TtsCacheKeyInput, TtsSynthesizeInput } from "./tts/types";
 
 export type { PronunciationEvaluationProvider } from "./pronunciation/contract";
