@@ -1,0 +1,148 @@
+import { eq } from "drizzle-orm";
+
+import type { CreateReportInput, Report } from "@/domain/report";
+import {
+  REPORT_GENERATING_MARKER,
+  REPORT_IN_PROGRESS_WINDOW_MS,
+} from "@/server/report/constants";
+
+import type { TalkForgeDatabase } from "../client";
+import { toReport } from "../mappers";
+import { reports, sessions } from "../schema";
+
+export function isReportGenerationComplete(report: Report): boolean {
+  return report.summary !== REPORT_GENERATING_MARKER;
+}
+
+async function findReportBySessionId(db: TalkForgeDatabase, sessionId: string) {
+  const [row] = await db
+    .select()
+    .from(reports)
+    .where(eq(reports.sessionId, sessionId))
+    .limit(1);
+
+  return row ? toReport(row) : null;
+}
+
+/** Returns only finalized reports suitable for API responses. */
+export async function getReportBySessionId(db: TalkForgeDatabase, sessionId: string) {
+  const report = await findReportBySessionId(db, sessionId);
+  if (!report || !isReportGenerationComplete(report)) {
+    return null;
+  }
+
+  return report;
+}
+
+export type PrepareReportGenerationResult =
+  | { status: "complete"; report: Report }
+  | { status: "claimed"; report: Report }
+  | { status: "resume"; report: Report }
+  | { status: "in_progress" };
+
+export type PrepareReportGenerationOptions = {
+  now?: () => Date;
+};
+
+/**
+ * Claims report generation under a session row lock so only one worker calls the LLM.
+ * Recent generating placeholders are treated as in-progress and should be retried later.
+ */
+export async function prepareReportGeneration(
+  db: TalkForgeDatabase,
+  sessionId: string,
+  options: PrepareReportGenerationOptions = {},
+): Promise<PrepareReportGenerationResult> {
+  const now = options.now ?? (() => new Date());
+
+  return db.transaction(async (tx) => {
+    await tx
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .for("update");
+
+    const existing = await findReportBySessionId(tx, sessionId);
+    if (existing) {
+      if (isReportGenerationComplete(existing)) {
+        return { status: "complete", report: existing };
+      }
+
+      const ageMs = now().getTime() - new Date(existing.createdAt).getTime();
+      if (ageMs < REPORT_IN_PROGRESS_WINDOW_MS) {
+        return { status: "in_progress" };
+      }
+
+      return { status: "resume", report: existing };
+    }
+
+    const [row] = await tx
+      .insert(reports)
+      .values({
+        sessionId,
+        summary: REPORT_GENERATING_MARKER,
+        taskCompletion: { completedGoalIds: [], missingGoalIds: [] },
+        keyCorrections: [],
+        alternativeExpressions: [],
+        shadowingRecommendations: [],
+        nextPracticeSuggestion: REPORT_GENERATING_MARKER,
+      })
+      .returning();
+
+    return {
+      status: "claimed",
+      report: toReport(row),
+    };
+  });
+}
+
+export async function finalizeReport(
+  db: TalkForgeDatabase,
+  sessionId: string,
+  input: CreateReportInput,
+) {
+  const [row] = await db
+    .update(reports)
+    .set({
+      summary: input.summary,
+      taskCompletion: input.taskCompletion,
+      keyCorrections: input.keyCorrections,
+      alternativeExpressions: input.alternativeExpressions,
+      shadowingRecommendations: input.shadowingRecommendations,
+      nextPracticeSuggestion: input.nextPracticeSuggestion,
+    })
+    .where(eq(reports.sessionId, sessionId))
+    .returning();
+
+  if (!row) {
+    throw new Error(`Report for session ${sessionId} was not found during finalization.`);
+  }
+
+  return toReport(row);
+}
+
+export type SaveReportForSessionResult = {
+  report: Report;
+  created: boolean;
+};
+
+/** @deprecated Prefer prepareReportGeneration + finalizeReport for worker flows. */
+export async function saveReportForSessionIfAbsent(
+  db: TalkForgeDatabase,
+  input: CreateReportInput,
+): Promise<SaveReportForSessionResult> {
+  const preparation = await prepareReportGeneration(db, input.sessionId);
+  if (preparation.status === "complete") {
+    return { report: preparation.report, created: false };
+  }
+
+  if (preparation.status === "in_progress") {
+    throw new Error("Report generation is already in progress for this session.");
+  }
+
+  const report = await finalizeReport(db, input.sessionId, input);
+  return {
+    report,
+    created: preparation.status === "claimed",
+  };
+}

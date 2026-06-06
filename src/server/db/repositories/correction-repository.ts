@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import type { Correction, CreateCorrectionInput } from "@/domain/correction";
 
@@ -57,6 +57,35 @@ export async function getCorrectionsByTurnId(db: TalkForgeDatabase, turnId: stri
     .where(eq(corrections.turnId, turnId));
 
   return rows.map(toCorrection);
+}
+
+export async function getCorrectionsByTurnIds(
+  db: TalkForgeDatabase,
+  turnIds: string[],
+) {
+  const result = new Map<string, Correction[]>();
+
+  if (turnIds.length === 0) {
+    return result;
+  }
+
+  const rows = await db
+    .select()
+    .from(corrections)
+    .where(inArray(corrections.turnId, turnIds));
+
+  for (const turnId of turnIds) {
+    result.set(turnId, []);
+  }
+
+  for (const row of rows) {
+    const correction = toCorrection(row);
+    const existing = result.get(row.turnId) ?? [];
+    existing.push(correction);
+    result.set(row.turnId, existing);
+  }
+
+  return result;
 }
 
 export type SaveCorrectionsForTurnResult = {

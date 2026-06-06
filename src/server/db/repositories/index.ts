@@ -1,10 +1,23 @@
 ﻿export {
+  completeSession,
   createSession,
   getScenarioById,
   getSessionById,
   listScenarios,
   upsertScenario,
 } from "./scenario-session-repository";
+export { getScenarioProgressBySessionId } from "./scenario-progress-repository";
+export {
+  finalizeReport,
+  getReportBySessionId,
+  isReportGenerationComplete,
+  prepareReportGeneration,
+  saveReportForSessionIfAbsent,
+} from "./report-repository";
+export type {
+  PrepareReportGenerationResult,
+  SaveReportForSessionResult,
+} from "./report-repository";
 export {
   createAudioSegment,
   deleteAudioSegment,
@@ -31,9 +44,11 @@ export {
   createCorrections,
   deleteCorrectionsByTurnId,
   getCorrectionsByTurnId,
+  getCorrectionsByTurnIds,
   saveCorrectionsForTurnIfAbsent,
 } from "./correction-repository";
 export {
+  getFreeSpeechEvaluationsByTurnIds,
   getPronunciationEvaluationByTurnIdAndMode,
   markTurnEvaluationFailed,
   prepareFreeSpeechEvaluation,

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import type { PronunciationMode } from "@/domain/enums";
 import type {
@@ -40,6 +40,33 @@ async function createPronunciationEvaluation(
     .returning();
 
   return toPronunciationEvaluation(row);
+}
+
+export async function getFreeSpeechEvaluationsByTurnIds(
+  db: TalkForgeDatabase,
+  turnIds: string[],
+) {
+  const result = new Map<string, PronunciationEvaluation>();
+
+  if (turnIds.length === 0) {
+    return result;
+  }
+
+  const rows = await db
+    .select()
+    .from(pronunciationEvaluations)
+    .where(
+      and(
+        inArray(pronunciationEvaluations.turnId, turnIds),
+        eq(pronunciationEvaluations.mode, "free_speech"),
+      ),
+    );
+
+  for (const row of rows) {
+    result.set(row.turnId, toPronunciationEvaluation(row));
+  }
+
+  return result;
 }
 
 export async function getPronunciationEvaluationByTurnIdAndMode(

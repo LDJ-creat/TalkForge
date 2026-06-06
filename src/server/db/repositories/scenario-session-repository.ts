@@ -80,3 +80,31 @@ export async function getSessionById(db: TalkForgeDatabase, sessionId: string) {
 
   return row ? toSession(row) : null;
 }
+
+export async function completeSession(
+  db: TalkForgeDatabase,
+  sessionId: string,
+  endedAt?: string,
+) {
+  const resolvedEndedAt = endedAt ?? new Date().toISOString();
+  const [row] = await db
+    .update(sessions)
+    .set({
+      status: "completed",
+      endedAt: resolvedEndedAt,
+    })
+    .where(eq(sessions.id, sessionId))
+    .returning();
+
+  if (row) {
+    return toSession(row);
+  }
+
+  const [existing] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, sessionId))
+    .limit(1);
+
+  return existing ? toSession(existing) : null;
+}
