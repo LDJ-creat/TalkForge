@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { coffeeOrderingScenario } from "@/server/db/seeds/scenarios";
 import { isUuid } from "@/queue/ids";
@@ -15,6 +15,14 @@ describe("conversation store", () => {
     useConversationStore.getState().reset();
     resetMockRealtimeSessionOptions();
     vi.useRealTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 404 })),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("starts in idle state", () => {

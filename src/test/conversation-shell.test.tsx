@@ -1,21 +1,65 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { coffeeOrderingScenario } from "@/server/db/seeds/scenarios";
+import { DEV_USER_ID } from "@/shared/dev-user";
 import { useConversationStore } from "@/features/conversation";
 
 import { ConversationShell } from "@/components/conversation-shell";
+
+const BACKEND_SESSION_ID = "11111111-1111-4111-8111-111111111111";
+
+function createFetchMock(options?: { backendLinked?: boolean }) {
+  const backendLinked = options?.backendLinked ?? false;
+
+  return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+
+    if (backendLinked && url.endsWith("/api/sessions") && init?.method === "POST") {
+      return new Response(
+        JSON.stringify({
+          session: {
+            id: BACKEND_SESSION_ID,
+            scenarioId: coffeeOrderingScenario.id,
+            status: "active",
+            startedAt: "2026-06-06T00:00:00.000Z",
+            realtimeProvider: "mock-realtime",
+          },
+          realtimeCredentials: {
+            provider: "mock-realtime",
+            providerSessionId: "rt_session_test",
+            token: "rt_token_test",
+            expiresAt: "2026-06-06T01:00:00.000Z",
+            connectionMode: "websocket",
+            endpointUrl: "wss://mock.talkforge.local/realtime",
+          },
+        }),
+        { status: 200 },
+      );
+    }
+
+    if (backendLinked && url.includes("/progress")) {
+      return new Response(JSON.stringify({ progress: null }), { status: 404 });
+    }
+
+    return new Response(null, { status: 404 });
+  });
+}
 
 describe("ConversationShell", () => {
   beforeEach(() => {
     useConversationStore.getState().reset();
     vi.useRealTimers();
+    vi.stubGlobal("fetch", createFetchMock());
+    process.env.NEXT_PUBLIC_DEV_USER_ID = DEV_USER_ID;
   });
 
   afterEach(async () => {
-    await useConversationStore.getState().teardownSession();
+    cleanup();
     vi.useRealTimers();
+    await useConversationStore.getState().teardownSession();
+    vi.unstubAllGlobals();
   });
 
   it("starts a mock session and allows manual end", async () => {
@@ -23,18 +67,16 @@ describe("ConversationShell", () => {
 
     render(<ConversationShell scenario={coffeeOrderingScenario} />);
 
-    expect(screen.getByTestId("conversation-shell")).toBeInTheDocument();
+    expect(screen.getAllByTestId("conversation-shell")[0]).toBeInTheDocument();
     expect(screen.getByText("Connecting…")).toBeInTheDocument();
 
     await vi.advanceTimersByTimeAsync(500);
 
     expect(screen.getByText("Connected")).toBeInTheDocument();
     expect(screen.getByTestId("transcript-entry-assistant")).toBeInTheDocument();
+    expect(screen.queryByTestId("mock-practice-turn-button")).not.toBeInTheDocument();
 
-    const endButton = screen.getByTestId("end-practice-button");
-    expect(endButton).not.toBeDisabled();
-
-    fireEvent.click(endButton);
+    fireEvent.click(screen.getAllByTestId("end-practice-button")[0]!);
     expect(screen.getByText("Ending session…")).toBeInTheDocument();
 
     await vi.advanceTimersByTimeAsync(300);
@@ -43,5 +85,15 @@ describe("ConversationShell", () => {
     expect(useConversationStore.getState().session?.status).toBe("completed");
 
     vi.useRealTimers();
+  });
+
+  it("shows the practice button for backend-linked sessions", async () => {
+    vi.stubGlobal("fetch", createFetchMock({ backendLinked: true }));
+
+    render(<ConversationShell scenario={coffeeOrderingScenario} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("mock-practice-turn-button")).toBeInTheDocument();
+    });
   });
 });
