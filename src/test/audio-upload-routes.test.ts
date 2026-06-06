@@ -20,6 +20,10 @@ vi.mock("@/server/storage/provider", () => ({
   getStorageProvider: () => ({}),
 }));
 
+vi.mock("@/server/queue/provider", () => ({
+  getQueueAdapter: () => ({ enqueue: vi.fn() }),
+}));
+
 vi.mock("@/server/storage/audio-upload", () => ({
   createTurnAudioUploadTarget: (...args: unknown[]) => createTurnAudioUploadTarget(...args),
   finalizeTurnAudioUpload: (...args: unknown[]) => finalizeTurnAudioUpload(...args),
