@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import type { Scenario } from "@/domain/scenario";
 
+import { completeSessionOnServer } from "./complete-session-api";
 import { mapRealtimeCredentials } from "./credentials";
 import {
   createConversationSessionId,
@@ -209,6 +210,12 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         connectionStatus: "disconnected",
         endingState: "completed",
       });
+
+      try {
+        await completeSessionOnServer(session.id);
+      } catch {
+        // Best-effort backend completion for client-only mock sessions.
+      }
     } catch {
       set({
         connectionStatus: "error",
