@@ -1,0 +1,141 @@
+﻿import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  createTurnAudioUploadTarget,
+  finalizeTurnAudioUpload,
+} from "@/server/storage/audio-upload";
+import { MockStorageProvider } from "@/providers/mock/storage";
+
+const SESSION_ID = "11111111-1111-4111-8111-111111111111";
+const TURN_ID = "22222222-2222-4222-8222-222222222222";
+const USER_ID = "33333333-3333-4333-8333-333333333333";
+const OBJECT_KEY = `audio/${SESSION_ID}/${TURN_ID}.webm`;
+
+const getSessionById = vi.fn();
+const getTurnById = vi.fn();
+const createAudioSegment = vi.fn();
+const linkTurnAudioSegment = vi.fn();
+
+vi.mock("@/server/db/repositories/scenario-session-repository", () => ({
+  getSessionById: (...args: unknown[]) => getSessionById(...args),
+}));
+
+vi.mock("@/server/db/repositories/turn-repository", () => ({
+  getTurnById: (...args: unknown[]) => getTurnById(...args),
+  linkTurnAudioSegment: (...args: unknown[]) => linkTurnAudioSegment(...args),
+}));
+
+const getAudioSegmentByTurnId = vi.fn();
+
+vi.mock("@/server/db/repositories/audio-segment-repository", () => ({
+  createAudioSegment: (...args: unknown[]) => createAudioSegment(...args),
+  getAudioSegmentByTurnId: (...args: unknown[]) => getAudioSegmentByTurnId(...args),
+}));
+
+describe("audio upload service", () => {
+  const db = {
+    transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
+  };
+  let storage: MockStorageProvider;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    storage = new MockStorageProvider();
+    getSessionById.mockResolvedValue({
+      id: SESSION_ID,
+      userId: USER_ID,
+    });
+    getTurnById.mockResolvedValue({
+      id: TURN_ID,
+      sessionId: SESSION_ID,
+    });
+    getAudioSegmentByTurnId.mockResolvedValue(null);
+  });
+
+  it("creates upload targets for authorized turns", async () => {
+    const result = await createTurnAudioUploadTarget(db as never, storage, {
+      sessionId: SESSION_ID,
+      turnId: TURN_ID,
+      userId: USER_ID,
+      sizeBytes: 128,
+    });
+
+    expect(result.objectKey).toBe(OBJECT_KEY);
+    expect(result.uploadTarget.method).toBe("PUT");
+    expect(await storage.objectExists({ objectKey: OBJECT_KEY })).toBe(false);
+  });
+
+  it("finalizes uploaded audio metadata in a transaction", async () => {
+    const uploadTarget = await storage.createUploadTarget({
+      objectKey: OBJECT_KEY,
+      contentType: "audio/webm",
+      sizeBytes: 5,
+    });
+    await storage.writeUploadedObject({
+      objectKey: uploadTarget.objectKey,
+      body: Buffer.from("audio"),
+      contentType: "audio/webm",
+    });
+
+    createAudioSegment.mockResolvedValue({
+      id: "44444444-4444-4444-8444-444444444444",
+      turnId: TURN_ID,
+      objectKey: OBJECT_KEY,
+      format: "webm",
+      codec: "opus",
+      durationMs: 1200,
+      sizeBytes: 5,
+      createdAt: "2026-06-06T00:00:00.000Z",
+    });
+    linkTurnAudioSegment.mockResolvedValue({ id: TURN_ID, audioSegmentId: "44444444-4444-4444-8444-444444444444" });
+
+    const result = await finalizeTurnAudioUpload(db as never, storage, {
+      sessionId: SESSION_ID,
+      turnId: TURN_ID,
+      userId: USER_ID,
+      objectKey: OBJECT_KEY,
+      durationMs: 1200,
+      sizeBytes: 5,
+    });
+
+    expect(createAudioSegment).toHaveBeenCalled();
+    expect(linkTurnAudioSegment).toHaveBeenCalledWith(db, TURN_ID, "44444444-4444-4444-8444-444444444444");
+    expect(result.audioSegment.objectKey).toBe(OBJECT_KEY);
+  });
+
+  it("returns existing audio segment metadata idempotently", async () => {
+    await storage.createUploadTarget({
+      objectKey: OBJECT_KEY,
+      contentType: "audio/webm",
+      sizeBytes: 5,
+    });
+    await storage.writeUploadedObject({
+      objectKey: OBJECT_KEY,
+      body: Buffer.from("audio"),
+      contentType: "audio/webm",
+    });
+
+    getAudioSegmentByTurnId.mockResolvedValue({
+      id: "44444444-4444-4444-8444-444444444444",
+      turnId: TURN_ID,
+      objectKey: OBJECT_KEY,
+      format: "webm",
+      codec: "opus",
+      durationMs: 1200,
+      sizeBytes: 5,
+      createdAt: "2026-06-06T00:00:00.000Z",
+    });
+
+    const result = await finalizeTurnAudioUpload(db as never, storage, {
+      sessionId: SESSION_ID,
+      turnId: TURN_ID,
+      userId: USER_ID,
+      objectKey: OBJECT_KEY,
+      durationMs: 1200,
+      sizeBytes: 5,
+    });
+
+    expect(createAudioSegment).not.toHaveBeenCalled();
+    expect(result.audioSegment.id).toBe("44444444-4444-4444-8444-444444444444");
+  });
+});
