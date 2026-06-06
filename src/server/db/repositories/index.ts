@@ -16,6 +16,7 @@ export {
   getTurnById,
   linkTurnAudioSegment,
   listTurnsBySessionId,
+  updateTurnEvaluationStatus,
   updateTurnTranscriptText,
 } from "./turn-repository";
 export {
@@ -32,3 +33,14 @@ export {
   getCorrectionsByTurnId,
   saveCorrectionsForTurnIfAbsent,
 } from "./correction-repository";
+export {
+  getPronunciationEvaluationByTurnIdAndMode,
+  markTurnEvaluationFailed,
+  prepareFreeSpeechEvaluation,
+  saveFreeSpeechEvaluationForTurnIfAbsent,
+  saveShadowingEvaluationForTurnIfAbsent,
+} from "./pronunciation-evaluation-repository";
+export type {
+  PrepareFreeSpeechEvaluationResult,
+  SavePronunciationEvaluationResult,
+} from "./pronunciation-evaluation-repository";

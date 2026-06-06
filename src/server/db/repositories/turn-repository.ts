@@ -1,5 +1,6 @@
 ﻿import { asc, eq } from "drizzle-orm";
 
+import type { EvaluationStatus } from "@/domain/enums";
 import type { CreateTurnInput } from "@/domain/turn";
 
 import type { TalkForgeDatabase } from "../client";
@@ -74,4 +75,18 @@ export async function listTurnsBySessionId(db: TalkForgeDatabase, sessionId: str
     .orderBy(asc(turns.startedAt));
 
   return rows.map(toTurn);
+}
+
+export async function updateTurnEvaluationStatus(
+  db: TalkForgeDatabase,
+  turnId: string,
+  evaluationStatus: EvaluationStatus,
+) {
+  const [row] = await db
+    .update(turns)
+    .set({ evaluationStatus })
+    .where(eq(turns.id, turnId))
+    .returning();
+
+  return row ? toTurn(row) : null;
 }
