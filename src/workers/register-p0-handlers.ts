@@ -3,15 +3,18 @@ import type { WorkerRegistry } from "@/queue/worker-types";
 import type { TalkForgeDatabase } from "@/server/db/client";
 import type { AsrProvider } from "@/providers/asr/contract";
 import type { LlmCorrectionProvider } from "@/providers/llm/contract";
+import type { PronunciationEvaluationProvider } from "@/providers/pronunciation/contract";
 
 import { registerAsrTranscribeWorker } from "./handlers/asr-transcribe";
 import { registerCorrectionAnalyzeWorker } from "./handlers/correction-analyze";
+import { registerEvaluationFreeSpeechWorker } from "./handlers/evaluation-free-speech";
 
 export type RegisterP0WorkerHandlersOptions = {
   db: TalkForgeDatabase;
   queueAdapter?: QueueAdapter;
   asrProvider?: AsrProvider;
   llmCorrectionProvider?: LlmCorrectionProvider;
+  pronunciationProvider?: PronunciationEvaluationProvider;
 };
 
 export function registerP0WorkerHandlers(
@@ -27,6 +30,11 @@ export function registerP0WorkerHandlers(
   registerCorrectionAnalyzeWorker(registry, {
     db: options.db,
     llmProvider: options.llmCorrectionProvider,
+  });
+
+  registerEvaluationFreeSpeechWorker(registry, {
+    db: options.db,
+    pronunciationProvider: options.pronunciationProvider,
   });
 
   return registry;
