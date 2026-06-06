@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { coffeeOrderingScenario } from "@/server/db/seeds/scenarios";
+import { isUuid } from "@/queue/ids";
 
 import {
   getConversationInitialState,
@@ -49,6 +50,8 @@ describe("conversation store", () => {
     expect(state.realtimeCredentials?.connectionMode).toBe("websocket");
     expect(state.realtimeCredentials?.endpointUrl).toContain("mock.talkforge.local");
     expect(state.session?.realtimeProvider).toBe("mock-realtime");
+    expect(state.session?.id).toBeTypeOf("string");
+    expect(isUuid(state.session!.id)).toBe(true);
     expect(state.transcripts).toHaveLength(1);
     expect(state.transcripts[0]?.role).toBe("assistant");
     expect(state.turnStatus).toBe("idle");

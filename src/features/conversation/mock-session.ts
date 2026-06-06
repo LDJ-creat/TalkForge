@@ -34,7 +34,7 @@ function createMockId(prefix: string): string {
 }
 
 export function createConversationSessionId(): string {
-  return createMockId("session");
+  return crypto.randomUUID();
 }
 
 export async function mockStartRealtimeSession(input: {
