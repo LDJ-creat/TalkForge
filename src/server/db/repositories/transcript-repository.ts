@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import type { CreateTranscriptInput } from "@/domain/transcript";
 
@@ -43,6 +43,22 @@ export async function getTranscriptByTurnId(db: TalkForgeDatabase, turnId: strin
     .limit(1);
 
   return row ? toTranscript(row) : null;
+}
+
+export async function getTranscriptsByTurnIds(
+  db: TalkForgeDatabase,
+  turnIds: string[],
+) {
+  if (turnIds.length === 0) {
+    return new Map<string, ReturnType<typeof toTranscript>>();
+  }
+
+  const rows = await db
+    .select()
+    .from(transcripts)
+    .where(inArray(transcripts.turnId, turnIds));
+
+  return new Map(rows.map((row) => [row.turnId, toTranscript(row)] as const));
 }
 
 export type SaveTranscriptForTurnResult = {

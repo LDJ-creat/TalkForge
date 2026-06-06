@@ -345,5 +345,6 @@ describe("ASR transcription pipeline", () => {
     });
 
     expect(registry.listRegisteredJobs()).toContain("asr.transcribe");
+    expect(registry.listRegisteredJobs()).toContain("correction.analyze");
   });
 });

@@ -1,4 +1,4 @@
-﻿import { eq } from "drizzle-orm";
+﻿import { asc, eq } from "drizzle-orm";
 
 import type { CreateTurnInput } from "@/domain/turn";
 
@@ -64,4 +64,14 @@ export async function updateTurnTranscriptText(
     .returning();
 
   return row ? toTurn(row) : null;
+}
+
+export async function listTurnsBySessionId(db: TalkForgeDatabase, sessionId: string) {
+  const rows = await db
+    .select()
+    .from(turns)
+    .where(eq(turns.sessionId, sessionId))
+    .orderBy(asc(turns.startedAt));
+
+  return rows.map(toTurn);
 }

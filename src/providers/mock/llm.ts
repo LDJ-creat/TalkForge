@@ -1,5 +1,9 @@
 import { createProviderError } from "../errors";
 import type { LlmCorrectionProvider, LlmReportProvider } from "../llm/contract";
+import {
+  ASR_UNCERTAIN_CONFIDENCE_THRESHOLD,
+  isLowConfidenceTranscript,
+} from "../llm/correction-policy";
 import type {
   CorrectionAnalysisResult,
   CorrectionAnalyzeInput,
@@ -34,7 +38,7 @@ export class MockLlmProvider implements LlmCorrectionProvider, LlmReportProvider
     }
 
     const confidence = input.transcriptConfidence ?? 1;
-    if (confidence < 0.6) {
+    if (isLowConfidenceTranscript(confidence)) {
       return {
         provider: this.name,
         corrections: [
@@ -48,6 +52,8 @@ export class MockLlmProvider implements LlmCorrectionProvider, LlmReportProvider
         metadata: {
           turnId: input.turnId,
           mock: true,
+          lowConfidenceThreshold: ASR_UNCERTAIN_CONFIDENCE_THRESHOLD,
+          promptAttached: Boolean(input.prompt),
         },
       };
     }
@@ -68,6 +74,8 @@ export class MockLlmProvider implements LlmCorrectionProvider, LlmReportProvider
         metadata: {
           turnId: input.turnId,
           mock: true,
+          lowConfidenceThreshold: ASR_UNCERTAIN_CONFIDENCE_THRESHOLD,
+          promptAttached: Boolean(input.prompt),
         },
       };
     }
@@ -78,6 +86,7 @@ export class MockLlmProvider implements LlmCorrectionProvider, LlmReportProvider
       metadata: {
         turnId: input.turnId,
         mock: true,
+        promptAttached: Boolean(input.prompt),
       },
     };
   }
