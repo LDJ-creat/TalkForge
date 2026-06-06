@@ -15,11 +15,20 @@ export {
   createTurn,
   getTurnById,
   linkTurnAudioSegment,
+  listTurnsBySessionId,
   updateTurnTranscriptText,
 } from "./turn-repository";
 export {
   createTranscript,
   getTranscriptById,
   getTranscriptByTurnId,
+  getTranscriptsByTurnIds,
   saveTranscriptForTurn,
 } from "./transcript-repository";
+export {
+  createCorrection,
+  createCorrections,
+  deleteCorrectionsByTurnId,
+  getCorrectionsByTurnId,
+  saveCorrectionsForTurnIfAbsent,
+} from "./correction-repository";
