@@ -1,3 +1,4 @@
+import type { Report } from "@/domain/report";
 import type { Scenario } from "@/domain/scenario";
 import type { SessionStatus } from "@/domain/enums";
 
@@ -56,6 +57,7 @@ export type ConversationSession = {
   startedAt: string;
   endedAt?: string;
   realtimeProvider?: string;
+  backendLinked?: boolean;
 };
 
 export type ConversationViewState = {
@@ -66,9 +68,12 @@ export type ConversationViewState = {
   connectionStatus: ConnectionStatus;
   turnStatus: TurnStatus;
   transcripts: TranscriptEntry[];
+  mockTurnCount: number;
   scenarioProgress: LocalScenarioProgressSnapshot | null;
   progressSource: ProgressSource;
   endingState: EndingState;
   endingSuggestionReason: EndingSuggestionReason | null;
   errorMessage: string | null;
+  report: Report | null;
+  reportStatus: "idle" | "loading" | "ready" | "unavailable";
 };

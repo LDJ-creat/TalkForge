@@ -8,6 +8,7 @@ import type { Scenario } from "@/domain/scenario";
 import { useConversationStore } from "@/features/conversation";
 import { SCENARIO_PROGRESS_REFRESH_INTERVAL_MS } from "@/features/conversation/types";
 
+import { SessionReportPanel } from "./session-report-panel";
 import { SessionStatusBar } from "./session-status-bar";
 import { TranscriptPanel } from "./transcript-panel";
 import { VoiceVisualizer } from "./voice-visualizer";
@@ -26,6 +27,8 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
     endingSuggestionReason,
     scenarioProgress,
     errorMessage,
+    report,
+    reportStatus,
   } = useConversationStore(
     useShallow((state) => ({
       session: state.session,
@@ -36,10 +39,13 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
       endingSuggestionReason: state.endingSuggestionReason,
       scenarioProgress: state.scenarioProgress,
       errorMessage: state.errorMessage,
+      report: state.report,
+      reportStatus: state.reportStatus,
     })),
   );
 
   const startSession = useConversationStore((state) => state.startSession);
+  const submitMockPracticeTurn = useConversationStore((state) => state.submitMockPracticeTurn);
   const requestEndSession = useConversationStore((state) => state.requestEndSession);
   const refreshScenarioProgress = useConversationStore((state) => state.refreshScenarioProgress);
 
@@ -71,6 +77,11 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
     connectionStatus === "disconnecting" ||
     endingState === "user_requested";
   const isCompleted = session?.status === "completed" || endingState === "completed";
+  const showMockPracticeButton =
+    isSessionActive &&
+    session?.backendLinked === true &&
+    connectionStatus === "connected" &&
+    !isEnding;
   const showEndingSuggestion =
     endingState === "ai_suggested" && scenarioProgress?.shouldSuggestEnding === true;
 
@@ -112,6 +123,21 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
         <section className="conversation-panel">
           <h2 className="conversation-panel__title">Voice practice</h2>
           <VoiceVisualizer turnStatus={turnStatus} />
+          {showMockPracticeButton ? (
+            <button
+              type="button"
+              className="button button--primary conversation-practice-button"
+              data-testid="mock-practice-turn-button"
+              onClick={() => void submitMockPracticeTurn()}
+              disabled={
+                turnStatus === "user_speaking" ||
+                turnStatus === "user_processing" ||
+                turnStatus === "assistant_processing"
+              }
+            >
+              Send practice response
+            </button>
+          ) : null}
           <SessionStatusBar
             connectionStatus={connectionStatus}
             turnStatus={turnStatus}
@@ -125,10 +151,10 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
           ) : null}
           {isCompleted ? (
             <p className="ending-banner" data-testid="session-ended-banner">
-              Practice ended. Your session feedback will be ready after async processing in a
-              later milestone.
+              Practice ended. Review your session report below when processing finishes.
             </p>
           ) : null}
+          {isCompleted ? <SessionReportPanel report={report} status={reportStatus} /> : null}
         </section>
 
         <TranscriptPanel entries={transcripts} />

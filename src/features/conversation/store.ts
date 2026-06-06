@@ -3,18 +3,23 @@ import { create } from "zustand";
 import type { Scenario } from "@/domain/scenario";
 
 import { completeSessionOnServer } from "./complete-session-api";
+import { fetchSessionTurnsFromServer } from "./create-turn-api";
 import { mapRealtimeCredentials } from "./credentials";
 import { evaluateLocalScenarioProgress } from "./evaluate-local-progress";
+import { pollSessionReportFromServer } from "./fetch-report-api";
 import {
   fetchSessionProgressFromServer,
   type ServerScenarioProgressSnapshot,
 } from "./fetch-session-progress-api";
+import { getNextMockUserTurnLine, submitMockUserTurn } from "./mock-user-turn";
 import {
   createConversationSessionId,
   createOpeningTranscript,
   mockStartRealtimeSession,
   mockStopRealtimeSession,
 } from "./mock-session";
+import { startSessionOnServer } from "./start-session-api";
+import { mergeTranscriptsWithServerTurns } from "./sync-transcripts";
 import type {
   ConnectionStatus,
   ConversationViewState,
@@ -25,6 +30,7 @@ import type {
 type ConversationStore = ConversationViewState & {
   selectScenario: (scenario: Scenario) => void;
   startSession: (scenario: Scenario) => Promise<void>;
+  submitMockPracticeTurn: () => Promise<void>;
   refreshScenarioProgress: () => void;
   syncSessionProgressFromServer: () => Promise<void>;
   requestEndSession: () => Promise<void>;
@@ -40,11 +46,14 @@ const initialState: ConversationViewState = {
   connectionStatus: "idle",
   turnStatus: "idle",
   transcripts: [],
+  mockTurnCount: 0,
   scenarioProgress: null,
   progressSource: "unknown",
   endingState: "none",
   endingSuggestionReason: null,
   errorMessage: null,
+  report: null,
+  reportStatus: "idle",
 };
 
 type StoreSet = (
@@ -155,6 +164,29 @@ function shouldStopMockSession(connectionStatus: ConnectionStatus): boolean {
   );
 }
 
+async function syncSessionTranscriptsFromServer(
+  set: StoreSet,
+  get: StoreGet,
+): Promise<void> {
+  const { session } = get();
+  if (!session?.backendLinked) {
+    return;
+  }
+
+  try {
+    const result = await fetchSessionTurnsFromServer(session.id);
+    if (!result?.turns.length) {
+      return;
+    }
+
+    set((state) => ({
+      transcripts: mergeTranscriptsWithServerTurns(state.transcripts, result.turns),
+    }));
+  } catch {
+    // Best-effort sync after background jobs update turn transcripts.
+  }
+}
+
 export const useConversationStore = create<ConversationStore>((set, get) => ({
   ...initialState,
 
@@ -181,13 +213,13 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
     }
 
     const epoch = bumpSessionEpoch(set, get);
-    const sessionId = createConversationSessionId();
+    const provisionalSessionId = createConversationSessionId();
     const startedAt = new Date().toISOString();
 
     set({
       selectedScenario: scenario,
       session: {
-        id: sessionId,
+        id: provisionalSessionId,
         scenarioId: scenario.id,
         status: "active",
         startedAt,
@@ -196,16 +228,42 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       connectionStatus: "connecting",
       turnStatus: "idle",
       transcripts: [],
+      mockTurnCount: 0,
       scenarioProgress: null,
       progressSource: "unknown",
       endingState: "none",
       endingSuggestionReason: null,
       errorMessage: null,
+      report: null,
+      reportStatus: "idle",
     });
 
     try {
+      const serverStart = await startSessionOnServer(scenario.id);
+
+      if (!isSessionEpochCurrent(get, epoch) || isSessionEnding(get)) {
+        return;
+      }
+
+      if (serverStart) {
+        const openingTranscript = createOpeningTranscript(scenario);
+
+        set({
+          session: serverStart.session,
+          realtimeCredentials: serverStart.realtimeCredentials,
+          connectionStatus: "connected",
+          turnStatus: "assistant_speaking",
+          transcripts: [openingTranscript],
+          progressSource: "server",
+        });
+
+        setTurnStatus(set, "idle");
+        await get().syncSessionProgressFromServer();
+        return;
+      }
+
       const credentials = await mockStartRealtimeSession({
-        sessionId,
+        sessionId: provisionalSessionId,
         scenario,
       });
 
@@ -218,7 +276,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
 
       set({
         session: {
-          id: sessionId,
+          id: provisionalSessionId,
           scenarioId: scenario.id,
           status: "active",
           startedAt,
@@ -243,13 +301,66 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         turnStatus: "idle",
         realtimeCredentials: null,
         session: {
-          id: sessionId,
+          id: createConversationSessionId(),
           scenarioId: scenario.id,
           status: "failed",
-          startedAt,
+          startedAt: new Date().toISOString(),
           endedAt: new Date().toISOString(),
         },
         errorMessage: "Could not start the practice session. Please try again.",
+      });
+    }
+  },
+
+  async submitMockPracticeTurn() {
+    const { session, connectionStatus, mockTurnCount, endingState } = get();
+
+    if (
+      !session ||
+      session.status !== "active" ||
+      session.backendLinked !== true ||
+      connectionStatus !== "connected" ||
+      (endingState !== "none" && endingState !== "ai_suggested")
+    ) {
+      return;
+    }
+
+    const turnIndex = mockTurnCount;
+    const transcriptText = getNextMockUserTurnLine(turnIndex);
+
+    setTurnStatus(set, "user_speaking");
+    set({ errorMessage: null });
+
+    try {
+      setTurnStatus(set, "user_processing");
+
+      const result = await submitMockUserTurn({
+        sessionId: session.id,
+        transcriptText,
+        turnIndex,
+      });
+
+      set((state) => ({
+        mockTurnCount: state.mockTurnCount + 1,
+        turnStatus: "assistant_speaking",
+        transcripts: [
+          ...state.transcripts,
+          result.userTranscript,
+          result.assistantTranscript,
+        ],
+      }));
+
+      setTurnStatus(set, "idle");
+      set({ progressSource: "server" });
+      await syncSessionTranscriptsFromServer(set, get);
+      await get().syncSessionProgressFromServer();
+    } catch (error) {
+      setTurnStatus(set, "idle");
+      set({
+        errorMessage:
+          error instanceof Error
+            ? error.message
+            : "Could not submit practice turn. Please try again.",
       });
     }
   },
@@ -329,12 +440,26 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         realtimeCredentials: null,
         connectionStatus: "disconnected",
         endingState: "completed",
+        reportStatus: session.backendLinked ? "loading" : "idle",
       });
 
-      try {
-        await completeSessionOnServer(session.id);
-      } catch {
-        // Best-effort backend completion for client-only mock sessions.
+      if (session.backendLinked) {
+        try {
+          await completeSessionOnServer(session.id);
+          const report = await pollSessionReportFromServer(session.id);
+          set({
+            report,
+            reportStatus: report ? "ready" : "unavailable",
+          });
+        } catch {
+          set({ reportStatus: "unavailable" });
+        }
+      } else {
+        try {
+          await completeSessionOnServer(session.id);
+        } catch {
+          // Best-effort backend completion for client-only mock sessions.
+        }
       }
     } catch {
       set({
