@@ -101,6 +101,7 @@ describe("IndexedDbTurnAudioCacheAdapter", () => {
       turnId: "22222222-2222-4222-8222-222222222222",
       sessionId: "11111111-1111-4111-8111-111111111111",
       blob: new Blob(["audio"], { type: "audio/webm" }),
+      durationMs: 1_200,
     });
 
     const entry = await adapter.get("22222222-2222-4222-8222-222222222222");

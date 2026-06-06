@@ -65,6 +65,7 @@ export function createIndexedDbTurnAudioCacheAdapter(
         turnId: input.turnId,
         sessionId: input.sessionId,
         blob: input.blob,
+        durationMs: input.durationMs,
         uploadStatus: "pending",
         updatedAt: new Date().toISOString(),
       };

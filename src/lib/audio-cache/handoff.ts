@@ -1,4 +1,6 @@
-﻿import type { TurnAudioCacheAdapter } from "./types";
+﻿import { REQUEST_USER_ID_HEADER } from "@/shared/request-user";
+
+import type { TurnAudioCacheAdapter } from "./types";
 
 export type UploadTurnAudioHandoffInput = {
   userId: string;
@@ -27,6 +29,7 @@ function getBaseUrl(appBaseUrl?: string): string {
 
 async function createUploadTarget(
   input: UploadTurnAudioHandoffInput,
+  sizeBytes: number,
   fetchImpl: typeof fetch,
 ) {
   const response = await fetchImpl(
@@ -35,9 +38,9 @@ async function createUploadTarget(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-talkforge-user-id": input.userId,
+        [REQUEST_USER_ID_HEADER]: input.userId,
       },
-      body: JSON.stringify({ sizeBytes: 0 }),
+      body: JSON.stringify({ sizeBytes }),
     },
   );
 
@@ -63,7 +66,7 @@ async function finalizeUpload(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-talkforge-user-id": input.userId,
+        [REQUEST_USER_ID_HEADER]: input.userId,
       },
       body: JSON.stringify({
         objectKey,
@@ -89,7 +92,13 @@ export async function uploadTurnAudioFromCacheEntry(
   }
 
   const sizeBytes = entry.blob.size;
-  const target = await createUploadTarget({ ...input, fetchImpl }, fetchImpl);
+  const durationMs = input.durationMs > 0 ? input.durationMs : entry.durationMs;
+  if (durationMs <= 0) {
+    throw new Error(`Turn audio cache entry ${input.turnId} is missing a valid durationMs.`);
+  }
+
+  const handoffInput = { ...input, durationMs, fetchImpl };
+  const target = await createUploadTarget(handoffInput, sizeBytes, fetchImpl);
   const uploadResponse = await fetchImpl(target.uploadTarget.uploadUrl, {
     method: target.uploadTarget.method,
     headers: target.uploadTarget.headers,
@@ -101,7 +110,7 @@ export async function uploadTurnAudioFromCacheEntry(
     throw new Error(`Audio upload failed (${uploadResponse.status}).`);
   }
 
-  await finalizeUpload({ ...input, fetchImpl }, target.objectKey, sizeBytes, fetchImpl);
+  await finalizeUpload(handoffInput, target.objectKey, sizeBytes, fetchImpl);
   await adapter.markUploaded(input.turnId, target.objectKey);
 
   return {
@@ -123,7 +132,7 @@ export async function retryPendingTurnAudioUploads(
         userId: input.userId,
         turnId: entry.turnId,
         sessionId: entry.sessionId,
-        durationMs: 0,
+        durationMs: entry.durationMs,
         fetchImpl,
         appBaseUrl: input.appBaseUrl,
       });

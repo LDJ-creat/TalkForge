@@ -45,7 +45,7 @@ export function createWorkerRegistry(): WorkerRegistry {
 
   const registry: WorkerRegistry = {
     register(name, handler) {
-      handlers.set(name, handler);
+      handlers.set(name, handler as WorkerHandler);
       return registry;
     },
     getHandler(name) {
