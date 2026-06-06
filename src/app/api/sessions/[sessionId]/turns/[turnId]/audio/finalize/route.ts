@@ -1,6 +1,7 @@
 import { jsonError, readJsonBody, requireRequestUserId } from "@/server/api/http";
 import { AudioUploadServiceError } from "@/server/storage/errors";
 import { getDb } from "@/server/db/client";
+import { getQueueAdapter } from "@/server/queue/provider";
 import { finalizeTurnAudioUpload } from "@/server/storage/audio-upload";
 import { getStorageProvider } from "@/server/storage/provider";
 
@@ -30,17 +31,22 @@ export async function POST(
       );
     }
 
-    const result = await finalizeTurnAudioUpload(getDb(), getStorageProvider(), {
-      sessionId,
-      turnId,
-      userId,
-      objectKey: body.objectKey,
-      durationMs: body.durationMs,
-      sizeBytes: body.sizeBytes,
-      format: body.format,
-      codec: body.codec,
-      sampleRate: body.sampleRate,
-    });
+    const result = await finalizeTurnAudioUpload(
+      getDb(),
+      getStorageProvider(),
+      {
+        sessionId,
+        turnId,
+        userId,
+        objectKey: body.objectKey,
+        durationMs: body.durationMs,
+        sizeBytes: body.sizeBytes,
+        format: body.format,
+        codec: body.codec,
+        sampleRate: body.sampleRate,
+      },
+      { queueAdapter: getQueueAdapter() },
+    );
 
     return Response.json(result);
   } catch (error) {

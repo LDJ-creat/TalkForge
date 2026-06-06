@@ -26,11 +26,20 @@ vi.mock("@/server/db/repositories/turn-repository", () => ({
 }));
 
 const getAudioSegmentByTurnId = vi.fn();
+const enqueueAsrTranscribeJob = vi.fn();
 
 vi.mock("@/server/db/repositories/audio-segment-repository", () => ({
   createAudioSegment: (...args: unknown[]) => createAudioSegment(...args),
   getAudioSegmentByTurnId: (...args: unknown[]) => getAudioSegmentByTurnId(...args),
 }));
+
+vi.mock("@/queue/enqueue", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/queue/enqueue")>();
+  return {
+    ...actual,
+    enqueueAsrTranscribeJob: (...args: unknown[]) => enqueueAsrTranscribeJob(...args),
+  };
+});
 
 describe("audio upload service", () => {
   const db = {
@@ -101,6 +110,57 @@ describe("audio upload service", () => {
     expect(createAudioSegment).toHaveBeenCalled();
     expect(linkTurnAudioSegment).toHaveBeenCalledWith(db, TURN_ID, "44444444-4444-4444-8444-444444444444");
     expect(result.audioSegment.objectKey).toBe(OBJECT_KEY);
+    expect(result.asrJobEnqueued).toBe(false);
+  });
+
+  it("enqueues an ASR job when a queue adapter is provided", async () => {
+    const uploadTarget = await storage.createUploadTarget({
+      objectKey: OBJECT_KEY,
+      contentType: "audio/webm",
+      sizeBytes: 5,
+    });
+    await storage.writeUploadedObject({
+      objectKey: uploadTarget.objectKey,
+      body: Buffer.from("audio"),
+      contentType: "audio/webm",
+    });
+
+    createAudioSegment.mockResolvedValue({
+      id: "44444444-4444-4444-8444-444444444444",
+      turnId: TURN_ID,
+      objectKey: OBJECT_KEY,
+      format: "webm",
+      codec: "opus",
+      durationMs: 1200,
+      sizeBytes: 5,
+      createdAt: "2026-06-06T00:00:00.000Z",
+    });
+    linkTurnAudioSegment.mockResolvedValue({ id: TURN_ID, audioSegmentId: "44444444-4444-4444-8444-444444444444" });
+    enqueueAsrTranscribeJob.mockResolvedValue({ id: "job-1", status: "pending" });
+
+    const queueAdapter = { enqueue: vi.fn() };
+    const result = await finalizeTurnAudioUpload(
+      db as never,
+      storage,
+      {
+        sessionId: SESSION_ID,
+        turnId: TURN_ID,
+        userId: USER_ID,
+        objectKey: OBJECT_KEY,
+        durationMs: 1200,
+        sizeBytes: 5,
+      },
+      { queueAdapter: queueAdapter as never },
+    );
+
+    expect(enqueueAsrTranscribeJob).toHaveBeenCalledWith(queueAdapter, {
+      turnId: TURN_ID,
+      sessionId: SESSION_ID,
+      audioSegmentId: "44444444-4444-4444-8444-444444444444",
+      audioObjectKey: OBJECT_KEY,
+      language: "en",
+    });
+    expect(result.asrJobEnqueued).toBe(true);
   });
 
   it("returns existing audio segment metadata idempotently", async () => {
@@ -137,5 +197,56 @@ describe("audio upload service", () => {
 
     expect(createAudioSegment).not.toHaveBeenCalled();
     expect(result.audioSegment.id).toBe("44444444-4444-4444-8444-444444444444");
+    expect(result.asrJobEnqueued).toBe(false);
+  });
+
+  it("enqueues ASR for an existing audio segment when a queue adapter is provided", async () => {
+    await storage.createUploadTarget({
+      objectKey: OBJECT_KEY,
+      contentType: "audio/webm",
+      sizeBytes: 5,
+    });
+    await storage.writeUploadedObject({
+      objectKey: OBJECT_KEY,
+      body: Buffer.from("audio"),
+      contentType: "audio/webm",
+    });
+
+    getAudioSegmentByTurnId.mockResolvedValue({
+      id: "44444444-4444-4444-8444-444444444444",
+      turnId: TURN_ID,
+      objectKey: OBJECT_KEY,
+      format: "webm",
+      codec: "opus",
+      durationMs: 1200,
+      sizeBytes: 5,
+      createdAt: "2026-06-06T00:00:00.000Z",
+    });
+    enqueueAsrTranscribeJob.mockResolvedValue({ id: "job-1", status: "pending" });
+
+    const queueAdapter = { enqueue: vi.fn() };
+    const result = await finalizeTurnAudioUpload(
+      db as never,
+      storage,
+      {
+        sessionId: SESSION_ID,
+        turnId: TURN_ID,
+        userId: USER_ID,
+        objectKey: OBJECT_KEY,
+        durationMs: 1200,
+        sizeBytes: 5,
+      },
+      { queueAdapter: queueAdapter as never },
+    );
+
+    expect(createAudioSegment).not.toHaveBeenCalled();
+    expect(enqueueAsrTranscribeJob).toHaveBeenCalledWith(queueAdapter, {
+      turnId: TURN_ID,
+      sessionId: SESSION_ID,
+      audioSegmentId: "44444444-4444-4444-8444-444444444444",
+      audioObjectKey: OBJECT_KEY,
+      language: "en",
+    });
+    expect(result.asrJobEnqueued).toBe(true);
   });
 });

@@ -134,6 +134,7 @@ export const transcripts = pgTable("transcripts", {
   id: uuid("id").primaryKey().defaultRandom(),
   turnId: uuid("turn_id")
     .notNull()
+    .unique()
     .references(() => turns.id, { onDelete: "cascade" }),
   provider: text("provider").notNull(),
   text: text("text").notNull(),

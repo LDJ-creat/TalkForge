@@ -2,6 +2,8 @@
 import type { UploadTarget } from "@/providers/storage/types";
 import type { CreateAudioSegmentInput } from "@/domain/audio-segment";
 
+import type { QueueAdapter } from "@/queue/adapter";
+import { enqueueAsrTranscribeJob } from "@/queue/enqueue";
 import type { TalkForgeDatabase } from "@/server/db/client";
 import {
   createAudioSegment,
@@ -40,6 +42,16 @@ export type FinalizeTurnAudioUploadInput = TurnAudioAccessInput & {
   format?: CreateAudioSegmentInput["format"];
   codec?: CreateAudioSegmentInput["codec"];
   sampleRate?: number;
+};
+
+export type FinalizeTurnAudioUploadOptions = {
+  queueAdapter?: QueueAdapter;
+};
+
+export type TurnAudioFinalizeResult = {
+  turnId: string;
+  audioSegment: Awaited<ReturnType<typeof createAudioSegment>>;
+  asrJobEnqueued: boolean;
 };
 
 export type TurnAudioUploadTargetResult = {
@@ -119,7 +131,8 @@ export async function finalizeTurnAudioUpload(
   db: TalkForgeDatabase,
   storageProvider: StorageProvider,
   input: FinalizeTurnAudioUploadInput,
-) {
+  options?: FinalizeTurnAudioUploadOptions,
+): Promise<TurnAudioFinalizeResult> {
   await assertSessionTurnAccess(db, input);
 
   const parsedObjectKey = parseTurnAudioObjectKey(input.objectKey);
@@ -147,7 +160,7 @@ export async function finalizeTurnAudioUpload(
     sizeBytes: input.sizeBytes,
   });
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const existing = await getAudioSegmentByTurnId(tx, input.turnId);
     if (existing) {
       return {
@@ -173,6 +186,23 @@ export async function finalizeTurnAudioUpload(
       audioSegment,
     };
   });
+
+  let asrJobEnqueued = false;
+  if (options?.queueAdapter) {
+    await enqueueAsrTranscribeJob(options.queueAdapter, {
+      turnId: input.turnId,
+      sessionId: input.sessionId,
+      audioSegmentId: result.audioSegment.id,
+      audioObjectKey: result.audioSegment.objectKey,
+      language: "en",
+    });
+    asrJobEnqueued = true;
+  }
+
+  return {
+    ...result,
+    asrJobEnqueued,
+  };
 }
 
 export async function deleteTurnAudio(

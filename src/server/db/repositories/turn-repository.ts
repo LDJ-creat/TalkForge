@@ -51,3 +51,17 @@ export async function clearTurnAudioSegment(db: TalkForgeDatabase, turnId: strin
 
   return row ? toTurn(row) : null;
 }
+
+export async function updateTurnTranscriptText(
+  db: TalkForgeDatabase,
+  turnId: string,
+  transcriptText: string,
+) {
+  const [row] = await db
+    .update(turns)
+    .set({ transcriptText })
+    .where(eq(turns.id, turnId))
+    .returning();
+
+  return row ? toTurn(row) : null;
+}
