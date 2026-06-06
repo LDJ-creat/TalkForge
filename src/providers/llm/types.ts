@@ -21,6 +21,11 @@ export type CorrectionAnalyzeInput = {
   recentContext: CorrectionContextTurn[];
   scenarioLevel: CefrLevel;
   scenarioConstraints?: string[];
+  /** Built by the correction pipeline for LLM providers that consume chat prompts. */
+  prompt?: {
+    system: string;
+    user: string;
+  };
 };
 
 export type CorrectionAnalysisItem = {
