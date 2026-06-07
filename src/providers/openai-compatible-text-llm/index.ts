@@ -24,6 +24,7 @@ export {
   parseCorrectionItemsFromContent,
   parseGoalJudgeSectionsFromContent,
   parseReportSectionsFromContent,
+  parseScenarioGenerateFromContent,
   parseJsonContent,
   extractJsonPayload,
   type ParseJsonResult,
@@ -32,6 +33,7 @@ export {
   CORRECTION_PROMPT_VERSION,
   GOAL_JUDGE_PROMPT_VERSION,
   REPORT_PROMPT_VERSION,
+  SCENARIO_GENERATE_PROMPT_VERSION,
 } from "./prompt-versions";
 export {
   parseCorrectionResponse,

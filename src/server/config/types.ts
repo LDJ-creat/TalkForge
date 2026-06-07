@@ -115,6 +115,7 @@ export type RuntimeConfig = {
     llmCorrection: ProviderSelection<TextLlmProviderName>;
     llmReport: ProviderSelection<TextLlmProviderName>;
     llmGoalJudge: ProviderSelection<TextLlmProviderName>;
+    llmScenarioGenerate: ProviderSelection<TextLlmProviderName>;
     tts: ProviderSelection<TtsProviderName>;
     pronunciation: ProviderSelection<PronunciationProviderName>;
     storage: ProviderSelection<StorageProviderName>;

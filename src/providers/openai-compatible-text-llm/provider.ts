@@ -4,6 +4,7 @@ import type {
   LlmCorrectionProvider,
   LlmGoalJudgeProvider,
   LlmReportProvider,
+  LlmScenarioGenerateProvider,
 } from "@/providers/llm/contract";
 import { buildHeuristicGoalJudgeResult } from "@/providers/llm/goal-judge-heuristic";
 import type { GoalJudgeInput, GoalJudgeResult } from "@/providers/llm/goal-judge-types";
@@ -14,6 +15,10 @@ import type {
   ReportGenerateInput,
   ReportGenerationResult,
 } from "@/providers/llm/types";
+import type {
+  ScenarioGenerateInput,
+  ScenarioGenerationResult,
+} from "@/providers/llm/scenario-generate-types";
 
 import { createChatCompletion } from "./client";
 import {
@@ -25,14 +30,17 @@ import {
   parseCorrectionItemsFromContent,
   parseGoalJudgeSectionsFromContent,
   parseReportSectionsFromContent,
+  parseScenarioGenerateFromContent,
 } from "./parse";
 import {
   CORRECTION_PROMPT_VERSION,
   GOAL_JUDGE_PROMPT_VERSION,
   REPORT_PROMPT_VERSION,
+  SCENARIO_GENERATE_PROMPT_VERSION,
 } from "./prompt-versions";
 import { buildGoalJudgePrompt } from "./prompts/goal-judge";
 import { buildReportPrompt } from "./prompts/report";
+import { buildScenarioGeneratePrompt } from "@/server/scenario-generation/prompt-builder";
 
 export type CreateOpenAiCompatibleTextLlmProviderOptions = {
   providerName: string;
@@ -62,7 +70,11 @@ function buildProviderDisplayName(providerName: string): string {
 }
 
 export class OpenAiCompatibleTextLlmProvider
-  implements LlmCorrectionProvider, LlmGoalJudgeProvider, LlmReportProvider
+  implements
+    LlmCorrectionProvider,
+    LlmGoalJudgeProvider,
+    LlmReportProvider,
+    LlmScenarioGenerateProvider
 {
   readonly name: string;
   private readonly config: OpenAiCompatibleTextLlmConfig;
@@ -106,6 +118,16 @@ export class OpenAiCompatibleTextLlmProvider
       provider: this.name,
       operation: "llm.scenarioJudge",
       fn: (context) => this.invokeGoalEvaluation(input, context),
+    });
+
+    return result;
+  }
+
+  async generateScenario(input: ScenarioGenerateInput): Promise<ScenarioGenerationResult> {
+    const { result } = await executeProviderCall({
+      provider: this.name,
+      operation: "llm.scenarioGenerate",
+      fn: (context) => this.invokeScenarioGeneration(input, context),
     });
 
     return result;
@@ -282,6 +304,54 @@ export class OpenAiCompatibleTextLlmProvider
       metadata,
     };
   }
+
+  async invokeScenarioGeneration(
+    input: ScenarioGenerateInput,
+    context: ProviderCallContext,
+  ): Promise<ScenarioGenerationResult> {
+    const prompt = buildScenarioGeneratePrompt(input);
+
+    const result = await createChatCompletion(
+      this.config,
+      {
+        model: this.config.model,
+        messages: [
+          { role: "system", content: prompt.system },
+          { role: "user", content: prompt.user },
+        ],
+        temperature: 0.5,
+        response_format: { type: "json_object" },
+      },
+      context,
+    );
+
+    const parsed = parseScenarioGenerateFromContent(result.content);
+    const metadata = {
+      model: result.model,
+      promptVersion: SCENARIO_GENERATE_PROMPT_VERSION,
+      finishReason: result.finishReason,
+      inputTokens: result.usage?.prompt_tokens,
+      outputTokens: result.usage?.completion_tokens,
+      parseFallback: !parsed.ok,
+      parseError: parsed.ok ? undefined : parsed.error,
+      descriptionLength: input.description.trim().length,
+    };
+
+    if (!parsed.ok) {
+      throw createProviderError({
+        provider: this.name,
+        code: "invalid_request",
+        message: parsed.error,
+        retryable: true,
+      });
+    }
+
+    return {
+      provider: this.name,
+      scenario: parsed.value,
+      metadata,
+    };
+  }
 }
 
 export function createOpenAiCompatibleTextLlmProvider(
@@ -294,7 +364,8 @@ export function isOpenAiCompatibleTextLlmProvider(
   provider:
     | LlmCorrectionProvider
     | LlmGoalJudgeProvider
-    | LlmReportProvider,
+    | LlmReportProvider
+    | LlmScenarioGenerateProvider,
 ): provider is OpenAiCompatibleTextLlmProvider {
   return provider instanceof OpenAiCompatibleTextLlmProvider;
 }

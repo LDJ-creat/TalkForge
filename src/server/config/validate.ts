@@ -113,6 +113,21 @@ export function collectRuntimeConfigIssues(
     );
   }
 
+  if (providers.llmScenarioGenerate.mode === "real") {
+    requireSecret(
+      issues,
+      secrets.llmApiKey,
+      "LLM_API_KEY",
+      `LLM_SCENARIO_GENERATE_PROVIDER="${providers.llmScenarioGenerate.name}"`,
+    );
+    requireTextLlmBaseUrl(
+      issues,
+      providers.llmScenarioGenerate.name,
+      secrets.llmBaseUrl,
+      "LLM_SCENARIO_GENERATE_PROVIDER",
+    );
+  }
+
   if (providers.tts.mode === "real") {
     requireSecret(
       issues,

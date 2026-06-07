@@ -2,6 +2,7 @@ import type {
   LlmCorrectionProvider,
   LlmGoalJudgeProvider,
   LlmReportProvider,
+  LlmScenarioGenerateProvider,
 } from "@/providers/llm/contract";
 import type { GoalJudgeInput, GoalJudgeResult } from "@/providers/llm/goal-judge-types";
 import type {
@@ -10,6 +11,10 @@ import type {
   ReportGenerateInput,
   ReportGenerationResult,
 } from "@/providers/llm/types";
+import type {
+  ScenarioGenerateInput,
+  ScenarioGenerationResult,
+} from "@/providers/llm/scenario-generate-types";
 import {
   buildGoalJudgePrompt,
   buildReportPrompt,
@@ -17,7 +22,9 @@ import {
   GOAL_JUDGE_PROMPT_VERSION,
   isOpenAiCompatibleTextLlmProvider,
   REPORT_PROMPT_VERSION,
+  SCENARIO_GENERATE_PROMPT_VERSION,
 } from "@/providers/openai-compatible-text-llm";
+import { buildScenarioGeneratePrompt } from "@/server/scenario-generation/prompt-builder";
 
 import type { AiInvocationTraceWriter } from "@/server/ai-tracing";
 import { executeTracedProviderCall } from "@/server/ai-tracing";
@@ -178,6 +185,55 @@ export function createTracedLlmReportProvider(
             true,
         }),
         extractRawResponse: (report) => report,
+      });
+
+      return result;
+    },
+  };
+}
+
+export function createTracedLlmScenarioGenerateProvider(
+  provider: LlmScenarioGenerateProvider,
+  traceWriter: AiInvocationTraceWriter,
+  options: TracedTextLlmProviderOptions,
+): LlmScenarioGenerateProvider {
+  return {
+    name: provider.name,
+    async generateScenario(
+      input: ScenarioGenerateInput,
+    ): Promise<ScenarioGenerationResult> {
+      const scenarioPrompt = buildScenarioGeneratePrompt(input);
+
+      const { result } = await executeTracedProviderCall({
+        traceWriter,
+        provider: provider.name,
+        model: options.model,
+        operation: "llm.scenarioGenerate",
+        promptVersion: SCENARIO_GENERATE_PROMPT_VERSION,
+        requestSummary: {
+          descriptionLength: input.description.trim().length,
+          referenceScenarioCount: input.referenceScenarios?.length ?? 0,
+        },
+        rawRequest: {
+          system: scenarioPrompt.system,
+          user: scenarioPrompt.user,
+        },
+        fn: (context) =>
+          isOpenAiCompatibleTextLlmProvider(provider)
+            ? provider.invokeScenarioGeneration(input, context)
+            : provider.generateScenario(input),
+        extractUsage: (generation) =>
+          extractUsageFromMetadata(generation.metadata as Record<string, unknown> | undefined),
+        extractResponseSummary: (generation) => ({
+          title: generation.scenario.title,
+          level: generation.scenario.level,
+          goalCount: generation.scenario.goals.length,
+          stageCount: generation.scenario.stages.length,
+          parseFallback:
+            (generation.metadata as { parseFallback?: boolean } | undefined)?.parseFallback ===
+            true,
+        }),
+        extractRawResponse: (generation) => generation,
       });
 
       return result;

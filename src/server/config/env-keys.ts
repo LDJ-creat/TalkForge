@@ -39,6 +39,7 @@ export const PROVIDER_ENV_KEYS = {
   llmCorrection: "LLM_CORRECTION_PROVIDER",
   llmReport: "LLM_REPORT_PROVIDER",
   llmGoalJudge: "LLM_GOAL_JUDGE_PROVIDER",
+  llmScenarioGenerate: "LLM_SCENARIO_GENERATE_PROVIDER",
   tts: "TTS_PROVIDER",
   pronunciation: "PRONUNCIATION_PROVIDER",
   storage: "STORAGE_PROVIDER",
