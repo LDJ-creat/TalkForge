@@ -1,3 +1,4 @@
+import type { AiInvocationLog } from "@/domain/ai-invocation-log";
 import type { AudioSegment } from "@/domain/audio-segment";
 import type { Correction } from "@/domain/correction";
 import type { PronunciationEvaluation } from "@/domain/pronunciation-evaluation";
@@ -15,6 +16,7 @@ import type { Transcript, TranscriptSegment } from "@/domain/transcript";
 import type { Turn } from "@/domain/turn";
 
 import type {
+  DbAiInvocationLog,
   DbAudioSegment,
   DbCorrection,
   DbPronunciationEvaluation,
@@ -241,6 +243,35 @@ export function toReport(row: DbReport): Report {
     shadowingRecommendations:
       row.shadowingRecommendations as Report["shadowingRecommendations"],
     nextPracticeSuggestion: row.nextPracticeSuggestion,
+    createdAt: row.createdAt,
+  };
+}
+
+export function toAiInvocationLog(row: DbAiInvocationLog): AiInvocationLog {
+  return {
+    id: row.id,
+    sessionId: row.sessionId ?? undefined,
+    turnId: row.turnId ?? undefined,
+    jobId: row.jobId ?? undefined,
+    provider: row.provider,
+    model: row.model,
+    operation: row.operation,
+    promptVersion: row.promptVersion ?? undefined,
+    inputObjectKey: row.inputObjectKey ?? undefined,
+    outputObjectKey: row.outputObjectKey ?? undefined,
+    requestSummary: row.requestSummary ?? undefined,
+    responseSummary: row.responseSummary ?? undefined,
+    rawRequestObjectKey: row.rawRequestObjectKey ?? undefined,
+    rawResponseObjectKey: row.rawResponseObjectKey ?? undefined,
+    status: row.status,
+    latencyMs: row.latencyMs,
+    retryCount: row.retryCount,
+    inputTokens: row.inputTokens ?? undefined,
+    outputTokens: row.outputTokens ?? undefined,
+    audioDurationMs: row.audioDurationMs ?? undefined,
+    costEstimate: row.costEstimate ?? undefined,
+    errorCode: row.errorCode ?? undefined,
+    errorMessage: row.errorMessage ?? undefined,
     createdAt: row.createdAt,
   };
 }

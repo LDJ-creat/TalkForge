@@ -66,3 +66,9 @@ export type {
   PrepareFreeSpeechEvaluationResult,
   SavePronunciationEvaluationResult,
 } from "./pronunciation-evaluation-repository";
+export {
+  countAiInvocationLogs,
+  createAiInvocationLog,
+  getAiInvocationLogById,
+  listAiInvocationLogsBySessionId,
+} from "./ai-invocation-log-repository";

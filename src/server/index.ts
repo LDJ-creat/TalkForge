@@ -1,6 +1,6 @@
 ﻿export * from "./db";
-export * from "./asr";
-export * from "./pronunciation";
+export * from "./ai-tracing";
+export * from "./asr";export * from "./pronunciation";
 export * from "./report";
 export * from "./scenario";
 export * from "./session";

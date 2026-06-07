@@ -1,6 +1,10 @@
 import { PROVIDER_ENV_KEYS } from "./env-keys";
+import path from "node:path";
+
 import {
   MOCK_PROVIDER_NAME,
+  type AiTracingConfig,
+  type AiTracingRawStorageBackend,
   type DatabaseProviderName,
   type ProviderMode,
   type ProviderSelection,
@@ -95,6 +99,73 @@ function parsePublicConfig(env: NodeJS.ProcessEnv): PublicClientConfig {
   };
 }
 
+function parseBooleanEnv(
+  env: NodeJS.ProcessEnv,
+  name: string,
+  fallback: boolean,
+): boolean {
+  const value = readEnv(env, name);
+  if (value === undefined) {
+    return fallback;
+  }
+  return value === "1" || value.toLowerCase() === "true";
+}
+
+function parseSampleRate(env: NodeJS.ProcessEnv): number {
+  const raw = readEnv(env, "AI_TRACING_SAMPLE_RATE");
+  if (!raw) {
+    return 1;
+  }
+  const parsed = Number.parseFloat(raw);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
+    return 1;
+  }
+  return parsed;
+}
+
+function parseRetentionDays(env: NodeJS.ProcessEnv): number | undefined {
+  const raw = readEnv(env, "AI_TRACING_RETENTION_DAYS");
+  if (!raw) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function resolveRawStorageBackend(
+  env: NodeJS.ProcessEnv,
+  nodeEnv: RuntimeConfig["nodeEnv"],
+): AiTracingRawStorageBackend {
+  const explicit = readEnv(env, "AI_TRACING_RAW_STORAGE");
+  if (explicit === "file" || explicit === "object" || explicit === "none") {
+    return explicit;
+  }
+
+  if (nodeEnv === "production") {
+    return "object";
+  }
+  return "file";
+}
+
+function parseAiTracingConfig(
+  env: NodeJS.ProcessEnv,
+  nodeEnv: RuntimeConfig["nodeEnv"],
+): AiTracingConfig {
+  const enabledDefault = nodeEnv !== "test";
+  return {
+    enabled: parseBooleanEnv(env, "AI_TRACING_ENABLED", enabledDefault),
+    captureRawRequest: parseBooleanEnv(env, "AI_TRACING_RAW_REQUEST", true),
+    captureRawResponse: parseBooleanEnv(env, "AI_TRACING_RAW_RESPONSE", true),
+    rawStorageBackend: resolveRawStorageBackend(env, nodeEnv),
+    sampleRate: parseSampleRate(env),
+    retentionDays: parseRetentionDays(env),
+    redactPii: parseBooleanEnv(env, "AI_TRACING_REDACT_PII", true),
+    localRoot:
+      readEnv(env, "AI_TRACING_LOCAL_ROOT") ??
+      path.join(process.cwd(), ".storage", "ai-traces"),
+  };
+}
+
 function usesOnlyMockProviders(
   providers: RuntimeConfig["providers"],
 ): boolean {
@@ -174,6 +245,7 @@ export function parseRuntimeConfigFromEnv(
     providers,
     secrets,
     public: parsePublicConfig(env),
+    aiTracing: parseAiTracingConfig(env, nodeEnv),
     usesOnlyMockProviders: usesOnlyMockProviders(providers),
   };
 }

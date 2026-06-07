@@ -1,0 +1,2 @@
+CREATE INDEX "ai_invocation_logs_session_created_idx" ON "ai_invocation_logs" USING btree ("session_id","created_at");--> statement-breakpoint
+CREATE INDEX "ai_invocation_logs_provider_operation_created_idx" ON "ai_invocation_logs" USING btree ("provider","operation","created_at");
