@@ -14,6 +14,7 @@ import { syncRealtimeAudioCapture } from "@/features/conversation/realtime/realt
 import { SCENARIO_PROGRESS_REFRESH_INTERVAL_MS } from "@/features/conversation/types";
 
 import { SessionReportPanel } from "./session-report-panel";
+import { ShadowingPracticePanel } from "./shadowing-practice-panel";
 import { SessionStatusBar } from "./session-status-bar";
 import { TranscriptPanel } from "./transcript-panel";
 import { VoiceVisualizer } from "./voice-visualizer";
@@ -40,6 +41,8 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
     errorMessage,
     report,
     reportStatus,
+    shadowingItems,
+    shadowingStatus,
   } = useConversationStore(
     useShallow((state) => ({
       session: state.session,
@@ -55,6 +58,8 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
       errorMessage: state.errorMessage,
       report: state.report,
       reportStatus: state.reportStatus,
+      shadowingItems: state.shadowingItems,
+      shadowingStatus: state.shadowingStatus,
     })),
   );
 
@@ -244,6 +249,9 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
             </p>
           ) : null}
           {isCompleted ? <SessionReportPanel report={report} status={reportStatus} /> : null}
+          {isCompleted ? (
+            <ShadowingPracticePanel items={shadowingItems} status={shadowingStatus} />
+          ) : null}
         </section>
 
         <TranscriptPanel entries={transcripts} />

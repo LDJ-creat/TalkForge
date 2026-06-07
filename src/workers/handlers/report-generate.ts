@@ -7,10 +7,12 @@ import {
   getScenarioProgressBySessionId,
   getSessionById,
   getTranscriptsByTurnIds,
+  isReportGenerationComplete,
   listTurnsBySessionId,
   prepareReportGeneration,
 } from "@/server/db/repositories";
 import type { LlmReportProvider } from "@/providers/llm/contract";
+import type { QueueAdapter } from "@/queue/adapter";
 import type { WorkerHandler } from "@/queue/worker-types";
 
 import {
@@ -18,10 +20,12 @@ import {
   getLlmReportProvider,
   type GenerateSessionReportDeps,
 } from "@/server/report";
+import { enqueueSessionShadowingGeneration } from "@/server/shadowing/enqueue-session-shadowing";
 
 export type CreateReportGenerateHandlerOptions = {
   db: TalkForgeDatabase;
   llmProvider?: LlmReportProvider;
+  queueAdapter?: QueueAdapter;
   deps?: Partial<GenerateSessionReportDeps>;
 };
 
@@ -64,11 +68,16 @@ export function createReportGenerateHandler(
   options: CreateReportGenerateHandlerOptions,
 ): WorkerHandler<"report.generate"> {
   const deps = createDbReportGenerateDeps(options);
+  const queueAdapter = options.queueAdapter;
 
   return async (payload, context) => {
-    await generateSessionReport(payload, deps, {
+    const result = await generateSessionReport(payload, deps, {
       attempts: context.attempts,
     });
+
+    if (queueAdapter && isReportGenerationComplete(result.report)) {
+      await enqueueSessionShadowingGeneration(queueAdapter, payload.sessionId);
+    }
   };
 }
 

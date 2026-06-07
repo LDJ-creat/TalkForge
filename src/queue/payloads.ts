@@ -39,12 +39,17 @@ export type ReportGeneratePayload = {
   sessionId: string;
 };
 
+export type ShadowingGeneratePayload = {
+  sessionId: string;
+};
+
 export type JobPayloadMap = {
   "asr.transcribe": AsrTranscribePayload;
   "correction.analyze": CorrectionAnalyzePayload;
   "evaluation.freeSpeech": EvaluationFreeSpeechPayload;
   "scenarioProgress.evaluate": ScenarioProgressEvaluatePayload;
   "report.generate": ReportGeneratePayload;
+  "shadowing.generate": ShadowingGeneratePayload;
 };
 
 export type JobPayload<TName extends JobName = JobName> = JobPayloadMap[TName];
@@ -264,6 +269,33 @@ export function validateReportGeneratePayload(
   };
 }
 
+export function validateShadowingGeneratePayload(
+  input: unknown,
+): PayloadValidationResult<ShadowingGeneratePayload> {
+  const errors: PayloadValidationError[] = [];
+
+  if (typeof input !== "object" || input === null) {
+    return {
+      valid: false,
+      errors: [{ field: "payload", message: "Payload must be an object." }],
+    };
+  }
+
+  const payload = input as Record<string, unknown>;
+  requireUuid(errors, "sessionId", payload.sessionId);
+
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
+  return {
+    valid: true,
+    payload: {
+      sessionId: payload.sessionId as string,
+    },
+  };
+}
+
 const payloadValidators: {
   [TName in JobName]: (
     input: unknown,
@@ -274,6 +306,7 @@ const payloadValidators: {
   "evaluation.freeSpeech": validateEvaluationFreeSpeechPayload,
   "scenarioProgress.evaluate": validateScenarioProgressEvaluatePayload,
   "report.generate": validateReportGeneratePayload,
+  "shadowing.generate": validateShadowingGeneratePayload,
 };
 
 export function validateJobPayload<TName extends JobName>(

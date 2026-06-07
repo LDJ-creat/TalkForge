@@ -7,6 +7,7 @@ import { fetchSessionTurnsFromServer } from "./create-turn-api";
 import { mapRealtimeCredentials } from "./credentials";
 import { evaluateLocalScenarioProgress } from "./evaluate-local-progress";
 import { pollSessionReportFromServer } from "./fetch-report-api";
+import { pollSessionShadowingFromServer } from "./fetch-shadowing-api";
 import {
   fetchSessionProgressFromServer,
   type ServerScenarioProgressSnapshot,
@@ -75,6 +76,8 @@ const initialState: ConversationViewState = {
   errorMessage: null,
   report: null,
   reportStatus: "idle",
+  shadowingItems: [],
+  shadowingStatus: "idle",
 };
 
 type StoreSet = (
@@ -335,6 +338,8 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       errorMessage: null,
       report: null,
       reportStatus: "idle",
+      shadowingItems: [],
+      shadowingStatus: "idle",
     });
     applyRealtimeLifecycle(set, "connecting");
 
@@ -640,18 +645,32 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         realtimeCredentials: null,
         endingState: "completed",
         reportStatus: session.backendLinked ? "loading" : "idle",
+        shadowingStatus: session.backendLinked ? "loading" : "idle",
       });
 
       if (session.backendLinked) {
         try {
           await completeSessionOnServer(session.id);
           const report = await pollSessionReportFromServer(session.id);
+          const shadowingItems = report
+            ? await pollSessionShadowingFromServer(session.id)
+            : [];
           set({
             report,
             reportStatus: report ? "ready" : "unavailable",
+            shadowingItems,
+            shadowingStatus:
+              shadowingItems.length > 0
+                ? "ready"
+                : report
+                  ? "unavailable"
+                  : "unavailable",
           });
         } catch {
-          set({ reportStatus: "unavailable" });
+          set({
+            reportStatus: "unavailable",
+            shadowingStatus: "unavailable",
+          });
         }
       } else {
         try {

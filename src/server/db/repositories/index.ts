@@ -77,3 +77,14 @@ export {
   findStandardAudioAssetByCacheKey,
   upsertStandardAudioAsset,
 } from "./standard-audio-asset-repository";
+export {
+  listShadowingItemsBySessionId,
+  prepareShadowingGeneration,
+  replaceShadowingItemsForSession,
+  updateShadowingItemStandardAudio,
+} from "./shadowing-item-repository";
+export type {
+  CreateShadowingItemRecordInput,
+  PrepareShadowingGenerationResult,
+  ReplaceShadowingItemsForSessionInput,
+} from "./shadowing-item-repository";
