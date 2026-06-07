@@ -2,14 +2,16 @@ import { createProviderError } from "@/providers/errors";
 import type { LlmCorrectionProvider, LlmReportProvider } from "@/providers/llm/contract";
 import { createMockLlmProvider } from "@/providers/mock/llm";
 import {
-  buildTextLlmProviderCacheKey,
-  createOpenAiCompatibleTextLlmProvider,
   isSupportedTextLlmProviderName,
   resolveTextLlmDefaults,
 } from "@/providers/openai-compatible-text-llm";
 import { getRuntimeConfig } from "@/server/config";
 import type { AiInvocationTraceWriter } from "@/server/ai-tracing";
 
+import {
+  getOrCreateOpenAiCompatibleTextLlmProvider,
+  resetOpenAiCompatibleTextLlmProviderCacheForTests,
+} from "./openai-text-llm-instance-cache";
 import {
   createTracedLlmCorrectionProvider,
   createTracedLlmReportProvider,
@@ -19,41 +21,7 @@ export type GetTextLlmProviderOptions = {
   traceWriter?: AiInvocationTraceWriter;
 };
 
-type CachedTextLlmProvider = ReturnType<typeof createOpenAiCompatibleTextLlmProvider>;
-
 let mockTextLlmProvider: ReturnType<typeof createMockLlmProvider> | undefined;
-const cachedTextLlmProviders = new Map<string, CachedTextLlmProvider>();
-
-function buildConfiguredProviderCacheKey(providerName: string): string {
-  const { secrets } = getRuntimeConfig();
-
-  return buildTextLlmProviderCacheKey({
-    providerName,
-    apiKey: secrets.llmApiKey ?? "",
-    apiBaseUrl: secrets.llmBaseUrl,
-    model: secrets.llmModel,
-  });
-}
-
-function createConfiguredTextLlmProvider(providerName: string): CachedTextLlmProvider {
-  const { secrets } = getRuntimeConfig();
-  const cacheKey = buildConfiguredProviderCacheKey(providerName);
-  const cached = cachedTextLlmProviders.get(cacheKey);
-
-  if (cached) {
-    return cached;
-  }
-
-  const provider = createOpenAiCompatibleTextLlmProvider({
-    providerName,
-    apiKey: secrets.llmApiKey ?? "",
-    apiBaseUrl: secrets.llmBaseUrl,
-    model: secrets.llmModel,
-  });
-  cachedTextLlmProviders.set(cacheKey, provider);
-
-  return provider;
-}
 
 function resolveBaseTextLlmProvider(
   providerName: string,
@@ -77,7 +45,7 @@ function resolveBaseTextLlmProvider(
     });
   }
 
-  return createConfiguredTextLlmProvider(providerName);
+  return getOrCreateOpenAiCompatibleTextLlmProvider(providerName);
 }
 
 function resolveModel(providerName: string): string {
@@ -134,5 +102,5 @@ export function getTextLlmProvider(
 
 export function resetTextLlmProviderForTests(): void {
   mockTextLlmProvider = undefined;
-  cachedTextLlmProviders.clear();
+  resetOpenAiCompatibleTextLlmProviderCacheForTests();
 }
