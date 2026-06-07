@@ -11,8 +11,13 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:seed": "tsx scripts/db-seed.ts"
+    "db:seed": "tsx scripts/db-seed.ts",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:check": "tsx scripts/infra-check.ts",
+    "worker": "tsx scripts/worker.ts"
   },
   "dependencies": {
     "@testing-library/jest-dom": "^6.9.1",

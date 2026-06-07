@@ -1,14 +1,7 @@
 import { isMemoryQueueAdapter } from "@/queue/memory-adapter";
-import { createWorkerRegistry } from "@/queue/worker-types";
 import { getRuntimeConfig } from "@/server/config";
-import { getAsrProvider } from "@/server/asr/provider";
-import { getDb } from "@/server/db/client";
-import { getLlmCorrectionProvider } from "@/server/correction/provider";
 import { logJobLifecycle } from "@/server/observability/log";
-import { getPronunciationProvider } from "@/server/pronunciation/provider";
-import { getLlmReportProvider } from "@/server/report/provider";
-import { getGoalJudgeProvider } from "@/server/scenario-progress/provider";
-import { registerP0WorkerHandlers } from "@/workers/register-p0-handlers";
+import { createP0WorkerRegistry } from "@/workers/create-p0-worker-registry";
 
 import { getQueueAdapter } from "./provider";
 
@@ -28,17 +21,7 @@ export function ensureP0WorkersRegistered(): void {
     return;
   }
 
-  const registry = createWorkerRegistry();
-  registerP0WorkerHandlers(registry, {
-    db: getDb(),
-    queueAdapter: adapter,
-    asrProvider: getAsrProvider(),
-    llmCorrectionProvider: getLlmCorrectionProvider(),
-    llmReportProvider: getLlmReportProvider(),
-    llmGoalJudgeProvider: getGoalJudgeProvider(),
-    pronunciationProvider: getPronunciationProvider(),
-  });
-
+  const registry = createP0WorkerRegistry({ queueAdapter: adapter });
   adapter.registerWorkerRegistry(registry);
   workersRegistered = true;
   logJobLifecycle("workers_registered", { jobName: "p0" });

@@ -1,0 +1,35 @@
+import { createWorkerRegistry } from "@/queue/worker-types";
+import type { WorkerRegistry } from "@/queue/worker-types";
+import { getAsrProvider } from "@/server/asr/provider";
+import { getLlmCorrectionProvider } from "@/server/correction/provider";
+import { getDb } from "@/server/db/client";
+import { getPronunciationProvider } from "@/server/pronunciation/provider";
+import { getLlmReportProvider } from "@/server/report/provider";
+import { getGoalJudgeProvider } from "@/server/scenario-progress/provider";
+import { getQueueAdapter } from "@/server/queue/provider";
+
+import {
+  registerP0WorkerHandlers,
+  type RegisterP0WorkerHandlersOptions,
+} from "./register-p0-handlers";
+
+export function createP0WorkerRegistry(
+  overrides: Partial<RegisterP0WorkerHandlersOptions> = {},
+): WorkerRegistry {
+  const registry = createWorkerRegistry();
+
+  registerP0WorkerHandlers(registry, {
+    db: overrides.db ?? getDb(),
+    queueAdapter: overrides.queueAdapter ?? getQueueAdapter(),
+    asrProvider: overrides.asrProvider ?? getAsrProvider(),
+    llmCorrectionProvider:
+      overrides.llmCorrectionProvider ?? getLlmCorrectionProvider(),
+    llmReportProvider: overrides.llmReportProvider ?? getLlmReportProvider(),
+    llmGoalJudgeProvider:
+      overrides.llmGoalJudgeProvider ?? getGoalJudgeProvider(),
+    pronunciationProvider:
+      overrides.pronunciationProvider ?? getPronunciationProvider(),
+  });
+
+  return registry;
+}

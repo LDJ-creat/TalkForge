@@ -7,7 +7,8 @@ P0 runs entirely on **mock providers** — no paid API keys required.
 ## Prerequisites
 
 - Node.js 20+
-- PostgreSQL (local)
+- PostgreSQL (local install or Docker Compose)
+- Redis (optional; required when using `QUEUE_PROVIDER=redis`)
 
 ## Quick start
 
@@ -22,6 +23,52 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000).
 
 `npm run db:seed` is recommended but no longer strictly required for the built-in scenarios: starting a session will auto-create the dev user and upsert seed scenarios when possible.
+
+## Real infrastructure (PostgreSQL + Redis)
+
+For local/staging runs with real PostgreSQL and Redis (P1 async worker path), use Docker Compose. Host ports **5434** (Postgres) and **6381** (Redis) avoid conflicts with other local services on the default 5432/6379 ports.
+
+```bash
+npm run infra:up
+npm run infra:check
+npm run db:push
+npm run db:seed
+```
+
+Update `.env` for real queue processing:
+
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5434/talkforge
+QUEUE_PROVIDER=redis
+REDIS_URL=redis://localhost:6381
+```
+
+Run the app and worker in separate terminals:
+
+```bash
+npm run dev
+npm run worker
+```
+
+Health endpoint: `GET /api/health` returns PostgreSQL and Redis status (503 when unhealthy).
+
+### Migrations
+
+- `npm run db:push` — apply the current Drizzle schema (recommended for local dev).
+- `npm run db:migrate` — apply committed SQL migrations from `drizzle/`.
+- `npm run db:generate` — generate a new migration after schema changes.
+
+### Teardown
+
+```bash
+npm run infra:down
+```
+
+To remove PostgreSQL data as well:
+
+```bash
+docker compose down -v
+```
 
 ## Environment
 
@@ -44,7 +91,7 @@ Authentication is a development header (`x-talkforge-user-id` / `NEXT_PUBLIC_DEV
 
 ### Queue note
 
-Leave `REDIS_URL` unset for local P0 demos. The app processes mock background jobs in-process via a memory queue. If you set `REDIS_URL`, you must also run a BullMQ worker process or jobs will enqueue but never execute, and reports will stay unavailable.
+Leave `REDIS_URL` unset for local P0 demos. The app processes mock background jobs in-process via a memory queue. If you set `QUEUE_PROVIDER=redis` and `REDIS_URL`, run `npm run worker` in a separate process or jobs will enqueue but never execute, and reports will stay unavailable.
 
 ## P0 mock demo flow (manual verification)
 
@@ -84,7 +131,12 @@ Leave `REDIS_URL` unset for local P0 demos. The app processes mock background jo
 | `npm run test` | Run Vitest suite |
 | `npm run lint` | ESLint |
 | `npm run db:push` | Apply Drizzle schema |
+| `npm run db:migrate` | Apply committed SQL migrations |
 | `npm run db:seed` | Seed dev user + built-in scenarios |
+| `npm run infra:up` | Start PostgreSQL and Redis via Docker Compose |
+| `npm run infra:down` | Stop Docker Compose services |
+| `npm run infra:check` | Verify PostgreSQL/Redis connectivity |
+| `npm run worker` | Start BullMQ worker for real queue mode |
 
 ## Architecture
 

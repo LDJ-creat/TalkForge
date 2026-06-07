@@ -393,7 +393,7 @@ describe("report generation worker", () => {
     await enqueueSessionReportGeneration(adapter, SESSION_ID);
     await enqueueSessionReportGeneration(adapter, SESSION_ID);
 
-    const first = await adapter.getJob(`report:${SESSION_ID}`);
+    const first = await adapter.getJob(`report-${SESSION_ID}`);
     expect(first?.name).toBe("report.generate");
     expect(first?.payload).toEqual({ sessionId: SESSION_ID });
   });
