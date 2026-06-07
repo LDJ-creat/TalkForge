@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -11,6 +10,8 @@ import {
 } from "@/features/scenario-create/api";
 import { formatScenarioRoleLine } from "@/lib/format-scenario-display";
 import { navCopy, scenarioCreateCopy } from "@/lib/ui-copy";
+
+import { BackLink } from "./back-link";
 
 type ScenarioCreateFormProps = {
   backHref?: string;
@@ -64,9 +65,7 @@ export function ScenarioCreateForm({ backHref = "/" }: ScenarioCreateFormProps) 
 
   return (
     <div className="scenario-create">
-      <Link href={backHref} className="scenario-entry__back">
-        {navCopy.backToScenarios}
-      </Link>
+      <BackLink href={backHref}>{navCopy.backToScenarios}</BackLink>
 
       <header className="scenario-create__header">
         <h1 className="scenario-entry__title">{scenarioCreateCopy.title}</h1>

@@ -1,6 +1,8 @@
 import type { ShadowingItem } from "@/domain/shadowing";
 import { shadowingCopy } from "@/lib/ui-copy";
 
+import { LoadingState } from "./loading-state";
+
 type ShadowingPracticePanelProps = {
   items: ShadowingItem[];
   status: "idle" | "loading" | "ready" | "unavailable";
@@ -35,7 +37,7 @@ export function ShadowingPracticePanel({
     return (
       <section className="shadowing-practice" data-testid="shadowing-practice-loading">
         <h2 className="shadowing-practice__title">{shadowingCopy.title}</h2>
-        <p>{shadowingCopy.loading}</p>
+        <LoadingState variant="inline" label={shadowingCopy.loading} />
       </section>
     );
   }

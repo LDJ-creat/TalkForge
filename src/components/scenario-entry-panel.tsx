@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 
 import type { Scenario } from "@/domain/scenario";
 import type { ScenarioHistoricalReport } from "@/domain/scenario-report-history";
@@ -9,7 +8,9 @@ import { fetchScenarioReportsFromServer } from "@/features/conversation/fetch-sc
 import { formatScenarioEntrySubtitle } from "@/lib/format-scenario-display";
 import { navCopy, scenarioEntryCopy } from "@/lib/ui-copy";
 
+import { BackLink } from "./back-link";
 import { HistoricalReportCard } from "./historical-report-card";
+import { LoadingState } from "./loading-state";
 
 type ScenarioEntryPanelProps = {
   scenario: Scenario;
@@ -46,9 +47,7 @@ export function ScenarioEntryPanel({ scenario, onStartPractice }: ScenarioEntryP
     <main className="scenario-entry" data-testid="scenario-entry-panel">
       <header className="scenario-entry__header">
         <div className="scenario-entry__info">
-          <Link href="/" className="scenario-entry__back">
-            {navCopy.allScenarios}
-          </Link>
+          <BackLink href="/">{navCopy.allScenarios}</BackLink>
           <h1 className="scenario-entry__title">{scenario.title}</h1>
           <p className="scenario-entry__subtitle">{formatScenarioEntrySubtitle(scenario)}</p>
           <p className="scenario-entry__description">{scenario.description}</p>
@@ -69,9 +68,11 @@ export function ScenarioEntryPanel({ scenario, onStartPractice }: ScenarioEntryP
         </h2>
 
         {status === "loading" ? (
-          <p className="scenario-entry__history-message" data-testid="scenario-history-loading">
-            {scenarioEntryCopy.loadingHistory}
-          </p>
+          <LoadingState
+            variant="skeleton-cards"
+            label={scenarioEntryCopy.loadingHistory}
+            testId="scenario-history-loading"
+          />
         ) : null}
 
         {status === "error" ? (

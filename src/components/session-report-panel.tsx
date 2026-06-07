@@ -1,6 +1,8 @@
 import type { Report } from "@/domain/report";
 import { reportCopy } from "@/lib/ui-copy";
 
+import { LoadingState } from "./loading-state";
+
 type SessionReportDetailsProps = {
   report: Report;
 };
@@ -87,7 +89,7 @@ export function SessionReportPanel({ report, status, onRetry }: SessionReportPan
     return (
       <section className="session-report" data-testid="session-report-loading">
         <h2 className="session-report__title">{reportCopy.title}</h2>
-        <p className="session-report__summary">{reportCopy.generating}</p>
+        <LoadingState variant="inline" label={reportCopy.generating} />
       </section>
     );
   }
