@@ -1,4 +1,4 @@
-import { createProviderError } from "@/providers/errors";
+import { createProviderError, type ProviderErrorCode } from "@/providers/errors";
 import type { ProviderCallContext } from "@/providers/runtime";
 
 import { buildChatCompletionsUrl, type OpenAiCompatibleTextLlmConfig } from "./config";
@@ -42,23 +42,47 @@ export type ChatCompletionResult = {
   finishReason?: string | null;
 };
 
-function mapHttpStatusToProviderCode(status: number) {
-  if (status === 401 || status === 403) {
-    return "authentication" as const;
+type ProviderErrorPayload = {
+  error?: {
+    message?: string;
+    code?: string;
+    type?: string;
+  };
+};
+
+function resolveProviderErrorCode(
+  status: number,
+  payload?: ProviderErrorPayload,
+): ProviderErrorCode {
+  const apiErrorCode = `${payload?.error?.code ?? ""} ${payload?.error?.type ?? ""}`.toLowerCase();
+
+  if (status === 401 || apiErrorCode.includes("invalidapikey")) {
+    return "authentication";
   }
+
+  if (
+    status === 429 ||
+    apiErrorCode.includes("quota") ||
+    apiErrorCode.includes("ratelimit") ||
+    apiErrorCode.includes("throttl")
+  ) {
+    return "rate_limited";
+  }
+
+  if (status === 403) {
+    return "authorization";
+  }
+
   if (status === 404) {
-    return "not_found" as const;
+    return "not_found";
   }
   if (status === 408 || status === 504) {
-    return "timeout" as const;
-  }
-  if (status === 429) {
-    return "rate_limited" as const;
+    return "timeout";
   }
   if (status >= 400 && status < 500) {
-    return "invalid_request" as const;
+    return "invalid_request";
   }
-  return "provider_unavailable" as const;
+  return "provider_unavailable";
 }
 
 function isRetryableStatus(status: number): boolean {
@@ -81,32 +105,36 @@ export async function createChatCompletion(
   });
 
   const responseText = await response.text();
-  let payload: ChatCompletionResponse | undefined;
+  let payload: ChatCompletionResponse | ProviderErrorPayload | undefined;
 
   if (responseText) {
     try {
-      payload = JSON.parse(responseText) as ChatCompletionResponse;
+      payload = JSON.parse(responseText) as ChatCompletionResponse | ProviderErrorPayload;
     } catch {
       payload = undefined;
     }
   }
 
   if (!response.ok) {
+    const errorPayload =
+      typeof payload === "object" && payload && "error" in payload
+        ? (payload as ProviderErrorPayload)
+        : undefined;
     const message =
-      typeof payload === "object" &&
-      payload &&
-      "error" in payload &&
-      typeof (payload as { error?: { message?: string } }).error?.message === "string"
-        ? (payload as { error: { message: string } }).error.message
+      typeof errorPayload?.error?.message === "string"
+        ? errorPayload.error.message
         : responseText || `Text LLM request failed with status ${response.status}.`;
+    const code = resolveProviderErrorCode(response.status, errorPayload);
 
     throw createProviderError({
       provider: config.providerName,
-      code: mapHttpStatusToProviderCode(response.status),
+      code,
       message,
-      retryable: isRetryableStatus(response.status),
+      retryable: isRetryableStatus(response.status) || code === "rate_limited",
       metadata: {
         status: response.status,
+        apiErrorCode: errorPayload?.error?.code,
+        apiErrorType: errorPayload?.error?.type,
       },
     });
   }
