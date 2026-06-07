@@ -4,7 +4,10 @@ import { coffeeOrderingScenario } from "@/server/db/seeds/scenarios";
 import { generateScenarioSystemInstructions } from "@/domain/scenario-prompt";
 import {
   buildQwenOmniRealtimeEndpoint,
+  buildQwenOmniOpeningSpeechEvents,
+  buildQwenOmniResponseCreateEvent,
   buildQwenOmniSessionConfig,
+  QWEN_OMNI_OPENING_USER_TEXT,
   buildQwenOmniSessionUpdateEvent,
   buildQwenOmniTokenUrl,
   createQwenOmniRealtimeProvider,
@@ -13,6 +16,8 @@ import {
   mintQwenOmniTemporaryToken,
   QWEN_OMNI_PROVIDER_NAME,
   resolveQwenOmniEndpoints,
+  resolveQwenOmniVoice,
+  shouldUseSemanticVad,
 } from "@/providers/qwen-omni";
 
 describe("Qwen Omni realtime config", () => {
@@ -40,6 +45,20 @@ describe("Qwen Omni realtime config", () => {
   });
 });
 
+describe("Qwen Omni voice resolution", () => {
+  it("maps qwen3.5 models to Tina when Cherry is configured", () => {
+    expect(
+      resolveQwenOmniVoice("qwen3.5-omni-flash-realtime", "Cherry"),
+    ).toBe("Tina");
+  });
+
+  it("keeps Cherry for qwen3-omni models", () => {
+    expect(
+      resolveQwenOmniVoice("qwen3-omni-flash-realtime", "Cherry"),
+    ).toBe("Cherry");
+  });
+});
+
 describe("Qwen Omni session config", () => {
   it("includes scenario system instructions in the session.update payload", () => {
     const instructions = generateScenarioSystemInstructions(coffeeOrderingScenario);
@@ -53,6 +72,46 @@ describe("Qwen Omni session config", () => {
     expect(updateEvent.session.instructions).toBe(instructions);
     expect(updateEvent.session.modalities).toEqual(["text", "audio"]);
     expect(updateEvent.session.turn_detection.type).toBe("server_vad");
+    expect(updateEvent.session.input_audio_transcription).toEqual({
+      model: "qwen3-asr-flash-realtime",
+    });
+  });
+
+  it("defaults to server_vad for sensitive mic capture", () => {
+    expect(shouldUseSemanticVad("qwen3.5-omni-flash-realtime")).toBe(false);
+
+    const sessionConfig = buildQwenOmniSessionConfig({
+      instructions: "test",
+      voice: "Cherry",
+      model: "qwen3.5-omni-flash-realtime",
+    });
+
+    expect(sessionConfig.turn_detection.type).toBe("server_vad");
+    expect(sessionConfig.turn_detection.threshold).toBe(0.35);
+  });
+
+  it("builds response.create for AI opening speech", () => {
+    expect(buildQwenOmniResponseCreateEvent()).toEqual({
+      type: "response.create",
+      response: {
+        modalities: ["text", "audio"],
+      },
+    });
+  });
+
+  it("builds opening speech as user item followed by response.create", () => {
+    const events = buildQwenOmniOpeningSpeechEvents();
+
+    expect(events).toHaveLength(2);
+    expect(events[0]).toEqual({
+      type: "conversation.item.create",
+      item: {
+        type: "message",
+        role: "user",
+        content: [{ type: "input_text", text: QWEN_OMNI_OPENING_USER_TEXT }],
+      },
+    });
+    expect(events[1]?.type).toBe("response.create");
   });
 });
 
