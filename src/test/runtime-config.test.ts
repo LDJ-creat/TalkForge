@@ -171,7 +171,7 @@ describe("runtime config", () => {
 
   it("formats validation failures with actionable issue lists", () => {
     try {
-      loadRuntimeConfig(withEnv({ ASR_PROVIDER: "openai" }));
+      loadRuntimeConfig(withEnv({ ASR_PROVIDER: "paraformer" }));
       expect.fail("Expected runtime config validation to fail.");
     } catch (error) {
       expect(error).toBeInstanceOf(RuntimeConfigError);

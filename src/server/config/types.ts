@@ -8,7 +8,7 @@ export type RealtimeProviderName =
   | "doubao"
   | (string & {});
 
-export type AsrProviderName = typeof MOCK_PROVIDER_NAME | (string & {});
+export type AsrProviderName = typeof MOCK_PROVIDER_NAME | "paraformer" | (string & {});
 
 export type TextLlmProviderName = typeof MOCK_PROVIDER_NAME | (string & {});
 
@@ -42,6 +42,8 @@ export type RuntimeSecrets = {
   realtimeVoice?: string;
   realtimeTokenTtlSec?: number;
   asrApiKey?: string;
+  asrBaseUrl?: string;
+  asrModel?: string;
   llmApiKey?: string;
   ttsApiKey?: string;
   pronunciationApiKey?: string;

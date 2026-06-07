@@ -90,6 +90,8 @@ export async function transcribeTurnAudio(
       audioObjectKey: payload.audioObjectKey,
       language: payload.language ?? "en",
       wordTimestamps: true,
+      sessionId: payload.sessionId,
+      turnId: payload.turnId,
     });
   } catch (error) {
     throw mapProviderErrorToJobError(error, {

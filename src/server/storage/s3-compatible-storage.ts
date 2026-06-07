@@ -273,4 +273,69 @@ export class S3CompatibleStorageProvider implements StorageProvider {
       throw normalizeProviderError(error, { provider: this.name });
     }
   }
+
+  async readObjectBody(objectKey: string): Promise<{
+    objectKey: string;
+    body: Buffer;
+    contentType?: string;
+  }> {
+    assertValidStorageObjectKey(objectKey);
+
+    try {
+      const response = await this.client.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: objectKey,
+        }),
+      );
+
+      if (!response.Body) {
+        throw createProviderError({
+          provider: this.name,
+          code: "not_found",
+          message: `Object ${objectKey} was not found.`,
+          retryable: false,
+        });
+      }
+
+      return {
+        objectKey,
+        body: await readS3ObjectBody(response.Body),
+        contentType: response.ContentType,
+      };
+    } catch (error) {
+      if (isS3NotFoundError(error)) {
+        throw createProviderError({
+          provider: this.name,
+          code: "not_found",
+          message: `Object ${objectKey} was not found.`,
+          retryable: false,
+          cause: error,
+        });
+      }
+      throw normalizeProviderError(error, { provider: this.name });
+    }
+  }
+}
+
+async function readS3ObjectBody(body: unknown): Promise<Buffer> {
+  if (Buffer.isBuffer(body)) {
+    return body;
+  }
+
+  if (body instanceof Uint8Array) {
+    return Buffer.from(body);
+  }
+
+  if (typeof body === "object" && body !== null && "transformToByteArray" in body) {
+    const bytes = await (body as { transformToByteArray: () => Promise<Uint8Array> })
+      .transformToByteArray();
+    return Buffer.from(bytes);
+  }
+
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of body as AsyncIterable<Uint8Array>) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
 }
