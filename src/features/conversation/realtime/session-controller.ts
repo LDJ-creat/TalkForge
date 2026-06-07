@@ -38,7 +38,8 @@ export type RealtimeSessionControllerEventPayload =
       role: TranscriptEntry["role"];
     }
   | { type: "diagnostics"; diagnostics: RealtimeConnectionDiagnostics }
-  | { type: "error"; message: string; recoverable: boolean; failed?: boolean };
+  | { type: "error"; message: string; recoverable: boolean; failed?: boolean }
+  | { type: "turn_persisted"; clientEntryId: string; serverTurnId: string };
 
 export type RealtimeSessionControllerEvent = {
   sessionEpoch: number;
@@ -303,6 +304,14 @@ async function startQwenOmniAudioPipeline(
   bindSharedMediaStream(stream);
 
   controllerState.turnSync = new RealtimeTurnSync({
+    onUserTurnPersisted: ({ clientEntryId, serverTurnId }) => {
+      options.onEvent({
+        sessionEpoch: controllerState.sessionEpoch,
+        type: "turn_persisted",
+        clientEntryId,
+        serverTurnId,
+      });
+    },
     sessionId,
     userId:
       typeof credentials.metadata?.userId === "string"

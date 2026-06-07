@@ -15,6 +15,10 @@ import {
 type RealtimeTurnSyncOptions = {
   sessionId: string;
   userId?: string;
+  onUserTurnPersisted?: (input: {
+    clientEntryId: string;
+    serverTurnId: string;
+  }) => void;
 };
 
 type PendingUserTurn = {
@@ -24,12 +28,14 @@ type PendingUserTurn = {
 export class RealtimeTurnSync {
   private readonly sessionId: string;
   private readonly userId: string;
+  private readonly onUserTurnPersisted?: RealtimeTurnSyncOptions["onUserTurnPersisted"];
   private pendingUserTurn: PendingUserTurn | null = null;
   private persistedTranscriptIds = new Set<string>();
 
   constructor(options: RealtimeTurnSyncOptions) {
     this.sessionId = options.sessionId;
     this.userId = resolveClientRequestUserId(options.userId);
+    this.onUserTurnPersisted = options.onUserTurnPersisted;
   }
 
   async onUserSpeechStarted(): Promise<void> {
@@ -71,6 +77,11 @@ export class RealtimeTurnSync {
       role: "user",
       transcriptText: entry.text,
       userId: this.userId,
+    });
+
+    this.onUserTurnPersisted?.({
+      clientEntryId: entry.id,
+      serverTurnId: turn.id,
     });
 
     const pendingTurnId = this.pendingUserTurn?.localTurnId;

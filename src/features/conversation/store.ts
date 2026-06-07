@@ -6,8 +6,7 @@ import { completeSessionOnServer } from "./complete-session-api";
 import { fetchSessionTurnsFromServer } from "./create-turn-api";
 import { mapRealtimeCredentials } from "./credentials";
 import { evaluateLocalScenarioProgress } from "./evaluate-local-progress";
-import { pollSessionReportFromServer } from "./fetch-report-api";
-import { pollSessionShadowingFromServer } from "./fetch-shadowing-api";
+import { refreshSessionReportAndShadowing } from "./refresh-session-results";
 import {
   fetchSessionProgressFromServer,
   type ServerScenarioProgressSnapshot,
@@ -36,7 +35,8 @@ import {
 } from "./realtime/session-controller";
 import { teardownRealtimeAudioCapture } from "./realtime/realtime-audio-bridge";
 import { startSessionOnServer } from "./start-session-api";
-import { mergeTranscriptsWithServerTurns } from "./sync-transcripts";
+import { pollTurnPronunciationFeedback } from "./poll-turn-pronunciation-feedback";
+import { applyServerTurnUpdate, mergeTranscriptsWithServerTurns } from "./sync-transcripts";
 import { resolveUsageLimitBannerMessage } from "@/shared/usage-limit-messages";
 
 import type {
@@ -58,6 +58,7 @@ type ConversationStore = ConversationViewState & {
   enterRealtimeFallback: () => void;
   interruptRealtimeAssistant: () => void;
   requestEndSession: () => Promise<void>;
+  retrySessionReport: () => Promise<void>;
   teardownSession: () => Promise<void>;
   reset: () => void;
 };
@@ -314,6 +315,48 @@ async function syncSessionTranscriptsFromServer(
   }
 }
 
+function scheduleTurnEvaluationPoll(
+  set: StoreSet,
+  get: StoreGet,
+  turnId: string,
+): void {
+  const { session } = get();
+  if (!session?.backendLinked || session.status !== "active") {
+    return;
+  }
+
+  const sessionId = session.id;
+  const sessionEpoch = get().sessionEpoch;
+
+  set((state) => ({
+    transcripts: state.transcripts.map((entry) =>
+      entry.id === turnId
+        ? {
+            ...entry,
+            pronunciationFeedback: {
+              evaluationStatus: "processing",
+            },
+          }
+        : entry,
+    ),
+  }));
+
+  void (async () => {
+    const serverTurn = await pollTurnPronunciationFeedback(sessionId, turnId);
+    if (!isSessionEpochCurrent(get, sessionEpoch) || get().session?.id !== sessionId) {
+      return;
+    }
+
+    if (!serverTurn) {
+      return;
+    }
+
+    set((state) => ({
+      transcripts: applyServerTurnUpdate(state.transcripts, serverTurn),
+    }));
+  })();
+}
+
 export const useConversationStore = create<ConversationStore>((set, get) => ({
   ...initialState,
 
@@ -515,6 +558,22 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
           errorMessage: event.message,
         });
         break;
+      case "turn_persisted":
+        set((state) => ({
+          transcripts: state.transcripts.map((entry) =>
+            entry.id === event.clientEntryId
+              ? {
+                  ...entry,
+                  id: event.serverTurnId,
+                  pronunciationFeedback: {
+                    evaluationStatus: "pending",
+                  },
+                }
+              : entry,
+          ),
+        }));
+        scheduleTurnEvaluationPoll(set, get, event.serverTurnId);
+        break;
       default:
         break;
     }
@@ -599,6 +658,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       set({ progressSource: "server" });
       await syncSessionTranscriptsFromServer(set, get);
       await get().syncSessionProgressFromServer();
+      scheduleTurnEvaluationPoll(set, get, result.turnId);
     } catch (error) {
       setTurnStatus(set, "idle");
       set({
@@ -693,11 +753,9 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
 
       if (session.backendLinked) {
         try {
-          await completeSessionOnServer(session.id);
-          const report = await pollSessionReportFromServer(session.id);
-          const shadowingItems = report
-            ? await pollSessionShadowingFromServer(session.id)
-            : [];
+          const { report, shadowingItems } = await refreshSessionReportAndShadowing(
+            session.id,
+          );
           set({
             report,
             reportStatus: report ? "ready" : "unavailable",
@@ -726,6 +784,41 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       set({
         connectionStatus: "error",
         errorMessage: "Could not end the session cleanly. Please refresh and try again.",
+      });
+    }
+  },
+
+  async retrySessionReport() {
+    const { session } = get();
+
+    if (!session || session.status !== "completed" || !session.backendLinked) {
+      return;
+    }
+
+    set({
+      report: null,
+      reportStatus: "loading",
+      shadowingItems: [],
+      shadowingStatus: "loading",
+    });
+
+    try {
+      const { report, shadowingItems } = await refreshSessionReportAndShadowing(session.id);
+      set({
+        report,
+        reportStatus: report ? "ready" : "unavailable",
+        shadowingItems,
+        shadowingStatus:
+          shadowingItems.length > 0
+            ? "ready"
+            : report
+              ? "unavailable"
+              : "unavailable",
+      });
+    } catch {
+      set({
+        reportStatus: "unavailable",
+        shadowingStatus: "unavailable",
       });
     }
   },

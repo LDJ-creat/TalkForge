@@ -6,6 +6,7 @@ import { useShallow } from "zustand/react/shallow";
 
 import type { Scenario } from "@/domain/scenario";
 import { useConversationStore } from "@/features/conversation";
+import { formatLatestEvaluationPlaceholder } from "@/features/conversation/format-pronunciation-feedback";
 import { isSessionUsageBlocked } from "@/shared/usage-limit-messages";
 import {
   canEnterFallback,
@@ -77,6 +78,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
   const interruptRealtimeAssistant = useConversationStore(
     (state) => state.interruptRealtimeAssistant,
   );
+  const retrySessionReport = useConversationStore((state) => state.retrySessionReport);
 
   useEffect(() => {
     const mountId = ++conversationShellMountSeq;
@@ -267,6 +269,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
             sessionStatus={session?.status}
             diagnostics={realtimeDiagnostics}
             showDebugDetails={SHOW_REALTIME_DEBUG}
+            evaluationPlaceholder={formatLatestEvaluationPlaceholder(transcripts)}
           />
           {errorMessage ? <p className="error-banner">{errorMessage}</p> : null}
           {showEndingSuggestion ? (
@@ -279,7 +282,17 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
               Practice ended. Review your session report below when processing finishes.
             </p>
           ) : null}
-          {isCompleted ? <SessionReportPanel report={report} status={reportStatus} /> : null}
+          {isCompleted ? (
+            <SessionReportPanel
+              report={report}
+              status={reportStatus}
+              onRetry={
+                reportStatus === "unavailable" && session?.backendLinked
+                  ? () => void retrySessionReport()
+                  : undefined
+              }
+            />
+          ) : null}
           {isCompleted ? (
             <ShadowingPracticePanel items={shadowingItems} status={shadowingStatus} />
           ) : null}

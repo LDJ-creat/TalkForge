@@ -70,7 +70,7 @@ describe("conversation store", () => {
     expect(isUuid(state.session!.id)).toBe(true);
     expect(state.transcripts).toHaveLength(1);
     expect(state.transcripts[0]?.role).toBe("assistant");
-    expect(state.turnStatus).toBe("user_speaking");
+    expect(state.turnStatus).toBe("idle");
 
     vi.useRealTimers();
   });
@@ -268,7 +268,12 @@ describe("conversation store", () => {
     const teardownPromise = useConversationStore.getState().teardownSession();
     await Promise.all([teardownPromise, vi.advanceTimersByTimeAsync(300)]);
 
-    expect(useConversationStore.getState()).toMatchObject(getConversationInitialState());
+    const state = useConversationStore.getState();
+    const { sessionEpoch, ...clearedState } = state;
+    const { sessionEpoch: _initialEpoch, ...initialState } =
+      getConversationInitialState();
+    expect(clearedState).toMatchObject(initialState);
+    expect(sessionEpoch).toBe(2);
 
     vi.useRealTimers();
   });

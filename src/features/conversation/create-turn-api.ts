@@ -1,3 +1,5 @@
+import type { EvaluationStatus } from "@/domain/enums";
+import type { TurnPronunciationFeedback } from "@/domain/pronunciation-feedback";
 import { REQUEST_USER_ID_HEADER, resolveClientRequestUserId } from "@/shared/request-user";
 
 export type CreateTurnOnServerInput = {
@@ -66,11 +68,16 @@ export async function fetchSessionTurnsFromServer(sessionId: string, userId?: st
   }
 
   return response.json() as Promise<{
-    turns: Array<{
-      id: string;
-      role: "user" | "assistant";
-      transcriptText?: string;
-      startedAt: string;
-    }>;
+    turns: ServerTurnWithFeedback[];
   }>;
 }
+
+export type ServerTurnWithFeedback = {
+  id: string;
+  role: "user" | "assistant";
+  transcriptText?: string;
+  startedAt: string;
+  endedAt?: string;
+  evaluationStatus: EvaluationStatus;
+  pronunciationFeedback?: TurnPronunciationFeedback;
+};
