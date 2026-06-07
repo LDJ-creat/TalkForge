@@ -3,7 +3,6 @@ import type { RealtimeSessionCredentials } from "@/providers/realtime/types";
 
 import type { TranscriptEntry } from "./types";
 
-const MOCK_CONNECT_DELAY_MS = 400;
 const MOCK_DISCONNECT_DELAY_MS = 250;
 const MOCK_REALTIME_PROVIDER = "mock-realtime";
 const MOCK_ENDPOINT_URL = "wss://mock.talkforge.local/realtime";
@@ -42,8 +41,6 @@ export async function mockStartRealtimeSession(input: {
   scenario: Scenario;
   userId?: string;
 }): Promise<RealtimeSessionCredentials> {
-  await delay(MOCK_CONNECT_DELAY_MS);
-
   if (mockOptions.failOnStart) {
     throw new Error("Mock realtime session start failed.");
   }
