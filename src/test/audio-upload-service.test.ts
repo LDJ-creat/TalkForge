@@ -1,10 +1,12 @@
-﻿import { beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { S3Client } from "@aws-sdk/client-s3";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createTurnAudioUploadTarget,
   finalizeTurnAudioUpload,
 } from "@/server/storage/audio-upload";
 import { MockStorageProvider } from "@/providers/mock/storage";
+import { createS3CompatibleStorageProvider } from "@/server/storage/s3-compatible-storage";
 
 const SESSION_ID = "11111111-1111-4111-8111-111111111111";
 const TURN_ID = "22222222-2222-4222-8222-222222222222";
@@ -248,5 +250,85 @@ describe("audio upload service", () => {
       language: "en",
     });
     expect(result.asrJobEnqueued).toBe(true);
+  });
+});
+
+describe("S3-compatible storage finalize validation", () => {
+  const db = {
+    transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(db),
+  };
+  const send = vi.fn();
+
+  const s3Storage = createS3CompatibleStorageProvider({
+    providerName: "oss",
+    endpoint: "https://oss-cn-hangzhou.aliyuncs.com",
+    bucket: "talkforge-audio",
+    accessKeyId: "access",
+    secretAccessKey: "secret",
+    region: "oss-cn-hangzhou",
+    client: { send } as unknown as S3Client,
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getSessionById.mockResolvedValue({
+      id: SESSION_ID,
+      userId: USER_ID,
+    });
+    getTurnById.mockResolvedValue({
+      id: TURN_ID,
+      sessionId: SESSION_ID,
+    });
+    getAudioSegmentByTurnId.mockResolvedValue(null);
+  });
+
+  it("rejects finalize when uploaded object size does not match", async () => {
+    send.mockResolvedValueOnce({});
+    send.mockResolvedValueOnce({ ContentLength: 10 });
+
+    await expect(
+      finalizeTurnAudioUpload(db as never, s3Storage, {
+        sessionId: SESSION_ID,
+        turnId: TURN_ID,
+        userId: USER_ID,
+        objectKey: OBJECT_KEY,
+        durationMs: 1200,
+        sizeBytes: 5,
+      }),
+    ).rejects.toMatchObject({
+      code: "uploaded_object_size_mismatch",
+    });
+  });
+
+  it("finalizes when uploaded object size matches HeadObject metadata", async () => {
+    send.mockResolvedValueOnce({});
+    send.mockResolvedValueOnce({ ContentLength: 5 });
+
+    createAudioSegment.mockResolvedValue({
+      id: "44444444-4444-4444-8444-444444444444",
+      turnId: TURN_ID,
+      objectKey: OBJECT_KEY,
+      format: "webm",
+      codec: "opus",
+      durationMs: 1200,
+      sizeBytes: 5,
+      createdAt: "2026-06-06T00:00:00.000Z",
+    });
+    linkTurnAudioSegment.mockResolvedValue({
+      id: TURN_ID,
+      audioSegmentId: "44444444-4444-4444-8444-444444444444",
+    });
+
+    const result = await finalizeTurnAudioUpload(db as never, s3Storage, {
+      sessionId: SESSION_ID,
+      turnId: TURN_ID,
+      userId: USER_ID,
+      objectKey: OBJECT_KEY,
+      durationMs: 1200,
+      sizeBytes: 5,
+    });
+
+    expect(result.audioSegment.sizeBytes).toBe(5);
+    expect(createAudioSegment).toHaveBeenCalled();
   });
 });
