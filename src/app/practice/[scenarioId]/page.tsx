@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { ConversationShell } from "@/components/conversation-shell";
+import { ScenarioPracticeShell } from "@/components/scenario-practice-shell";
 import { getSeedScenarioById } from "@/server/scenario/catalog";
 
 type PracticePageProps = {
@@ -15,7 +15,7 @@ export default async function PracticePage({ params }: PracticePageProps) {
     notFound();
   }
 
-  return <ConversationShell scenario={scenario} />;
+  return <ScenarioPracticeShell scenario={scenario} />;
 }
 
 export async function generateStaticParams() {
