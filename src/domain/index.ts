@@ -9,6 +9,7 @@ export * from "./audio-segment";
 export * from "./transcript";
 export * from "./correction";
 export * from "./pronunciation-evaluation";
+export * from "./pronunciation-feedback";
 export * from "./report";
 export * from "./shadowing";
 export * from "./ai-invocation-log";
