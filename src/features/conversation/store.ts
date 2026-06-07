@@ -35,6 +35,8 @@ import {
 import { teardownRealtimeAudioCapture } from "./realtime/realtime-audio-bridge";
 import { startSessionOnServer } from "./start-session-api";
 import { mergeTranscriptsWithServerTurns } from "./sync-transcripts";
+import { resolveUsageLimitBannerMessage } from "@/shared/usage-limit-messages";
+
 import type {
   ConnectionStatus,
   ConversationViewState,
@@ -73,6 +75,7 @@ const initialState: ConversationViewState = {
   progressSource: "unknown",
   endingState: "none",
   endingSuggestionReason: null,
+  usageLimits: null,
   errorMessage: null,
   report: null,
   reportStatus: "idle",
@@ -200,11 +203,15 @@ function applyServerScenarioProgress(
   get: StoreGet,
   progress: ServerScenarioProgressSnapshot,
 ): void {
-  set({
+  const usageLimitMessage = resolveUsageLimitBannerMessage(progress.usageLimits);
+
+  set((state) => ({
     scenarioProgress: toLocalScenarioProgress(progress),
     endingSuggestionReason: progress.endingSuggestionReason,
     progressSource: "server",
-  });
+    usageLimits: progress.usageLimits,
+    ...(usageLimitMessage ? { errorMessage: usageLimitMessage } : {}),
+  }));
   maybeSuggestEnding(set, get, progress.shouldSuggestEnding);
 }
 
@@ -390,7 +397,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       await startRealtimeConnection(scenario, realtimeCredentials, epoch);
       applyLocalScenarioProgress(set, get);
       await get().syncSessionProgressFromServer();
-    } catch {
+    } catch (error) {
       if (!isSessionEpochCurrent(get, epoch) || isSessionEnding(get)) {
         return;
       }
@@ -405,7 +412,10 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
           startedAt: new Date().toISOString(),
           endedAt: new Date().toISOString(),
         },
-        errorMessage: "Could not start the practice session. Please try again.",
+        errorMessage:
+          error instanceof Error
+            ? error.message
+            : "Could not start the practice session. Please try again.",
       });
     }
   },

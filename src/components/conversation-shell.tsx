@@ -6,6 +6,7 @@ import { useShallow } from "zustand/react/shallow";
 
 import type { Scenario } from "@/domain/scenario";
 import { useConversationStore } from "@/features/conversation";
+import { isSessionUsageBlocked } from "@/shared/usage-limit-messages";
 import {
   canEnterFallback,
   canRetryRealtime,
@@ -38,6 +39,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
     endingState,
     endingSuggestionReason,
     scenarioProgress,
+    usageLimits,
     errorMessage,
     report,
     reportStatus,
@@ -55,6 +57,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
       endingState: state.endingState,
       endingSuggestionReason: state.endingSuggestionReason,
       scenarioProgress: state.scenarioProgress,
+      usageLimits: state.usageLimits,
       errorMessage: state.errorMessage,
       report: state.report,
       reportStatus: state.reportStatus,
@@ -127,13 +130,15 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
     endingState === "user_requested" ||
     realtimeLifecycleStatus === "ended";
   const isCompleted = session?.status === "completed" || endingState === "completed";
+  const usageBlocked = usageLimits ? isSessionUsageBlocked(usageLimits) : false;
   const showMockPracticeButton =
     isSessionActive &&
     session?.backendLinked === true &&
     (realtimeLifecycleStatus === "fallback" ||
       realtimeLifecycleStatus === "connected" ||
       realtimeLifecycleStatus === "listening") &&
-    !isEnding;
+    !isEnding &&
+    !usageBlocked;
   const showEndingSuggestion =
     endingState === "ai_suggested" && scenarioProgress?.shouldSuggestEnding === true;
   const showRetryRealtime = isSessionActive && canRetryRealtime(realtimeLifecycleStatus);

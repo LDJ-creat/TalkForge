@@ -83,6 +83,11 @@ export type ConversationViewState = {
   progressSource: ProgressSource;
   endingState: EndingState;
   endingSuggestionReason: EndingSuggestionReason | null;
+  usageLimits: {
+    turnLimitReached: boolean;
+    durationLimitReached: boolean;
+    asrLimitReached: boolean;
+  } | null;
   errorMessage: string | null;
   report: Report | null;
   reportStatus: "idle" | "loading" | "ready" | "unavailable";

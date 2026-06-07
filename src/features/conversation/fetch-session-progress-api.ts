@@ -16,6 +16,20 @@ export type ServerScenarioProgressSnapshot = {
     userTurnCount: number;
     durationSec: number;
   };
+  usageLimits: {
+    maxTurns: number;
+    maxDurationSec: number;
+    maxAsrJobs: number;
+    maxReportAttempts: number;
+    userTurnCount: number;
+    durationSec: number;
+    asrJobsUsed: number;
+    reportAttemptsUsed: number;
+    turnLimitReached: boolean;
+    durationLimitReached: boolean;
+    asrLimitReached: boolean;
+    reportLimitReached: boolean;
+  };
 };
 
 export async function fetchSessionProgressFromServer(
