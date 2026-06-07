@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "realtime-proxy": "tsx scripts/realtime-ws-proxy.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

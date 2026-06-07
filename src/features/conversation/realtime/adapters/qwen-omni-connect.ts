@@ -7,10 +7,36 @@ export type BrowserWebSocketConnection = {
   protocols?: string[];
 };
 
+export function resolveQwenOmniBrowserProxyBaseUrl(): string | null {
+  const configured = process.env.NEXT_PUBLIC_REALTIME_PROXY_URL?.trim();
+  if (!configured) {
+    return null;
+  }
+
+  return configured.replace(/\/+$/, "");
+}
+
+export function buildQwenOmniBrowserProxyWebSocketUrl(
+  endpointUrl: string,
+  proxyBaseUrl: string,
+): string {
+  const upstream = new URL(endpointUrl);
+  const model = upstream.searchParams.get("model");
+
+  if (!model) {
+    throw new Error("Realtime endpoint URL is missing the model query parameter.");
+  }
+
+  const proxyUrl = new URL("/realtime", `${proxyBaseUrl}/`);
+  proxyUrl.searchParams.set("model", model);
+  return proxyUrl.toString();
+}
+
 /**
- * DashScope realtime expects `Authorization: Bearer <token>` on the handshake.
- * Browser WebSocket cannot set HTTP headers, so we pass the short-lived token
- * through Sec-WebSocket-Protocol per the provider's browser guidance.
+ * DashScope realtime requires `Authorization: Bearer <token>` on the upstream
+ * handshake. Browsers cannot set that header, and DashScope rejects
+ * Sec-WebSocket-Protocol bearer auth with 401. Route browser traffic through
+ * the local TalkForge realtime proxy, which adds the Authorization header.
  */
 export function resolveQwenOmniBrowserWebSocket(
   credentials: ConversationRealtimeCredentials,
@@ -23,8 +49,13 @@ export function resolveQwenOmniBrowserWebSocket(
     throw new Error("Realtime session token is missing.");
   }
 
+  const proxyBaseUrl = resolveQwenOmniBrowserProxyBaseUrl();
+  const url = proxyBaseUrl
+    ? buildQwenOmniBrowserProxyWebSocketUrl(credentials.endpointUrl, proxyBaseUrl)
+    : credentials.endpointUrl;
+
   return {
-    url: credentials.endpointUrl,
+    url,
     protocols: ["Bearer", credentials.token],
   };
 }

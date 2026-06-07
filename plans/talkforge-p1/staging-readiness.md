@@ -139,6 +139,10 @@ npm run dev
 npm run worker
 ```
 
+When `REALTIME_PROVIDER=qwen-omni`, the worker also starts the local realtime WebSocket proxy on `REALTIME_PROXY_PORT` (default `3002`). The browser connects to `NEXT_PUBLIC_REALTIME_PROXY_URL` because DashScope requires `Authorization` headers that browser WebSockets cannot send directly.
+
+If you are testing voice without the Redis worker, run `npm run realtime-proxy` in a separate terminal instead.
+
 Confirm `GET /api/health` returns `200`.
 
 ## Manual Staging Checklist
