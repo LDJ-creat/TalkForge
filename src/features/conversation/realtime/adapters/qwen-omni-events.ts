@@ -23,7 +23,7 @@ export function mapQwenOmniServerEvent(
 ): { events: RealtimeClientEvent[]; nextState: typeof state } {
   const event = payload as QwenRealtimeServerEvent;
   const events: RealtimeClientEvent[] = [];
-  let nextState = { ...state };
+  const nextState = { ...state };
 
   if (!event?.type) {
     return { events, nextState };

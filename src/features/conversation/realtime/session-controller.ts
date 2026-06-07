@@ -12,9 +12,7 @@ export type RealtimeSessionControllerOptions = {
   onEvent: (event: RealtimeSessionControllerEvent) => void;
 };
 
-export type RealtimeSessionControllerEvent = {
-  sessionEpoch: number;
-} & (
+export type RealtimeSessionControllerEventPayload =
   | { type: "lifecycle"; status: RealtimeLifecycleStatus }
   | { type: "transcript"; entry: TranscriptEntry }
   | {
@@ -24,8 +22,11 @@ export type RealtimeSessionControllerEvent = {
       role: TranscriptEntry["role"];
     }
   | { type: "diagnostics"; diagnostics: RealtimeConnectionDiagnostics }
-  | { type: "error"; message: string; recoverable: boolean; failed?: boolean }
-);
+  | { type: "error"; message: string; recoverable: boolean; failed?: boolean };
+
+export type RealtimeSessionControllerEvent = {
+  sessionEpoch: number;
+} & RealtimeSessionControllerEventPayload;
 
 export type RealtimeConnectInput = {
   credentials: ConversationRealtimeCredentials;
@@ -66,13 +67,11 @@ let controllerState = createInitialState();
 let options: RealtimeSessionControllerOptions | null = null;
 let reconnectTask: Promise<void> | null = null;
 
-function emit(
-  event: Omit<RealtimeSessionControllerEvent, "sessionEpoch">,
-): void {
+function emit(event: RealtimeSessionControllerEventPayload): void {
   options?.onEvent({
     ...event,
     sessionEpoch: controllerState.sessionEpoch,
-  } as RealtimeSessionControllerEvent);
+  });
 }
 
 function shouldAttemptRecovery(): boolean {

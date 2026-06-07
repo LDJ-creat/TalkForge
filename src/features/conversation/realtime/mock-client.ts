@@ -50,7 +50,6 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
 
 export function createMockRealtimeClient(): RealtimeClient {
   let connected = false;
-  let disconnectPromise: Promise<void> | null = null;
   const listeners = new Set<(event: RealtimeClientEvent) => void>();
   let connectStartedAt = 0;
 
@@ -111,7 +110,7 @@ export function createMockRealtimeClient(): RealtimeClient {
         throw new Error("Mock realtime session stop failed.");
       }
 
-      if (!connected && !disconnectPromise) {
+      if (!connected) {
         emit({ type: "lifecycle", status: "ended" });
         return;
       }
