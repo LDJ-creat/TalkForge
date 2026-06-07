@@ -1,6 +1,7 @@
 import { findPublicEnvLeaks } from "./env-keys";
 import { RuntimeConfigError } from "./errors";
 import type { RuntimeConfig } from "./types";
+import { isKnownTextLlmProviderName } from "@/providers/openai-compatible-text-llm";
 
 function requireSecret(
   issues: string[],
@@ -11,6 +12,23 @@ function requireSecret(
   if (!value) {
     issues.push(
       `${envKey} is required when ${providerLabel} is enabled with a real provider.`,
+    );
+  }
+}
+
+function requireTextLlmBaseUrl(
+  issues: string[],
+  providerName: string,
+  llmBaseUrl: string | undefined,
+  providerLabel: string,
+): void {
+  if (providerName === "mock" || isKnownTextLlmProviderName(providerName)) {
+    return;
+  }
+
+  if (!llmBaseUrl) {
+    issues.push(
+      `LLM_BASE_URL is required when ${providerLabel}="${providerName}" uses a custom OpenAI-compatible provider id.`,
     );
   }
 }
@@ -57,6 +75,12 @@ export function collectRuntimeConfigIssues(
       "LLM_API_KEY",
       `LLM_CORRECTION_PROVIDER="${providers.llmCorrection.name}"`,
     );
+    requireTextLlmBaseUrl(
+      issues,
+      providers.llmCorrection.name,
+      secrets.llmBaseUrl,
+      "LLM_CORRECTION_PROVIDER",
+    );
   }
 
   if (providers.llmReport.mode === "real") {
@@ -65,6 +89,12 @@ export function collectRuntimeConfigIssues(
       secrets.llmApiKey,
       "LLM_API_KEY",
       `LLM_REPORT_PROVIDER="${providers.llmReport.name}"`,
+    );
+    requireTextLlmBaseUrl(
+      issues,
+      providers.llmReport.name,
+      secrets.llmBaseUrl,
+      "LLM_REPORT_PROVIDER",
     );
   }
 
