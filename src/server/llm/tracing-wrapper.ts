@@ -1,4 +1,9 @@
-import type { LlmCorrectionProvider, LlmReportProvider } from "@/providers/llm/contract";
+import type {
+  LlmCorrectionProvider,
+  LlmGoalJudgeProvider,
+  LlmReportProvider,
+} from "@/providers/llm/contract";
+import type { GoalJudgeInput, GoalJudgeResult } from "@/providers/llm/goal-judge-types";
 import type {
   CorrectionAnalysisResult,
   CorrectionAnalyzeInput,
@@ -6,8 +11,10 @@ import type {
   ReportGenerationResult,
 } from "@/providers/llm/types";
 import {
+  buildGoalJudgePrompt,
   buildReportPrompt,
   CORRECTION_PROMPT_VERSION,
+  GOAL_JUDGE_PROMPT_VERSION,
   isOpenAiCompatibleTextLlmProvider,
   REPORT_PROMPT_VERSION,
 } from "@/providers/openai-compatible-text-llm";
@@ -70,6 +77,58 @@ export function createTracedLlmCorrectionProvider(
             true,
         }),
         extractRawResponse: (analysis) => analysis,
+      });
+
+      return result;
+    },
+  };
+}
+
+export function createTracedLlmGoalJudgeProvider(
+  provider: LlmGoalJudgeProvider,
+  traceWriter: AiInvocationTraceWriter,
+  options: TracedTextLlmProviderOptions,
+): LlmGoalJudgeProvider {
+  return {
+    name: provider.name,
+    async evaluateGoals(input: GoalJudgeInput): Promise<GoalJudgeResult> {
+      const goalJudgePrompt = buildGoalJudgePrompt(input);
+
+      const { result } = await executeTracedProviderCall({
+        traceWriter,
+        provider: provider.name,
+        model: options.model,
+        operation: "llm.scenarioJudge",
+        sessionId: input.sessionId,
+        promptVersion: GOAL_JUDGE_PROMPT_VERSION,
+        requestSummary: {
+          sessionId: input.sessionId,
+          scenarioId: input.scenario.id,
+          turnCount: input.turns.length,
+          completedGoals: input.previousProgress?.completedGoalIds.length ?? 0,
+          currentStageId: input.previousProgress?.currentStageId,
+        },
+        rawRequest: {
+          system: goalJudgePrompt.system,
+          user: goalJudgePrompt.user,
+        },
+        fn: (context) =>
+          isOpenAiCompatibleTextLlmProvider(provider)
+            ? provider.invokeGoalEvaluation(input, context)
+            : provider.evaluateGoals(input),
+        extractUsage: (judge) =>
+          extractUsageFromMetadata(judge.metadata as Record<string, unknown> | undefined),
+        extractResponseSummary: (judge) => ({
+          completedGoalCount: judge.completedGoalIds.length,
+          offTopic: judge.offTopic,
+          parseFallback:
+            (judge.metadata as { parseFallback?: boolean } | undefined)?.parseFallback ===
+            true,
+          ruleFallback:
+            (judge.metadata as { ruleFallback?: boolean } | undefined)?.ruleFallback ===
+            true,
+        }),
+        extractRawResponse: (judge) => judge,
       });
 
       return result;

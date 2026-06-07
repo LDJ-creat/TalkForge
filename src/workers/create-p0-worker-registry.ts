@@ -31,7 +31,7 @@ export function createP0WorkerRegistry(
     llmReportProvider:
       overrides.llmReportProvider ?? getLlmReportProvider({ traceWriter }),
     llmGoalJudgeProvider:
-      overrides.llmGoalJudgeProvider ?? getGoalJudgeProvider(),
+      overrides.llmGoalJudgeProvider ?? getGoalJudgeProvider({ traceWriter }),
     pronunciationProvider:
       overrides.pronunciationProvider ?? getPronunciationProvider(),
   });

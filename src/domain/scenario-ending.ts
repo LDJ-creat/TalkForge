@@ -154,6 +154,7 @@ export function buildScenarioProgressUpdate(input: {
   turns: Turn[];
   completedGoalIds: string[];
   previousCompletedGoalIds?: string[];
+  judgeCurrentStageId?: string;
   offTopic: boolean;
   updatedAt?: string;
 }): ScenarioProgress & ExitPolicyEvaluation {
@@ -170,9 +171,11 @@ export function buildScenarioProgressUpdate(input: {
     durationSec,
   });
 
+  const inferredStageId = inferCurrentStageId(input.scenario, mergedCompletedGoalIds);
+
   return {
     sessionId: input.sessionId,
-    currentStageId: inferCurrentStageId(input.scenario, mergedCompletedGoalIds),
+    currentStageId: input.judgeCurrentStageId ?? inferredStageId,
     completedGoalIds: mergedCompletedGoalIds,
     missingGoalIds: resolveMissingGoalIds(input.scenario, mergedCompletedGoalIds),
     offTopic: input.offTopic,
