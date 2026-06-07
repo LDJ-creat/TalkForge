@@ -5,7 +5,10 @@ import { isUuid } from "@/queue/ids";
 
 import {
   getConversationInitialState,
+  resetMockRealtimeClientOptions,
   resetMockRealtimeSessionOptions,
+  resetRealtimeSessionControllerForTests,
+  setMockRealtimeClientOptions,
   setMockRealtimeSessionOptions,
   useConversationStore,
 } from "@/features/conversation";
@@ -14,6 +17,8 @@ describe("conversation store", () => {
   beforeEach(() => {
     useConversationStore.getState().reset();
     resetMockRealtimeSessionOptions();
+    resetMockRealtimeClientOptions();
+    resetRealtimeSessionControllerForTests();
     vi.useRealTimers();
     vi.stubGlobal(
       "fetch",
@@ -21,7 +26,10 @@ describe("conversation store", () => {
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    vi.useRealTimers();
+    await useConversationStore.getState().teardownSession();
+    resetRealtimeSessionControllerForTests();
     vi.unstubAllGlobals();
   });
 
@@ -48,10 +56,10 @@ describe("conversation store", () => {
     expect(useConversationStore.getState().connectionStatus).toBe("connecting");
     expect(useConversationStore.getState().session?.status).toBe("active");
 
-    await vi.advanceTimersByTimeAsync(500);
-    await startPromise;
+    await Promise.all([startPromise, vi.advanceTimersByTimeAsync(1_300)]);
 
     const state = useConversationStore.getState();
+    expect(state.realtimeLifecycleStatus).toBe("listening");
     expect(state.connectionStatus).toBe("connected");
     expect(state.realtimeCredentials?.provider).toBe("mock-realtime");
     expect(state.realtimeCredentials?.providerSessionId).toMatch(/^rt_coffee_ordering_a2_/);
@@ -62,7 +70,9 @@ describe("conversation store", () => {
     expect(isUuid(state.session!.id)).toBe(true);
     expect(state.transcripts).toHaveLength(1);
     expect(state.transcripts[0]?.role).toBe("assistant");
-    expect(state.turnStatus).toBe("idle");
+    expect(state.turnStatus).toBe("user_speaking");
+
+    vi.useRealTimers();
   });
 
   it("completes a manual end session flow", async () => {
@@ -71,15 +81,13 @@ describe("conversation store", () => {
     const startPromise = useConversationStore
       .getState()
       .startSession(coffeeOrderingScenario);
-    await vi.advanceTimersByTimeAsync(500);
-    await startPromise;
+    await Promise.all([startPromise, vi.advanceTimersByTimeAsync(1_300)]);
 
     const endPromise = useConversationStore.getState().requestEndSession();
     expect(useConversationStore.getState().endingState).toBe("user_requested");
     expect(useConversationStore.getState().connectionStatus).toBe("disconnecting");
 
-    await vi.advanceTimersByTimeAsync(300);
-    await endPromise;
+    await Promise.all([endPromise, vi.advanceTimersByTimeAsync(300)]);
 
     const state = useConversationStore.getState();
     expect(state.session?.status).toBe("completed");
@@ -87,6 +95,8 @@ describe("conversation store", () => {
     expect(state.connectionStatus).toBe("disconnected");
     expect(state.endingState).toBe("completed");
     expect(state.realtimeCredentials).toBeNull();
+
+    vi.useRealTimers();
   });
 
   it("does not revive a session when end is requested during connect", async () => {
@@ -99,10 +109,7 @@ describe("conversation store", () => {
     expect(useConversationStore.getState().connectionStatus).toBe("connecting");
 
     const endPromise = useConversationStore.getState().requestEndSession();
-    await vi.advanceTimersByTimeAsync(500);
-    await startPromise;
-    await vi.advanceTimersByTimeAsync(300);
-    await endPromise;
+    await Promise.all([startPromise, endPromise, vi.advanceTimersByTimeAsync(1_700)]);
 
     const state = useConversationStore.getState();
     expect(state.connectionStatus).toBe("disconnected");
@@ -110,6 +117,8 @@ describe("conversation store", () => {
     expect(state.endingState).toBe("completed");
     expect(state.realtimeCredentials).toBeNull();
     expect(state.transcripts).toHaveLength(0);
+
+    vi.useRealTimers();
   });
 
   it("allows manual end after an AI ending suggestion", async () => {
@@ -119,8 +128,7 @@ describe("conversation store", () => {
     const startPromise = useConversationStore
       .getState()
       .startSession(coffeeOrderingScenario);
-    await vi.advanceTimersByTimeAsync(500);
-    await startPromise;
+    await Promise.all([startPromise, vi.advanceTimersByTimeAsync(1_300)]);
 
     useConversationStore.setState({
       transcripts: [
@@ -142,13 +150,13 @@ describe("conversation store", () => {
     const endPromise = useConversationStore.getState().requestEndSession();
     expect(useConversationStore.getState().endingState).toBe("user_requested");
 
-    await vi.advanceTimersByTimeAsync(300);
-    await endPromise;
+    await Promise.all([endPromise, vi.advanceTimersByTimeAsync(300)]);
 
     expect(useConversationStore.getState().endingState).toBe("completed");
     expect(useConversationStore.getState().session?.status).toBe("completed");
 
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("does not start duplicate sessions for the same active scenario", async () => {
@@ -157,15 +165,55 @@ describe("conversation store", () => {
     const startPromise = useConversationStore
       .getState()
       .startSession(coffeeOrderingScenario);
-    await vi.advanceTimersByTimeAsync(500);
-    await startPromise;
+    await Promise.all([startPromise, vi.advanceTimersByTimeAsync(1_300)]);
 
     const firstSessionId = useConversationStore.getState().session?.id;
 
     await useConversationStore.getState().startSession(coffeeOrderingScenario);
-    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(1_700);
 
     expect(useConversationStore.getState().session?.id).toBe(firstSessionId);
+
+    vi.useRealTimers();
+  });
+
+  it("interrupts assistant speech through the realtime controller", async () => {
+    vi.useFakeTimers();
+
+    const startPromise = useConversationStore
+      .getState()
+      .startSession(coffeeOrderingScenario);
+
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(useConversationStore.getState().realtimeLifecycleStatus).toBe(
+      "assistant_speaking",
+    );
+
+    useConversationStore.getState().interruptRealtimeAssistant();
+
+    await vi.advanceTimersByTimeAsync(800);
+    await startPromise;
+
+    expect(useConversationStore.getState().realtimeLifecycleStatus).toBe("listening");
+
+    vi.useRealTimers();
+  });
+
+  it("ignores stale realtime controller events after the session epoch changes", () => {
+    useConversationStore.setState({
+      sessionEpoch: 2,
+      realtimeLifecycleStatus: "listening",
+      connectionStatus: "connected",
+    });
+
+    useConversationStore.getState().handleRealtimeControllerEvent({
+      sessionEpoch: 1,
+      type: "lifecycle",
+      status: "failed",
+    });
+
+    expect(useConversationStore.getState().realtimeLifecycleStatus).toBe("listening");
   });
 
   it("sets error state when mock start fails", async () => {
@@ -176,14 +224,16 @@ describe("conversation store", () => {
       .getState()
       .startSession(coffeeOrderingScenario);
 
-    await vi.advanceTimersByTimeAsync(500);
     await startPromise;
 
     const state = useConversationStore.getState();
-    expect(state.connectionStatus).toBe("error");
+    expect(state.connectionStatus).toBe("failed");
+    expect(state.realtimeLifecycleStatus).toBe("failed");
     expect(state.session?.status).toBe("failed");
     expect(state.errorMessage).toContain("Could not start");
     expect(state.realtimeCredentials).toBeNull();
+
+    vi.useRealTimers();
   });
 
   it("sets error state when mock stop fails", async () => {
@@ -192,19 +242,19 @@ describe("conversation store", () => {
     const startPromise = useConversationStore
       .getState()
       .startSession(coffeeOrderingScenario);
-    await vi.advanceTimersByTimeAsync(500);
-    await startPromise;
+    await Promise.all([startPromise, vi.advanceTimersByTimeAsync(1_300)]);
 
-    setMockRealtimeSessionOptions({ failOnStop: true });
+    setMockRealtimeClientOptions({ failOnDisconnect: true });
 
     const endPromise = useConversationStore.getState().requestEndSession();
-    await vi.advanceTimersByTimeAsync(300);
-    await endPromise;
+    await Promise.all([endPromise, vi.advanceTimersByTimeAsync(300)]);
 
     const state = useConversationStore.getState();
     expect(state.connectionStatus).toBe("error");
     expect(state.errorMessage).toContain("Could not end the session");
     expect(state.session?.status).toBe("active");
+
+    vi.useRealTimers();
   });
 
   it("teardownSession stops an active mock session and clears state", async () => {
@@ -213,14 +263,14 @@ describe("conversation store", () => {
     const startPromise = useConversationStore
       .getState()
       .startSession(coffeeOrderingScenario);
-    await vi.advanceTimersByTimeAsync(500);
-    await startPromise;
+    await Promise.all([startPromise, vi.advanceTimersByTimeAsync(1_300)]);
 
     const teardownPromise = useConversationStore.getState().teardownSession();
-    await vi.advanceTimersByTimeAsync(300);
-    await teardownPromise;
+    await Promise.all([teardownPromise, vi.advanceTimersByTimeAsync(300)]);
 
     expect(useConversationStore.getState()).toMatchObject(getConversationInitialState());
+
+    vi.useRealTimers();
   });
 
   it("resets all conversation state", async () => {
@@ -229,10 +279,11 @@ describe("conversation store", () => {
     const startPromise = useConversationStore
       .getState()
       .startSession(coffeeOrderingScenario);
-    await vi.advanceTimersByTimeAsync(500);
-    await startPromise;
+    await Promise.all([startPromise, vi.advanceTimersByTimeAsync(1_300)]);
     useConversationStore.getState().reset();
 
     expect(useConversationStore.getState()).toMatchObject(getConversationInitialState());
+
+    vi.useRealTimers();
   });
 });

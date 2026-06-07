@@ -4,7 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { coffeeOrderingScenario } from "@/server/db/seeds/scenarios";
 import { DEV_USER_ID } from "@/shared/dev-user";
-import { useConversationStore } from "@/features/conversation";
+import {
+  resetMockRealtimeClientOptions,
+  resetRealtimeSessionControllerForTests,
+  useConversationStore,
+} from "@/features/conversation";
 
 import { ConversationShell } from "@/components/conversation-shell";
 
@@ -50,6 +54,8 @@ function createFetchMock(options?: { backendLinked?: boolean }) {
 describe("ConversationShell", () => {
   beforeEach(() => {
     useConversationStore.getState().reset();
+    resetMockRealtimeClientOptions();
+    resetRealtimeSessionControllerForTests();
     vi.useRealTimers();
     vi.stubGlobal("fetch", createFetchMock());
     process.env.NEXT_PUBLIC_DEV_USER_ID = DEV_USER_ID;
@@ -70,16 +76,22 @@ describe("ConversationShell", () => {
     expect(screen.getAllByTestId("conversation-shell")[0]).toBeInTheDocument();
     expect(screen.getByText("Connecting…")).toBeInTheDocument();
 
-    await vi.advanceTimersByTimeAsync(500);
+    await Promise.all([
+      vi.advanceTimersByTimeAsync(1_300),
+      vi.runOnlyPendingTimersAsync(),
+    ]);
 
-    expect(screen.getByText("Connected")).toBeInTheDocument();
+    expect(screen.getByText("Listening")).toBeInTheDocument();
     expect(screen.getByTestId("transcript-entry-assistant")).toBeInTheDocument();
     expect(screen.queryByTestId("mock-practice-turn-button")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getAllByTestId("end-practice-button")[0]!);
     expect(screen.getByText("Ending session…")).toBeInTheDocument();
 
-    await vi.advanceTimersByTimeAsync(300);
+    await Promise.all([
+      vi.advanceTimersByTimeAsync(300),
+      vi.runOnlyPendingTimersAsync(),
+    ]);
 
     expect(screen.getByTestId("session-ended-banner")).toBeInTheDocument();
     expect(useConversationStore.getState().session?.status).toBe("completed");
@@ -87,13 +99,34 @@ describe("ConversationShell", () => {
     vi.useRealTimers();
   });
 
+  it("shows an interrupt control while the assistant is speaking", async () => {
+    vi.useFakeTimers();
+
+    render(<ConversationShell scenario={coffeeOrderingScenario} />);
+
+    await Promise.all([
+      vi.advanceTimersByTimeAsync(500),
+      vi.runOnlyPendingTimersAsync(),
+    ]);
+
+    expect(screen.getByTestId("interrupt-assistant-button")).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
   it("shows the practice button for backend-linked sessions", async () => {
+    vi.useFakeTimers();
     vi.stubGlobal("fetch", createFetchMock({ backendLinked: true }));
 
     render(<ConversationShell scenario={coffeeOrderingScenario} />);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("mock-practice-turn-button")).toBeInTheDocument();
-    });
+    await Promise.all([
+      vi.advanceTimersByTimeAsync(1_300),
+      vi.runOnlyPendingTimersAsync(),
+    ]);
+
+    expect(screen.getByTestId("mock-practice-turn-button")).toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 });
