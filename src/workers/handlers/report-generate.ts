@@ -1,4 +1,5 @@
 import type { TalkForgeDatabase } from "@/server/db/client";
+import { countReportGenerationAttemptsForSession } from "@/server/db/repositories/ai-invocation-metrics-repository";
 import {
   finalizeReport,
   getCorrectionsByTurnIds,
@@ -61,6 +62,9 @@ export function createDbReportGenerateDeps(
     finalizeReport:
       deps?.finalizeReport ??
       ((sessionId, input) => finalizeReport(db, sessionId, input)),
+    countReportGenerationAttempts:
+      deps?.countReportGenerationAttempts ??
+      ((sessionId) => countReportGenerationAttemptsForSession(db, sessionId)),
   };
 }
 

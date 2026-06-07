@@ -1,6 +1,12 @@
 import { jsonError, readJsonBody, requireRequestUserId } from "@/server/api/http";
 import { getDb } from "@/server/db/client";
-import { createTurn, getSessionById, listTurnsBySessionId } from "@/server/db/repositories";
+import { countAsrTranscribeAttemptsForSession } from "@/server/db/repositories/ai-invocation-metrics-repository";
+import {
+  createTurn,
+  getScenarioById,
+  getSessionById,
+  listTurnsBySessionId,
+} from "@/server/db/repositories";
 import { SessionServiceError } from "@/server/session";
 import { createTurnForUser, listSessionTurnsForUser } from "@/server/session/create-turn";
 import type { TurnRole } from "@/domain/enums";
@@ -69,6 +75,9 @@ export async function POST(
       },
       {
         getSessionById: (id) => getSessionById(db, id),
+        getScenarioById: (scenarioId) => getScenarioById(db, scenarioId),
+        listTurnsBySessionId: (id) => listTurnsBySessionId(db, id),
+        countAsrInvocationAttempts: (id) => countAsrTranscribeAttemptsForSession(db, id),
         createTurn: (input) => createTurn(db, input),
       },
     );

@@ -14,7 +14,8 @@ export function getRuntimeConfig(): RuntimeConfig {
 export function loadRuntimeConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): RuntimeConfig {
-  return validateRuntimeConfig(parseRuntimeConfigFromEnv(env), env);
+  cachedConfig = validateRuntimeConfig(parseRuntimeConfigFromEnv(env), env);
+  return cachedConfig;
 }
 
 export function resetRuntimeConfigForTests(): void {

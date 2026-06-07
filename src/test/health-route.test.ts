@@ -13,9 +13,15 @@ vi.mock("@/server/infrastructure", () => ({
   })),
 }));
 
+vi.mock("@/server/db/client", () => ({
+  getDb: () => {
+    throw new Error("database unavailable in test");
+  },
+}));
+
 describe("GET /api/health", () => {
   it("returns 200 when infrastructure is healthy", async () => {
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/health"));
     const body = await response.json();
 
     expect(response.status).toBe(200);

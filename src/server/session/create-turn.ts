@@ -1,6 +1,8 @@
 import type { TurnRole } from "@/domain/enums";
+import type { Scenario } from "@/domain/scenario";
 import type { Session } from "@/domain/session";
 import type { CreateTurnInput, Turn } from "@/domain/turn";
+import { assertSessionWithinLimitsOrThrow } from "@/server/observability/enforce-session-limits";
 import { logTurnLifecycle } from "@/server/observability/log";
 
 import { SessionServiceError } from "./errors";
@@ -14,6 +16,9 @@ export type CreateTurnForUserInput = {
 
 export type CreateTurnForUserDeps = {
   getSessionById: (sessionId: string) => Promise<Session | null>;
+  getScenarioById: (scenarioId: string) => Promise<Scenario | null>;
+  listTurnsBySessionId: (sessionId: string) => Promise<Turn[]>;
+  countAsrInvocationAttempts?: (sessionId: string) => Promise<number>;
   createTurn: (input: CreateTurnInput) => Promise<Turn>;
 };
 
@@ -38,6 +43,26 @@ export async function createTurnForUser(
       "session_not_active",
       "Turns can only be added to active sessions.",
     );
+  }
+
+  if (input.role === "user") {
+    const [scenario, turns, asrInvocationCount] = await Promise.all([
+      deps.getScenarioById(session.scenarioId),
+      deps.listTurnsBySessionId(sessionId),
+      deps.countAsrInvocationAttempts?.(sessionId) ?? Promise.resolve(0),
+    ]);
+
+    if (!scenario) {
+      throw new SessionServiceError(404, "scenario_not_found", "Scenario was not found.");
+    }
+
+    assertSessionWithinLimitsOrThrow({
+      scenario,
+      session,
+      turns,
+      asrInvocationCount,
+      pending: { additionalUserTurns: 1 },
+    });
   }
 
   const endedAt = input.endedAt ?? new Date().toISOString();

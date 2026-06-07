@@ -11,11 +11,16 @@ import {
 } from "@/domain/scenario-ending";
 import type { Scenario } from "@/domain/scenario";
 
+import type { SessionUsageLimitsView } from "@/domain/session-usage-limits";
+import { getRuntimeConfig } from "@/server/config";
+import { countReportGenerationAttemptsForSession } from "@/server/db/repositories/ai-invocation-metrics-repository";
+import { buildSessionUsageView } from "@/server/observability/session-usage";
 import { SessionServiceError } from "@/server/session/errors";
 
 export type ScenarioProgressView = ScenarioProgress & {
   endingSuggestionReason: EndingSuggestionReason | null;
   boundaries: ProtectiveBoundaryStatus;
+  usageLimits: SessionUsageLimitsView;
 };
 
 export type FetchSessionProgressDeps = {
@@ -25,6 +30,8 @@ export type FetchSessionProgressDeps = {
   getScenarioProgressBySessionId: (
     sessionId: string,
   ) => Promise<ScenarioProgress | null>;
+  countReportGenerationAttempts?: (sessionId: string) => Promise<number>;
+  countAsrInvocationAttempts?: (sessionId: string) => Promise<number>;
 };
 
 export async function fetchSessionProgressForUser(
@@ -46,9 +53,11 @@ export async function fetchSessionProgressForUser(
     throw new SessionServiceError(404, "scenario_not_found", "Scenario was not found.");
   }
 
-  const [turns, progress] = await Promise.all([
+  const [turns, progress, reportAttemptsUsed, asrInvocationCount] = await Promise.all([
     deps.listTurnsBySessionId(sessionId),
     deps.getScenarioProgressBySessionId(sessionId),
+    deps.countReportGenerationAttempts?.(sessionId) ?? Promise.resolve(0),
+    deps.countAsrInvocationAttempts?.(sessionId) ?? Promise.resolve(0),
   ]);
 
   const userTurnCount = countUserTurns(turns);
@@ -73,10 +82,20 @@ export async function fetchSessionProgressForUser(
       updatedAt: new Date().toISOString(),
     } satisfies ScenarioProgress);
 
+  const usageLimits = buildSessionUsageView({
+    scenario,
+    session,
+    turns,
+    limits: getRuntimeConfig().sessionUsageLimits,
+    asrInvocationCount,
+    reportAttemptsUsed,
+  });
+
   return {
     ...baseProgress,
     shouldSuggestEnding: exitEvaluation.shouldSuggestEnding,
     endingSuggestionReason: exitEvaluation.endingSuggestionReason,
     boundaries: exitEvaluation.boundaries,
+    usageLimits,
   };
 }

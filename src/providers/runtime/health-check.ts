@@ -9,9 +9,12 @@ export type ProviderHealthCheckOptions = {
   signal?: AbortSignal;
 };
 
+export type ProviderHealthCheckKind = "configuration" | "live";
+
 export type ProviderHealthCheckResult = {
   ok: boolean;
   provider: string;
+  checkKind?: ProviderHealthCheckKind;
   latencyMs?: number;
   message?: string;
   errorCode?: ProviderErrorCode;
@@ -19,6 +22,7 @@ export type ProviderHealthCheckResult = {
 
 export interface ProviderHealthCheck {
   readonly provider: string;
+  readonly checkKind?: ProviderHealthCheckKind;
   check(options?: ProviderHealthCheckOptions): Promise<ProviderHealthCheckResult>;
 }
 
@@ -57,6 +61,7 @@ export async function runProviderHealthCheck(
     return {
       ok: false,
       provider: healthCheck.provider,
+      checkKind: healthCheck.checkKind,
       latencyMs: Math.max(0, Date.now() - startedAt),
       message: normalized.message,
       errorCode: normalized.code,
@@ -66,10 +71,12 @@ export async function runProviderHealthCheck(
 
 export function createStaticProviderHealthCheck(input: {
   provider: string;
+  checkKind?: ProviderHealthCheckKind;
   check: (options?: ProviderHealthCheckOptions) => Promise<void> | void;
 }): ProviderHealthCheck {
   return {
     provider: input.provider,
+    checkKind: input.checkKind,
     async check(options) {
       const startedAt = Date.now();
       await input.check(options);
@@ -77,6 +84,7 @@ export function createStaticProviderHealthCheck(input: {
       return {
         ok: true,
         provider: input.provider,
+        checkKind: input.checkKind,
         latencyMs: Math.max(0, Date.now() - startedAt),
       };
     },

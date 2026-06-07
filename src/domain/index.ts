@@ -12,3 +12,4 @@ export * from "./pronunciation-evaluation";
 export * from "./report";
 export * from "./shadowing";
 export * from "./ai-invocation-log";
+export * from "./session-usage-limits";
