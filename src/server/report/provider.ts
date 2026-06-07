@@ -1,22 +1,18 @@
 import type { LlmReportProvider } from "@/providers/llm/contract";
-import { createMockLlmProvider } from "@/providers/mock/llm";
 import { getRuntimeConfig } from "@/server/config";
+import type { AiInvocationTraceWriter } from "@/server/ai-tracing";
 
-let mockLlmReportProvider: ReturnType<typeof createMockLlmProvider> | undefined;
+import { getTextLlmProvider, resetTextLlmProviderForTests } from "@/server/llm/text-llm-provider";
 
-export function getLlmReportProvider(): LlmReportProvider {
+export type GetLlmReportProviderOptions = {
+  traceWriter?: AiInvocationTraceWriter;
+};
+
+export function getLlmReportProvider(
+  options?: GetLlmReportProviderOptions,
+): LlmReportProvider {
   const providerName = getRuntimeConfig().providers.llmReport.name;
-
-  if (providerName === "mock") {
-    mockLlmReportProvider ??= createMockLlmProvider();
-    return mockLlmReportProvider;
-  }
-
-  throw new Error(
-    `Unsupported LLM report provider "${providerName}". P0 supports "mock" only.`,
-  );
+  return getTextLlmProvider(providerName, options);
 }
 
-export function resetLlmReportProviderForTests(): void {
-  mockLlmReportProvider = undefined;
-}
+export { resetTextLlmProviderForTests as resetLlmReportProviderForTests };

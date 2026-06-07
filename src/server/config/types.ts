@@ -45,6 +45,8 @@ export type RuntimeSecrets = {
   asrBaseUrl?: string;
   asrModel?: string;
   llmApiKey?: string;
+  llmBaseUrl?: string;
+  llmModel?: string;
   ttsApiKey?: string;
   pronunciationApiKey?: string;
   pronunciationAppId?: string;

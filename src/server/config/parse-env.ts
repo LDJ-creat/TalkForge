@@ -87,6 +87,8 @@ function parseSecrets(env: NodeJS.ProcessEnv): RuntimeSecrets {
     asrBaseUrl: readEnv(env, "ASR_BASE_URL"),
     asrModel: readEnv(env, "ASR_MODEL"),
     llmApiKey: readEnv(env, "LLM_API_KEY"),
+    llmBaseUrl: readEnv(env, "LLM_BASE_URL"),
+    llmModel: readEnv(env, "LLM_MODEL"),
     ttsApiKey: readEnv(env, "TTS_API_KEY"),
     pronunciationApiKey: readEnv(env, "PRONUNCIATION_API_KEY"),
     pronunciationAppId: readEnv(env, "PRONUNCIATION_APP_ID"),
