@@ -1,4 +1,5 @@
 import { jsonError, readJsonBody, requireRequestUserId } from "@/server/api/http";
+import { createAiInvocationTraceService } from "@/server/ai-tracing";
 import { getDb } from "@/server/db/client";
 import { ensureDevSessionPrerequisites } from "@/server/db/seeds/ensure-dev-session-prerequisites";
 import {
@@ -27,13 +28,15 @@ export async function POST(request: Request) {
     const db = getDb();
     await ensureDevSessionPrerequisites(db, userId, body.scenarioId.trim());
 
+    const traceWriter = createAiInvocationTraceService({ db });
+
     const result = await startSessionForUser(userId, body.scenarioId.trim(), {
       getScenarioById: (scenarioId) => getScenarioById(db, scenarioId),
       createSession: (input) => createSession(db, input),
       updateRealtimeProviderSessionId: (sessionId, providerSessionId) =>
         updateSessionRealtimeProviderSessionId(db, sessionId, providerSessionId),
       failSession: (sessionId) => failSession(db, sessionId),
-      realtimeProvider: getRealtimeProvider(),
+      realtimeProvider: getRealtimeProvider({ traceWriter }),
     });
 
     return Response.json(result);
