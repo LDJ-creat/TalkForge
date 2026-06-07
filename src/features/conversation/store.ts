@@ -23,11 +23,13 @@ import {
   deriveTurnStatus,
   type RealtimeLifecycleStatus,
 } from "./realtime/lifecycle";
+import { isQwenOmniRealtimeProvider } from "./realtime/adapters/qwen-omni-connect";
 import {
   configureRealtimeSessionController,
   connectRealtimeSession,
   disconnectRealtimeSession,
   enterRealtimeFallbackMode,
+  getRealtimeSessionControllerLifecycle,
   interruptRealtimeAssistant as sendRealtimeInterrupt,
   retryRealtimeSession,
   type RealtimeSessionControllerEvent,
@@ -247,6 +249,7 @@ function shouldDisconnectRealtime(lifecycle: RealtimeLifecycleStatus): boolean {
     lifecycle === "connecting" ||
     lifecycle === "connected" ||
     lifecycle === "listening" ||
+    lifecycle === "user_speaking" ||
     lifecycle === "assistant_speaking" ||
     lifecycle === "interrupted" ||
     lifecycle === "reconnecting" ||
@@ -259,16 +262,33 @@ async function startRealtimeConnection(
   scenario: Scenario,
   credentials: ConversationViewState["realtimeCredentials"],
   epoch: number,
+  set: StoreSet,
+  get: StoreGet,
 ): Promise<void> {
   if (!credentials) {
     return;
   }
 
+  if (!isSessionEpochCurrent(get, epoch) || isSessionEnding(get)) {
+    return;
+  }
+
+  applyRealtimeLifecycle(set, "connecting");
+
+  const useMockOpening =
+    !credentials || !isQwenOmniRealtimeProvider(credentials.provider);
+
   await connectRealtimeSession({
     credentials,
-    openingTranscript: createOpeningTranscript(scenario),
+    openingTranscript: useMockOpening ? createOpeningTranscript(scenario) : undefined,
     sessionEpoch: epoch,
   });
+
+  if (!isSessionEpochCurrent(get, epoch) || isSessionEnding(get)) {
+    return;
+  }
+
+  applyRealtimeLifecycle(set, getRealtimeSessionControllerLifecycle());
 }
 
 async function syncSessionTranscriptsFromServer(
@@ -312,13 +332,10 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       session.scenarioId === scenario.id &&
       (realtimeLifecycleStatus === "connected" ||
         realtimeLifecycleStatus === "listening" ||
+        realtimeLifecycleStatus === "user_speaking" ||
         realtimeLifecycleStatus === "assistant_speaking" ||
         realtimeLifecycleStatus === "fallback")
     ) {
-      return;
-    }
-
-    if (realtimeLifecycleStatus === "connecting" || realtimeLifecycleStatus === "reconnecting") {
       return;
     }
 
@@ -362,11 +379,21 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
           session: serverStart.session,
           realtimeCredentials: serverStart.realtimeCredentials,
           progressSource: "server",
+          realtimeDiagnostics: {
+            provider: serverStart.realtimeCredentials.provider,
+          },
         });
+
+        if (!isSessionEpochCurrent(get, epoch) || isSessionEnding(get)) {
+          return;
+        }
+
         await startRealtimeConnection(
           scenario,
           serverStart.realtimeCredentials,
           epoch,
+          set,
+          get,
         );
         await get().syncSessionProgressFromServer();
         return;
@@ -392,9 +419,16 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
           realtimeProvider: realtimeCredentials.provider,
         },
         realtimeCredentials,
+        realtimeDiagnostics: {
+          provider: realtimeCredentials.provider,
+        },
       });
 
-      await startRealtimeConnection(scenario, realtimeCredentials, epoch);
+      if (!isSessionEpochCurrent(get, epoch) || isSessionEnding(get)) {
+        return;
+      }
+
+      await startRealtimeConnection(scenario, realtimeCredentials, epoch, set, get);
       applyLocalScenarioProgress(set, get);
       await get().syncSessionProgressFromServer();
     } catch (error) {
@@ -449,6 +483,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         } else if (
           event.status === "connected" ||
           event.status === "listening" ||
+          event.status === "user_speaking" ||
           event.status === "fallback"
         ) {
           set({ errorMessage: null });
@@ -529,9 +564,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       !session ||
       session.status !== "active" ||
       session.backendLinked !== true ||
-      (realtimeLifecycleStatus !== "fallback" &&
-        realtimeLifecycleStatus !== "connected" &&
-        realtimeLifecycleStatus !== "listening") ||
+      realtimeLifecycleStatus !== "fallback" ||
       (endingState !== "none" && endingState !== "ai_suggested")
     ) {
       return;
@@ -699,8 +732,12 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
 
   async teardownSession() {
     const { session, realtimeLifecycleStatus, endingState } = get();
+    const nextEpoch = bumpSessionEpoch(set, get);
 
-    bumpSessionEpoch(set, get);
+    set({
+      ...initialState,
+      sessionEpoch: nextEpoch,
+    });
 
     try {
       await teardownRealtimeAudioCapture();
@@ -719,8 +756,6 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         // Best-effort cleanup when navigating away from the shell.
       }
     }
-
-    set(initialState);
   },
 
   reset() {

@@ -36,7 +36,8 @@ const MOCK_CREDENTIALS = mapRealtimeCredentials({
 describe("realtime lifecycle helpers", () => {
   it("derives connection and turn status from lifecycle phases", () => {
     expect(deriveConnectionStatus("listening")).toBe("connected");
-    expect(deriveTurnStatus("listening")).toBe("user_speaking");
+    expect(deriveTurnStatus("listening")).toBe("idle");
+    expect(deriveTurnStatus("user_speaking")).toBe("user_speaking");
     expect(deriveConnectionStatus("reconnecting")).toBe("reconnecting");
     expect(deriveConnectionStatus("failed")).toBe("failed");
     expect(deriveConnectionStatus("ended")).toBe("disconnected");
@@ -59,7 +60,7 @@ describe("qwen omni event adapter", () => {
     );
     expect(speechStarted.events).toContainEqual({
       type: "lifecycle",
-      status: "listening",
+      status: "user_speaking",
     });
 
     const responseCreated = mapQwenOmniServerEvent(

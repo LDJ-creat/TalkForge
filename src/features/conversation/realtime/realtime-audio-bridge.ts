@@ -3,6 +3,7 @@
 import { getClientTurnAudioCacheAdapter } from "@/lib/audio-cache/client-adapter";
 
 import type { RealtimeLifecycleStatus } from "./lifecycle";
+import { isQwenOmniRealtimeProvider } from "./adapters/qwen-omni-connect";
 import { isMockRealtimeProvider } from "./websocket-client";
 
 const MIN_TURN_DURATION_MS = 300;
@@ -14,12 +15,22 @@ type ActiveCapture = {
   recorder: MediaRecorder;
   stream: MediaStream;
   chunks: BlobPart[];
+  ownsStream: boolean;
 };
 
+let sharedStream: MediaStream | null = null;
 let activeCapture: ActiveCapture | null = null;
 
-function createTurnId(): string {
-  return crypto.randomUUID();
+export function bindSharedMediaStream(stream: MediaStream): void {
+  sharedStream = stream;
+}
+
+export function getBoundSharedMediaStream(): MediaStream | null {
+  return sharedStream;
+}
+
+export function clearSharedMediaStream(): void {
+  sharedStream = null;
 }
 
 function canCaptureAudio(
@@ -28,21 +39,38 @@ function canCaptureAudio(
   sessionId: string | null | undefined,
 ): boolean {
   return (
-    lifecycle === "listening" &&
+    (lifecycle === "listening" ||
+      lifecycle === "user_speaking" ||
+      lifecycle === "connected" ||
+      lifecycle === "assistant_speaking") &&
     Boolean(sessionId) &&
     Boolean(provider) &&
     !isMockRealtimeProvider(provider ?? "")
   );
 }
 
-async function startCapture(sessionId: string): Promise<void> {
-  if (activeCapture || typeof navigator === "undefined" || !navigator.mediaDevices) {
+async function resolveCaptureStream(): Promise<MediaStream> {
+  if (sharedStream) {
+    return sharedStream;
+  }
+
+  if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+    throw new Error("Microphone access is not available in this browser.");
+  }
+
+  return navigator.mediaDevices.getUserMedia({ audio: true });
+}
+
+export async function startSharedTurnCapture(
+  sessionId: string,
+  turnId: string,
+): Promise<void> {
+  if (activeCapture) {
     return;
   }
 
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const stream = await resolveCaptureStream();
   const recorder = new MediaRecorder(stream);
-  const turnId = createTurnId();
   const chunks: BlobPart[] = [];
 
   recorder.addEventListener("dataavailable", (event) => {
@@ -58,12 +86,13 @@ async function startCapture(sessionId: string): Promise<void> {
     recorder,
     stream,
     chunks,
+    ownsStream: !sharedStream,
   };
 
   recorder.start(250);
 }
 
-async function stopCapture(): Promise<void> {
+export async function stopSharedTurnCapture(): Promise<void> {
   const capture = activeCapture;
   if (!capture) {
     return;
@@ -80,8 +109,10 @@ async function stopCapture(): Promise<void> {
     }
   });
 
-  for (const track of capture.stream.getTracks()) {
-    track.stop();
+  if (capture.ownsStream) {
+    for (const track of capture.stream.getTracks()) {
+      track.stop();
+    }
   }
 
   const durationMs = Math.max(Date.now() - capture.startedAt, MIN_TURN_DURATION_MS);
@@ -108,15 +139,20 @@ export async function syncRealtimeAudioCapture(input: {
   sessionId: string | null | undefined;
 }): Promise<string | null> {
   if (!canCaptureAudio(input.lifecycle, input.provider, input.sessionId)) {
-    if (activeCapture) {
-      await stopCapture();
+    return null;
+  }
+
+  if (isQwenOmniRealtimeProvider(input.provider ?? "")) {
+    if (!sharedStream) {
+      return null;
     }
     return null;
   }
 
-  if (!activeCapture) {
+  if (!sharedStream) {
     try {
-      await startCapture(input.sessionId!);
+      const stream = await resolveCaptureStream();
+      bindSharedMediaStream(stream);
       return null;
     } catch {
       return "Microphone access is required for realtime voice practice.";
@@ -128,6 +164,8 @@ export async function syncRealtimeAudioCapture(input: {
 
 export async function teardownRealtimeAudioCapture(): Promise<void> {
   if (activeCapture) {
-    await stopCapture();
+    await stopSharedTurnCapture();
   }
+
+  clearSharedMediaStream();
 }

@@ -1,9 +1,25 @@
 import type { ConversationRealtimeCredentials } from "../credentials";
 import type { TranscriptEntry } from "../types";
 
+import {
+  getRealtimeAudioDiagnostics,
+  resetRealtimeAudioDiagnostics,
+  setRealtimeAudioDiagnosticsListener,
+} from "./audio/audio-diagnostics";
+import { QwenOmniAudioStream } from "./adapters/qwen-omni-audio-stream";
+import { isQwenOmniRealtimeProvider } from "./adapters/qwen-omni-connect";
+import { buildQwenOmniOpeningSpeechEvents } from "./adapters/qwen-omni-client-events";
 import type { RealtimeClient, RealtimeClientEvent } from "./client-types";
 import { createRealtimeClient } from "./create-client";
 import type { RealtimeConnectionDiagnostics, RealtimeLifecycleStatus } from "./lifecycle";
+import {
+  bindSharedMediaStream,
+  clearSharedMediaStream,
+  teardownRealtimeAudioCapture,
+} from "./realtime-audio-bridge";
+import { RealtimeTurnSync } from "./realtime-turn-sync";
+import { isBargeInEnabled } from "./audio/barge-in";
+import { UPLINK_PLAYBACK_TAIL_MUTE_MS } from "./audio/constants";
 
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_BASE_DELAY_MS = 800;
@@ -46,6 +62,8 @@ type ControllerState = {
   abortController: AbortController | null;
   unsubscribe: (() => void) | null;
   client: RealtimeClient | null;
+  audioStream: QwenOmniAudioStream | null;
+  turnSync: RealtimeTurnSync | null;
 };
 
 function createInitialState(): ControllerState {
@@ -60,18 +78,87 @@ function createInitialState(): ControllerState {
     abortController: null,
     unsubscribe: null,
     client: null,
+    audioStream: null,
+    turnSync: null,
   };
 }
 
 let controllerState = createInitialState();
 let options: RealtimeSessionControllerOptions | null = null;
 let reconnectTask: Promise<void> | null = null;
+let audioDiagnosticsIntervalId: ReturnType<typeof globalThis.setInterval> | null = null;
+let uplinkResumeTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
+
+function clearUplinkResumeTimer(): void {
+  if (uplinkResumeTimer !== null) {
+    globalThis.clearTimeout(uplinkResumeTimer);
+    uplinkResumeTimer = null;
+  }
+}
+
+function clearAudioDiagnosticsInterval(): void {
+  if (audioDiagnosticsIntervalId !== null) {
+    globalThis.clearInterval(audioDiagnosticsIntervalId);
+    audioDiagnosticsIntervalId = null;
+  }
+}
 
 function emit(event: RealtimeSessionControllerEventPayload): void {
   options?.onEvent({
     ...event,
     sessionEpoch: controllerState.sessionEpoch,
   });
+}
+
+function emitDiagnosticsPatch(patch: Partial<RealtimeConnectionDiagnostics> = {}): void {
+  controllerState.diagnostics = {
+    ...controllerState.diagnostics,
+    ...patch,
+    audio: getRealtimeAudioDiagnostics(),
+  };
+  emit({ type: "diagnostics", diagnostics: controllerState.diagnostics });
+}
+
+function scheduleUplinkResumeAfterPlayback(): void {
+  clearUplinkResumeTimer();
+
+  const attemptResume = () => {
+    const stream = controllerState.audioStream;
+    if (!stream) {
+      return;
+    }
+
+    const delayMs = stream.getPlaybackIdleDelayMs() + UPLINK_PLAYBACK_TAIL_MUTE_MS;
+    if (delayMs <= UPLINK_PLAYBACK_TAIL_MUTE_MS + 50) {
+      stream.setUplinkEnabled(true);
+      return;
+    }
+
+    uplinkResumeTimer = globalThis.setTimeout(attemptResume, Math.min(delayMs, 200));
+  };
+
+  attemptResume();
+}
+
+function syncAudioUplink(lifecycle: RealtimeLifecycleStatus): void {
+  const stream = controllerState.audioStream;
+  if (!stream) {
+    return;
+  }
+
+  if (lifecycle === "assistant_speaking") {
+    clearUplinkResumeTimer();
+    stream.setUplinkEnabled(false);
+    return;
+  }
+
+  if (
+    lifecycle === "listening" ||
+    lifecycle === "user_speaking" ||
+    lifecycle === "interrupted"
+  ) {
+    scheduleUplinkResumeAfterPlayback();
+  }
 }
 
 function shouldAttemptRecovery(): boolean {
@@ -93,14 +180,56 @@ function markFailed(message: string): void {
   });
 }
 
+function isInternalClientEvent(event: RealtimeClientEvent): boolean {
+  return (
+    event.type === "session_ready" ||
+    event.type === "provider_audio_delta" ||
+    event.type === "provider_audio_done" ||
+    event.type === "user_speech_started" ||
+    event.type === "user_speech_stopped"
+  );
+}
+
+function handleInternalClientEvent(event: RealtimeClientEvent): void {
+  switch (event.type) {
+    case "session_ready":
+      for (const event of buildQwenOmniOpeningSpeechEvents()) {
+        controllerState.client?.sendProviderMessage?.(event);
+      }
+      break;
+    case "provider_audio_delta":
+      void controllerState.audioStream?.handleAudioDelta(event.base64Pcm);
+      break;
+    case "provider_audio_done":
+      break;
+    case "user_speech_started":
+      void controllerState.turnSync?.onUserSpeechStarted();
+      emitDiagnosticsPatch();
+      break;
+    case "user_speech_stopped":
+      void controllerState.turnSync?.onUserSpeechStopped();
+      emitDiagnosticsPatch();
+      break;
+    default:
+      break;
+  }
+}
+
 function mapClientEvent(event: RealtimeClientEvent): void {
+  if (isInternalClientEvent(event)) {
+    handleInternalClientEvent(event);
+    return;
+  }
+
   switch (event.type) {
     case "lifecycle":
       controllerState.lifecycle = event.status;
+      syncAudioUplink(event.status);
       emit({ type: "lifecycle", status: event.status });
       break;
     case "transcript":
       emit({ type: "transcript", entry: event.entry });
+      void controllerState.turnSync?.onTranscriptFinal(event.entry);
       break;
     case "transcript_delta":
       emit({
@@ -111,12 +240,10 @@ function mapClientEvent(event: RealtimeClientEvent): void {
       });
       break;
     case "diagnostics":
-      controllerState.diagnostics = {
-        ...controllerState.diagnostics,
+      emitDiagnosticsPatch({
         ...event.diagnostics,
         reconnectAttempt: controllerState.reconnectAttempt,
-      };
-      emit({ type: "diagnostics", diagnostics: controllerState.diagnostics });
+      });
       break;
     case "error":
       emit({
@@ -135,6 +262,72 @@ function mapClientEvent(event: RealtimeClientEvent): void {
   }
 }
 
+async function startQwenOmniAudioPipeline(
+  credentials: ConversationRealtimeCredentials,
+): Promise<void> {
+  if (!controllerState.client || !isQwenOmniRealtimeProvider(credentials.provider)) {
+    return;
+  }
+
+  resetRealtimeAudioDiagnostics();
+  clearAudioDiagnosticsInterval();
+  audioDiagnosticsIntervalId = globalThis.setInterval(() => {
+    emitDiagnosticsPatch();
+  }, 500);
+  setRealtimeAudioDiagnosticsListener(() => {
+    emitDiagnosticsPatch();
+  });
+
+  const sessionId =
+    typeof credentials.metadata?.sessionId === "string"
+      ? credentials.metadata.sessionId
+      : null;
+
+  if (!sessionId) {
+    return;
+  }
+
+  const sendProviderMessage = (message: unknown) => {
+    controllerState.client?.sendProviderMessage?.(message);
+  };
+
+  controllerState.audioStream = new QwenOmniAudioStream({
+    sendProviderMessage,
+    onBargeIn: isBargeInEnabled()
+      ? () => {
+          interruptRealtimeAssistant();
+        }
+      : undefined,
+  });
+  const stream = await controllerState.audioStream.start();
+  bindSharedMediaStream(stream);
+
+  controllerState.turnSync = new RealtimeTurnSync({
+    sessionId,
+    userId:
+      typeof credentials.metadata?.userId === "string"
+        ? credentials.metadata.userId
+        : undefined,
+  });
+
+  emitDiagnosticsPatch();
+}
+
+async function stopQwenOmniAudioPipeline(): Promise<void> {
+  setRealtimeAudioDiagnosticsListener(null);
+  clearAudioDiagnosticsInterval();
+  clearUplinkResumeTimer();
+
+  if (controllerState.audioStream) {
+    await controllerState.audioStream.stop();
+    controllerState.audioStream = null;
+  }
+
+  controllerState.turnSync = null;
+  clearSharedMediaStream();
+  await teardownRealtimeAudioCapture();
+}
+
 async function openClientConnection(): Promise<void> {
   const { credentials, openingTranscript, abortController } = controllerState;
   if (!credentials) {
@@ -145,12 +338,15 @@ async function openClientConnection(): Promise<void> {
   controllerState.unsubscribe = controllerState.client.onEvent(mapClientEvent);
 
   const sessionUpdateEvent = credentials.metadata?.sessionUpdateEvent;
+  const skipOpeningTranscript = isQwenOmniRealtimeProvider(credentials.provider);
 
   await controllerState.client.connect(credentials, {
-    openingTranscript,
+    openingTranscript: skipOpeningTranscript ? undefined : openingTranscript,
     sessionUpdateEvent,
     signal: abortController?.signal,
   });
+
+  await startQwenOmniAudioPipeline(credentials);
 }
 
 async function runReconnectLoop(): Promise<void> {
@@ -220,6 +416,8 @@ async function cleanupClient(input?: {
 }): Promise<void> {
   controllerState.abortController?.abort();
   controllerState.abortController = null;
+
+  await stopQwenOmniAudioPipeline();
 
   if (controllerState.unsubscribe) {
     controllerState.unsubscribe();
@@ -356,5 +554,7 @@ export function enterRealtimeFallbackMode(): void {
 }
 
 export function interruptRealtimeAssistant(): void {
+  clearUplinkResumeTimer();
   controllerState.client?.interrupt?.();
+  void controllerState.audioStream?.interrupt();
 }
