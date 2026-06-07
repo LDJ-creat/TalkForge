@@ -172,6 +172,13 @@ export function createWebsocketRealtimeClient(
           if (!settled) {
             settled = true;
             globalThis.clearTimeout(timeoutId);
+            console.warn(
+              "[talkforge:realtime] websocket error before ready",
+              JSON.stringify({
+                provider: credentials.provider,
+                url: connection.url,
+              }),
+            );
             reject(new Error("Realtime WebSocket connection failed."));
             return;
           }
@@ -183,15 +190,39 @@ export function createWebsocketRealtimeClient(
           });
         });
 
-        socket.addEventListener("close", () => {
+        socket.addEventListener("close", (closeEvent) => {
           connected = false;
           if (!settled) {
             settled = true;
             globalThis.clearTimeout(timeoutId);
-            reject(new Error("Realtime connection closed before ready."));
+            console.warn(
+              "[talkforge:realtime] websocket closed before ready",
+              JSON.stringify({
+                provider: credentials.provider,
+                url: connection.url,
+                code: closeEvent.code,
+                reason: closeEvent.reason,
+                wasClean: closeEvent.wasClean,
+              }),
+            );
+            reject(
+              new Error(
+                closeEvent.reason
+                  ? `Realtime connection closed before ready (${closeEvent.code}: ${closeEvent.reason}).`
+                  : "Realtime connection closed before ready.",
+              ),
+            );
             return;
           }
 
+          console.warn(
+            "[talkforge:realtime] websocket closed after connect",
+            JSON.stringify({
+              provider: credentials.provider,
+              code: closeEvent.code,
+              reason: closeEvent.reason,
+            }),
+          );
           emit({
             type: "error",
             message: "Realtime connection closed unexpectedly.",

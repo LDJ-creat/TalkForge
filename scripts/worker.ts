@@ -3,9 +3,12 @@ import { loadEnvFile } from "./load-env";
 loadEnvFile();
 
 import { checkInfrastructureHealth } from "@/server/infrastructure";
+import { maybeStartRealtimeWebSocketProxy } from "@/server/realtime/ws-proxy";
 import { startBullMQWorkerProcess } from "@/workers/start-bullmq-worker";
 
 async function main() {
+  maybeStartRealtimeWebSocketProxy();
+
   const health = await checkInfrastructureHealth();
   if (!health.ok) {
     console.error("[talkforge:worker] Infrastructure is not ready:");
