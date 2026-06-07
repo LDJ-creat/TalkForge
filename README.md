@@ -93,6 +93,37 @@ Authentication is a development header (`x-talkforge-user-id` / `NEXT_PUBLIC_DEV
 
 Leave `REDIS_URL` unset for local P0 demos. The app processes mock background jobs in-process via a memory queue. If you set `QUEUE_PROVIDER=redis` and `REDIS_URL`, run `npm run worker` in a separate process or jobs will enqueue but never execute, and reports will stay unavailable.
 
+## P1 real-provider staging (manual verification)
+
+P1 replaces mock providers with configurable real integrations. Use this path after P1-001 through P1-014 are in place.
+
+1. Copy `.env.example` to `.env` and configure real PostgreSQL, Redis, object storage, and provider API keys (server-only; never commit secrets).
+2. Start infrastructure and seed data:
+
+   ```bash
+   npm run infra:up
+   npm run infra:check
+   npm run db:push
+   npm run db:seed
+   npm run staging:smoke
+   ```
+
+3. Run the app and worker in separate terminals (`npm run dev`, `npm run worker`).
+4. Complete the manual checklist in [`plans/talkforge-p1/staging-readiness.md`](plans/talkforge-p1/staging-readiness.md).
+5. After a practice session, verify AI invocation traces:
+
+   ```bash
+   npm run staging:smoke -- --session-id <your-session-id>
+   ```
+
+CI-safe regression for the full learning loop (mocked providers):
+
+```bash
+npm run test -- src/test/p1-e2e-staging-readiness.test.ts
+```
+
+Operational health, usage limits, and alert categories: [`plans/talkforge-p1/ops-verification.md`](plans/talkforge-p1/ops-verification.md).
+
 ## P0 mock demo flow (manual verification)
 
 1. Start the app (`npm run dev`) with PostgreSQL reachable.
@@ -137,6 +168,7 @@ Leave `REDIS_URL` unset for local P0 demos. The app processes mock background jo
 | `npm run infra:down` | Stop Docker Compose services |
 | `npm run infra:check` | Verify PostgreSQL/Redis connectivity |
 | `npm run worker` | Start BullMQ worker for real queue mode |
+| `npm run staging:smoke` | Staging readiness summary; add `-- --session-id <uuid>` to inspect AI traces |
 
 ## Architecture
 
