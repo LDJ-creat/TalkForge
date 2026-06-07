@@ -36,6 +36,22 @@ export type ParsedReportSections = {
   keyCorrections?: ReportKeyCorrection[];
 };
 
+export type RawGoalJudgeResponse = {
+  completedGoalIds?: unknown;
+  missingGoalIds?: unknown;
+  currentStageId?: unknown;
+  offTopic?: unknown;
+  shouldSuggestEnding?: unknown;
+};
+
+export type ParsedGoalJudgeSections = {
+  completedGoalIds: string[];
+  missingGoalIds: string[];
+  currentStageId?: string;
+  offTopic: boolean;
+  shouldSuggestEnding: boolean;
+};
+
 function readString(value: unknown): string | undefined {
   return typeof value === "string" ? value.trim() : undefined;
 }
@@ -158,6 +174,43 @@ function parseTaskCompletion(value: unknown): ReportTaskCompletion | undefined {
       typeof record.score === "number" && Number.isFinite(record.score)
         ? Math.round(record.score)
         : undefined,
+  };
+}
+
+function readBoolean(value: unknown, fallback = false): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+export function parseGoalJudgeResponse(
+  payload: unknown,
+  options?: { validGoalIds?: Set<string>; validStageIds?: Set<string> },
+): ParsedGoalJudgeSections {
+  const record =
+    payload && typeof payload === "object"
+      ? (payload as RawGoalJudgeResponse)
+      : ({} satisfies RawGoalJudgeResponse);
+
+  const filterIds = (value: unknown): string[] => {
+    const ids = parseStringArray(value);
+    if (!options?.validGoalIds) {
+      return ids;
+    }
+    return ids.filter((id) => options.validGoalIds!.has(id));
+  };
+
+  const currentStageId = readString(record.currentStageId);
+  const normalizedStageId =
+    currentStageId &&
+    (!options?.validStageIds || options.validStageIds.has(currentStageId))
+      ? currentStageId
+      : undefined;
+
+  return {
+    completedGoalIds: filterIds(record.completedGoalIds),
+    missingGoalIds: filterIds(record.missingGoalIds),
+    currentStageId: normalizedStageId,
+    offTopic: readBoolean(record.offTopic),
+    shouldSuggestEnding: readBoolean(record.shouldSuggestEnding),
   };
 }
 

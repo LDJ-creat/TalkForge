@@ -22,6 +22,7 @@ export {
 } from "./client";
 export {
   parseCorrectionItemsFromContent,
+  parseGoalJudgeSectionsFromContent,
   parseReportSectionsFromContent,
   parseJsonContent,
   extractJsonPayload,
@@ -29,12 +30,15 @@ export {
 } from "./parse";
 export {
   CORRECTION_PROMPT_VERSION,
+  GOAL_JUDGE_PROMPT_VERSION,
   REPORT_PROMPT_VERSION,
 } from "./prompt-versions";
 export {
   parseCorrectionResponse,
   parseCorrectionResponseItem,
+  parseGoalJudgeResponse,
   parseReportResponse,
+  type ParsedGoalJudgeSections,
   type ParsedReportSections,
 } from "./schemas";
 export {
@@ -43,4 +47,5 @@ export {
   OpenAiCompatibleTextLlmProvider,
   type CreateOpenAiCompatibleTextLlmProviderOptions,
 } from "./provider";
+export { buildGoalJudgePrompt, type GoalJudgePrompt } from "./prompts/goal-judge";
 export { buildReportPrompt, type ReportPrompt } from "./prompts/report";

@@ -3,7 +3,9 @@ import type { CorrectionAnalysisItem } from "@/providers/llm/types";
 
 import {
   parseCorrectionResponse,
+  parseGoalJudgeResponse,
   parseReportResponse,
+  type ParsedGoalJudgeSections,
   type ParsedReportSections,
   type RawCorrectionResponse,
 } from "./schemas";
@@ -76,6 +78,21 @@ export function parseCorrectionItemsFromContent(
       error: error instanceof Error ? error.message : "Invalid correction schema.",
     };
   }
+}
+
+export function parseGoalJudgeSectionsFromContent(
+  rawContent: string,
+  options?: { validGoalIds?: Set<string>; validStageIds?: Set<string> },
+): ParseJsonResult<ParsedGoalJudgeSections> {
+  const parsed = parseJsonContent(rawContent);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  return {
+    ok: true,
+    value: parseGoalJudgeResponse(parsed.value, options),
+  };
 }
 
 export function parseReportSectionsFromContent(
