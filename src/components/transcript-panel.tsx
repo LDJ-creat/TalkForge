@@ -24,6 +24,14 @@ function renderUserPronunciationFeedback(entry: TranscriptEntry) {
     );
   }
 
+  if (feedback.evaluationStatus === "skipped") {
+    return (
+      <p className="transcript-entry__pronunciation transcript-entry__pronunciation--failed">
+        {transcriptCopy.evaluationSkipped}
+      </p>
+    );
+  }
+
   if (feedback.evaluationStatus === "failed") {
     return (
       <p className="transcript-entry__pronunciation transcript-entry__pronunciation--failed">

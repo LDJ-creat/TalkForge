@@ -5,6 +5,7 @@ import { resolveClientRequestUserId } from "@/shared/request-user";
 import { QWEN_OMNI_OPENING_USER_TEXT } from "@/providers/qwen-omni/session-config";
 
 import { createTurnOnServer } from "../create-turn-api";
+import { skipTurnEvaluationOnServer } from "../skip-turn-evaluation-api";
 import type { TranscriptEntry } from "../types";
 
 import {
@@ -95,6 +96,11 @@ export class RealtimeTurnSync {
     const cached = await adapter.get(pendingTurnId);
 
     if (!cached) {
+      try {
+        await skipTurnEvaluationOnServer(this.sessionId, turn.id, this.userId);
+      } catch {
+        // Best-effort: mark evaluation skipped when no audio was captured.
+      }
       return;
     }
 
