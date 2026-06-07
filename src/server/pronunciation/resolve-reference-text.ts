@@ -3,7 +3,7 @@ import type { Turn } from "@/domain/turn";
 
 export const MIN_FREE_SPEECH_REFERENCE_WORD_COUNT = 2;
 
-export type ResolvedReferenceTextSource = "transcript" | "turn_fallback";
+export type ResolvedReferenceTextSource = "realtime" | "transcript";
 
 export type ResolvedReferenceText = {
   text: string;
@@ -29,32 +29,32 @@ export async function resolveReferenceTextForTurn(
   turnId: string,
   deps: ResolveReferenceTextDeps,
 ): Promise<ResolvedReferenceText> {
-  const transcript = await deps.getTranscriptByTurnId(turnId);
-  const transcriptText = transcript?.text?.trim();
+  const turn = await deps.getTurnById(turnId);
+  const realtimeText = turn?.transcriptText?.trim();
 
-  if (transcriptText) {
+  if (realtimeText) {
     return {
-      text: transcriptText,
-      wordCount: countReferenceWords(transcriptText),
-      source: "transcript",
+      text: realtimeText,
+      wordCount: countReferenceWords(realtimeText),
+      source: "realtime",
     };
   }
 
-  const turn = await deps.getTurnById(turnId);
-  const fallbackText = turn?.transcriptText?.trim();
+  const transcript = await deps.getTranscriptByTurnId(turnId);
+  const legacyText = transcript?.text?.trim();
 
-  if (fallbackText) {
+  if (legacyText) {
     return {
-      text: fallbackText,
-      wordCount: countReferenceWords(fallbackText),
-      source: "turn_fallback",
+      text: legacyText,
+      wordCount: countReferenceWords(legacyText),
+      source: "transcript",
     };
   }
 
   return {
     text: "",
     wordCount: 0,
-    source: "turn_fallback",
+    source: "realtime",
   };
 }
 

@@ -85,10 +85,7 @@ export async function evaluateSessionProgress(
     turns: turns.map((turn) => ({
       turnId: turn.id,
       role: turn.role,
-      text:
-        transcriptsByTurnId.get(turn.id)?.text ??
-        turn.transcriptText ??
-        "",
+      text: turn.transcriptText?.trim() || transcriptsByTurnId.get(turn.id)?.text || "",
     })),
     previousProgress,
   };

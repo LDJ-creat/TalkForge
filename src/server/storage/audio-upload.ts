@@ -3,7 +3,6 @@ import type { UploadTarget } from "@/providers/storage/types";
 import type { CreateAudioSegmentInput } from "@/domain/audio-segment";
 
 import type { QueueAdapter } from "@/queue/adapter";
-import { enqueueAsrTranscribeJob } from "@/queue/enqueue";
 import type { TalkForgeDatabase } from "@/server/db/client";
 import {
   createAudioSegment,
@@ -11,7 +10,6 @@ import {
   getAudioSegmentById,
   getAudioSegmentByTurnId,
 } from "@/server/db/repositories/audio-segment-repository";
-import { countAsrTranscribeAttemptsForSession } from "@/server/db/repositories/ai-invocation-metrics-repository";
 import {
   getScenarioById,
   getSessionById,
@@ -23,6 +21,10 @@ import {
   listTurnsBySessionId,
 } from "@/server/db/repositories/turn-repository";
 import { assertSessionWithinLimitsForAudioOrThrow } from "@/server/observability/enforce-session-limits";
+import {
+  createCountUserTurnsBySessionId,
+  enqueueTurnPostAudioJobs,
+} from "@/server/turn-post-audio";
 
 import { AudioUploadServiceError } from "./errors";
 import { buildTurnAudioObjectKey, parseTurnAudioObjectKey } from "./object-keys";
@@ -57,7 +59,7 @@ export type FinalizeTurnAudioUploadOptions = {
 export type TurnAudioFinalizeResult = {
   turnId: string;
   audioSegment: Awaited<ReturnType<typeof createAudioSegment>>;
-  asrJobEnqueued: boolean;
+  postAudioJobsEnqueued: boolean;
 };
 
 export type TurnAudioUploadTargetResult = {
@@ -195,14 +197,13 @@ export async function finalizeTurnAudioUpload(
     };
   });
 
-  let asrJobEnqueued = false;
+  let postAudioJobsEnqueued = false;
   if (options?.queueAdapter) {
     const session = await getSessionById(db, input.sessionId);
     if (session && result.created) {
-      const [scenario, turns, asrInvocationCount] = await Promise.all([
+      const [scenario, turns] = await Promise.all([
         getScenarioById(db, session.scenarioId),
         listTurnsBySessionId(db, input.sessionId),
-        countAsrTranscribeAttemptsForSession(db, input.sessionId),
       ]);
 
       if (scenario) {
@@ -210,25 +211,30 @@ export async function finalizeTurnAudioUpload(
           scenario,
           session,
           turns,
-          asrInvocationCount,
           pending: { additionalAsrJobs: 1 },
         });
       }
     }
 
-    await enqueueAsrTranscribeJob(options.queueAdapter, {
-      turnId: input.turnId,
-      sessionId: input.sessionId,
-      audioSegmentId: result.audioSegment.id,
-      audioObjectKey: result.audioSegment.objectKey,
-      language: "en",
-    });
-    asrJobEnqueued = true;
+    postAudioJobsEnqueued = await enqueueTurnPostAudioJobs(
+      {
+        turnId: input.turnId,
+        sessionId: input.sessionId,
+        audioSegmentId: result.audioSegment.id,
+      },
+      {
+        queueAdapter: options.queueAdapter,
+        getTurnById: (turnId) => getTurnById(db, turnId),
+        countUserTurnsBySessionId: createCountUserTurnsBySessionId((sessionId) =>
+          listTurnsBySessionId(db, sessionId),
+        ),
+      },
+    );
   }
 
   return {
     ...result,
-    asrJobEnqueued,
+    postAudioJobsEnqueued,
   };
 }
 
