@@ -25,7 +25,7 @@
 | P1-012 | Shadowing Content Pipeline | `feature/p1-012-shadowing-content-pipeline` | P1-009, P1-011 | B | todo |
 | P1-013 | Pronunciation Evaluation Provider | `feature/p1-013-pronunciation-evaluation-provider` | P1-003, P1-004, P1-005, P1-012 | final | todo |
 | P1-014 | Observability Cost And Safety | `feature/p1-014-observability-cost-safety` | P1-005 through P1-013 | final | todo |
-| P1-015 | Real E2E Staging Readiness | `feature/p1-015-real-e2e-staging-readiness` | P1-001 through P1-014 | final | todo |
+| P1-015 | Real E2E Staging Readiness | `feature/p1-015-real-e2e-staging-readiness` | P1-001 through P1-014 | final | done |
 
 ## Execution Notes
 

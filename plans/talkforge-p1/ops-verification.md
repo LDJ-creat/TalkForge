@@ -2,6 +2,8 @@
 
 Use this checklist after deploying TalkForge with real providers.
 
+For the full end-to-end staging flow (scenario → realtime → report → Shadowing), start with [`staging-readiness.md`](./staging-readiness.md).
+
 ## Health And Provider Status
 
 1. `GET /api/health` returns `200` when PostgreSQL (and Redis when enabled) are healthy.
