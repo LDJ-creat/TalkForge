@@ -6,7 +6,7 @@ type VoiceVisualizerProps = {
   label?: string;
 };
 
-function getVisualizerLabel(turnStatus: TurnStatus): string {
+function getVisualizerLabel(turnStatus: TurnStatus): string | null {
   switch (turnStatus) {
     case "user_speaking":
       return voiceVisualizerCopy.listening;
@@ -16,7 +16,7 @@ function getVisualizerLabel(turnStatus: TurnStatus): string {
     case "assistant_processing":
       return voiceVisualizerCopy.processing;
     default:
-      return voiceVisualizerCopy.ready;
+      return null;
   }
 }
 
@@ -27,6 +27,8 @@ export function VoiceVisualizer({ turnStatus, label }: VoiceVisualizerProps) {
     turnStatus === "user_processing" ||
     turnStatus === "assistant_processing";
 
+  const displayLabel = label ?? getVisualizerLabel(turnStatus);
+
   return (
     <div
       className={`voice-visualizer${isActive ? " voice-visualizer--active" : ""}`}
@@ -36,7 +38,7 @@ export function VoiceVisualizer({ turnStatus, label }: VoiceVisualizerProps) {
       <span className="voice-visualizer__orb voice-visualizer__orb--one" />
       <span className="voice-visualizer__orb voice-visualizer__orb--two" />
       <span className="voice-visualizer__orb voice-visualizer__orb--three" />
-      <p className="voice-visualizer__label">{label ?? getVisualizerLabel(turnStatus)}</p>
+      {displayLabel ? <p className="voice-visualizer__label">{displayLabel}</p> : null}
     </div>
   );
 }
