@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
   boolean,
   doublePrecision,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -12,6 +13,10 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import {
+  AI_INVOCATION_OPERATIONS,
+  AI_INVOCATION_STATUSES,
+} from "@/domain/ai-invocation-log";
 import {
   AUDIO_CODECS,
   AUDIO_FORMATS,
@@ -36,6 +41,14 @@ export const correctionTypeEnum = pgEnum("correction_type", CORRECTION_TYPES);
 export const pronunciationModeEnum = pgEnum(
   "pronunciation_mode",
   PRONUNCIATION_MODES,
+);
+export const aiInvocationOperationEnum = pgEnum(
+  "ai_invocation_operation",
+  AI_INVOCATION_OPERATIONS,
+);
+export const aiInvocationStatusEnum = pgEnum(
+  "ai_invocation_status",
+  AI_INVOCATION_STATUSES,
 );
 
 export const users = pgTable("users", {
@@ -178,6 +191,49 @@ export const pronunciationEvaluations = pgTable(
   }),
 );
 
+export const aiInvocationLogs = pgTable(
+  "ai_invocation_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id").references(() => sessions.id, {
+      onDelete: "set null",
+    }),
+    turnId: uuid("turn_id").references(() => turns.id, { onDelete: "set null" }),
+    jobId: text("job_id"),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    operation: aiInvocationOperationEnum("operation").notNull(),
+    promptVersion: text("prompt_version"),
+    inputObjectKey: text("input_object_key"),
+    outputObjectKey: text("output_object_key"),
+    requestSummary: jsonb("request_summary"),
+    responseSummary: jsonb("response_summary"),
+    rawRequestObjectKey: text("raw_request_object_key"),
+    rawResponseObjectKey: text("raw_response_object_key"),
+    status: aiInvocationStatusEnum("status").notNull(),
+    latencyMs: integer("latency_ms").notNull(),
+    retryCount: integer("retry_count").notNull().default(0),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    audioDurationMs: integer("audio_duration_ms"),
+    costEstimate: doublePrecision("cost_estimate"),
+    errorCode: text("error_code"),
+    errorMessage: text("error_message"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    sessionCreatedIdx: index("ai_invocation_logs_session_created_idx").on(
+      table.sessionId,
+      table.createdAt,
+    ),
+    providerOperationCreatedIdx: index(
+      "ai_invocation_logs_provider_operation_created_idx",
+    ).on(table.provider, table.operation, table.createdAt),
+  }),
+);
+
 export const reports = pgTable("reports", {
   id: uuid("id").primaryKey().defaultRandom(),
   sessionId: uuid("session_id")
@@ -217,6 +273,7 @@ export const sessionsRelations = relations(sessions, ({ one, many }) => ({
     references: [scenarioProgress.sessionId],
   }),
   turns: many(turns),
+  aiInvocationLogs: many(aiInvocationLogs),
   report: one(reports, {
     fields: [sessions.id],
     references: [reports.sessionId],
@@ -242,6 +299,18 @@ export const turnsRelations = relations(turns, ({ one, many }) => ({
   transcripts: many(transcripts),
   corrections: many(corrections),
   pronunciationEvaluations: many(pronunciationEvaluations),
+  aiInvocationLogs: many(aiInvocationLogs),
+}));
+
+export const aiInvocationLogsRelations = relations(aiInvocationLogs, ({ one }) => ({
+  session: one(sessions, {
+    fields: [aiInvocationLogs.sessionId],
+    references: [sessions.id],
+  }),
+  turn: one(turns, {
+    fields: [aiInvocationLogs.turnId],
+    references: [turns.id],
+  }),
 }));
 
 export const audioSegmentsRelations = relations(audioSegments, ({ one }) => ({
@@ -293,6 +362,7 @@ export type DbCorrection = typeof corrections.$inferSelect;
 export type DbPronunciationEvaluation =
   typeof pronunciationEvaluations.$inferSelect;
 export type DbReport = typeof reports.$inferSelect;
+export type DbAiInvocationLog = typeof aiInvocationLogs.$inferSelect;
 
 export type NewDbScenario = typeof scenarios.$inferInsert;
 export type NewDbSession = typeof sessions.$inferInsert;
@@ -303,6 +373,7 @@ export type NewDbCorrection = typeof corrections.$inferInsert;
 export type NewDbPronunciationEvaluation =
   typeof pronunciationEvaluations.$inferInsert;
 export type NewDbReport = typeof reports.$inferInsert;
+export type NewDbAiInvocationLog = typeof aiInvocationLogs.$inferInsert;
 
 export const schema = {
   users,
@@ -314,6 +385,7 @@ export const schema = {
   transcripts,
   corrections,
   pronunciationEvaluations,
+  aiInvocationLogs,
   reports,
   usersRelations,
   scenariosRelations,
@@ -324,5 +396,6 @@ export const schema = {
   transcriptsRelations,
   correctionsRelations,
   pronunciationEvaluationsRelations,
+  aiInvocationLogsRelations,
   reportsRelations,
 };

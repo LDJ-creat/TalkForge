@@ -8,6 +8,20 @@
       "when": 1780744917412,
       "tag": "0000_loving_loners",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780806389827,
+      "tag": "0001_supreme_hulk",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780806929760,
+      "tag": "0002_bumpy_hedge_knight",
+      "breakpoints": true
     }
   ]
 }
