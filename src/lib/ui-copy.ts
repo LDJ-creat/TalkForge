@@ -57,6 +57,10 @@ export const scenarioEntryCopy = {
   loadingHistory: "正在加载历史报告…",
   loadHistoryError: "无法加载练习历史，你仍可以开始新对话。",
   emptyHistory: "还没有历史报告，点击下方开始你的第一次对话。",
+  historicalReportFailed: "报告生成失败，可重试生成或查看对话详情。",
+  historicalReportGenerating: "报告正在生成中…",
+  historicalReportRetrying: "正在重新生成报告…",
+  viewSessionDetails: "查看详情",
 };
 
 export const conversationCopy = {

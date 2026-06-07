@@ -1,6 +1,9 @@
 import type { Report } from "@/domain/report";
-import type { ScenarioHistoricalReport } from "@/domain/scenario-report-history";
-import { errorCopy, taskCompletionCopy } from "@/lib/ui-copy";
+import type {
+  ScenarioHistoricalReport,
+  ScenarioHistoricalReportStatus,
+} from "@/domain/scenario-report-history";
+import { errorCopy, scenarioEntryCopy, taskCompletionCopy } from "@/lib/ui-copy";
 import { REQUEST_USER_ID_HEADER, resolveClientRequestUserId } from "@/shared/request-user";
 
 export async function fetchScenarioReportsFromServer(
@@ -47,6 +50,29 @@ export function formatReportEvaluatedAt(evaluatedAt: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   });
+}
+
+export function formatHistoricalReportHeadline(item: ScenarioHistoricalReport): string {
+  if (item.status === "ready" && item.report) {
+    return item.report.summary;
+  }
+
+  if (item.status === "generating") {
+    return scenarioEntryCopy.historicalReportGenerating;
+  }
+
+  return scenarioEntryCopy.historicalReportFailed;
+}
+
+export function formatHistoricalReportMeta(
+  status: ScenarioHistoricalReportStatus,
+  report?: Report,
+): string {
+  if (status !== "ready" || !report) {
+    return taskCompletionCopy.unavailable;
+  }
+
+  return formatTaskCompletionSummary(report);
 }
 
 export function formatTaskCompletionSummary(report: Report): string {

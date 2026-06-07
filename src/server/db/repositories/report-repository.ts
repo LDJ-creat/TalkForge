@@ -1,7 +1,10 @@
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import type { CreateReportInput, Report } from "@/domain/report";
-import type { ScenarioHistoricalReport } from "@/domain/scenario-report-history";
+import type {
+  ScenarioHistoricalReport,
+  ScenarioHistoricalReportStatus,
+} from "@/domain/scenario-report-history";
 import {
   REPORT_GENERATING_MARKER,
   REPORT_IN_PROGRESS_WINDOW_MS,
@@ -37,12 +40,35 @@ export async function getReportBySessionId(db: TalkForgeDatabase, sessionId: str
   return report;
 }
 
-export async function listCompletedReportsByScenarioForUser(
+function resolveScenarioReportHistoryStatus(
+  report: Report | null,
+  now: Date,
+): ScenarioHistoricalReportStatus {
+  if (!report) {
+    return "failed";
+  }
+
+  if (isReportGenerationComplete(report)) {
+    return "ready";
+  }
+
+  const ageMs = now.getTime() - new Date(report.createdAt).getTime();
+  if (ageMs < REPORT_IN_PROGRESS_WINDOW_MS) {
+    return "generating";
+  }
+
+  return "failed";
+}
+
+export async function listScenarioReportHistoryForUser(
   db: TalkForgeDatabase,
   userId: string,
   scenarioId: string,
   limit = DEFAULT_SCENARIO_REPORT_HISTORY_LIMIT,
+  options: { now?: () => Date } = {},
 ): Promise<ScenarioHistoricalReport[]> {
+  const now = options.now ?? (() => new Date());
+
   const rows = await db
     .select({
       sessionId: sessions.id,
@@ -50,26 +76,48 @@ export async function listCompletedReportsByScenarioForUser(
       sessionEndedAt: sessions.endedAt,
       report: reports,
     })
-    .from(reports)
-    .innerJoin(sessions, eq(reports.sessionId, sessions.id))
+    .from(sessions)
+    .leftJoin(reports, eq(reports.sessionId, sessions.id))
     .where(
       and(
         eq(sessions.userId, userId),
         eq(sessions.scenarioId, scenarioId),
         eq(sessions.status, "completed"),
-        ne(reports.summary, REPORT_GENERATING_MARKER),
       ),
     )
-    .orderBy(desc(reports.createdAt))
+    .orderBy(
+      desc(
+        sql`coalesce(${reports.createdAt}, ${sessions.endedAt}, ${sessions.startedAt})`,
+      ),
+    )
     .limit(limit);
 
-  return rows.map((row) => ({
-    sessionId: row.sessionId,
-    sessionStartedAt: row.sessionStartedAt,
-    sessionEndedAt: row.sessionEndedAt ?? undefined,
-    evaluatedAt: row.report.createdAt,
-    report: toReport(row.report),
-  }));
+  return rows.map((row) => {
+    const report = row.report ? toReport(row.report) : null;
+    const status = resolveScenarioReportHistoryStatus(report, now());
+    const evaluatedAt =
+      report?.createdAt ?? row.sessionEndedAt ?? row.sessionStartedAt;
+
+    return {
+      sessionId: row.sessionId,
+      sessionStartedAt: row.sessionStartedAt,
+      sessionEndedAt: row.sessionEndedAt ?? undefined,
+      evaluatedAt,
+      status,
+      report: status === "ready" && report ? report : undefined,
+    };
+  });
+}
+
+/** @deprecated Use listScenarioReportHistoryForUser. */
+export async function listCompletedReportsByScenarioForUser(
+  db: TalkForgeDatabase,
+  userId: string,
+  scenarioId: string,
+  limit = DEFAULT_SCENARIO_REPORT_HISTORY_LIMIT,
+): Promise<ScenarioHistoricalReport[]> {
+  const history = await listScenarioReportHistoryForUser(db, userId, scenarioId, limit);
+  return history.filter((item) => item.status === "ready" && item.report);
 }
 
 export type PrepareReportGenerationResult =

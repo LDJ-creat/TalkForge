@@ -19,6 +19,7 @@ export {
   getReportBySessionId,
   isReportGenerationComplete,
   listCompletedReportsByScenarioForUser,
+  listScenarioReportHistoryForUser,
   prepareReportGeneration,
   saveReportForSessionIfAbsent,
 } from "./report-repository";

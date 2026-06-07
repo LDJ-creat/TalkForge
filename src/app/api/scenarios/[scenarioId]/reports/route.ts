@@ -2,7 +2,7 @@ import { jsonError, requireRequestUserId } from "@/server/api/http";
 import { getDb } from "@/server/db/client";
 import {
   getScenarioById,
-  listCompletedReportsByScenarioForUser,
+  listScenarioReportHistoryForUser,
 } from "@/server/db/repositories";
 import { ReportServiceError } from "@/server/report/errors";
 import { listScenarioReportsForUser } from "@/server/report/list-scenario-reports";
@@ -18,8 +18,8 @@ export async function GET(
 
     const result = await listScenarioReportsForUser(scenarioId, userId, {
       getScenarioById: (id) => getScenarioById(db, id),
-      listCompletedReportsByScenarioForUser: (ownerId, id) =>
-        listCompletedReportsByScenarioForUser(db, ownerId, id),
+      listScenarioReportHistoryForUser: (ownerId, id) =>
+        listScenarioReportHistoryForUser(db, ownerId, id),
     });
 
     return Response.json(result);

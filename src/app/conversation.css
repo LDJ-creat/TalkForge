@@ -807,6 +807,24 @@
   text-decoration: none;
 }
 
+.historical-report-card__retry-button {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.75rem;
+}
+
+.historical-report-card--failed {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.historical-report-card--generating .historical-report-card__headline {
+  color: var(--muted);
+}
+
+.historical-report-card__error {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+}
+
 .historical-report-card__body {
   padding: 0 1.1rem 1rem;
   border-top: 1px solid var(--accent-muted);
