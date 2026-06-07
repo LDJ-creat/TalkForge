@@ -231,6 +231,7 @@ function usesOnlyMockProviders(
     providers.llmCorrection.mode === "mock" &&
     providers.llmReport.mode === "mock" &&
     providers.llmGoalJudge.mode === "mock" &&
+    providers.llmScenarioGenerate.mode === "mock" &&
     providers.tts.mode === "mock" &&
     providers.pronunciation.mode === "mock" &&
     providers.storage.mode === "mock" &&
@@ -248,6 +249,16 @@ export function parseRuntimeConfigFromEnv(
     env,
     PROVIDER_ENV_KEYS.llmReport,
     llmCorrectionName,
+  );
+  const llmGoalJudgeName = readProviderName(
+    env,
+    PROVIDER_ENV_KEYS.llmGoalJudge,
+    llmCorrectionName,
+  );
+  const llmScenarioGenerateName = readProviderName(
+    env,
+    PROVIDER_ENV_KEYS.llmScenarioGenerate,
+    llmReportName,
   );
   const storageName = readProviderName(
     env,
@@ -270,10 +281,10 @@ export function parseRuntimeConfigFromEnv(
       llmReportName as RuntimeConfig["providers"]["llmReport"]["name"],
     ),
     llmGoalJudge: selection(
-      readProviderName(
-        env,
-        PROVIDER_ENV_KEYS.llmGoalJudge,
-      ) as RuntimeConfig["providers"]["llmGoalJudge"]["name"],
+      llmGoalJudgeName as RuntimeConfig["providers"]["llmGoalJudge"]["name"],
+    ),
+    llmScenarioGenerate: selection(
+      llmScenarioGenerateName as RuntimeConfig["providers"]["llmScenarioGenerate"]["name"],
     ),
     tts: selection(
       readProviderName(env, PROVIDER_ENV_KEYS.tts) as RuntimeConfig["providers"]["tts"]["name"],

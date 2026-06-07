@@ -1,6 +1,10 @@
 import type { ProviderIdentity } from "../types";
 import type { GoalJudgeInput, GoalJudgeResult } from "./goal-judge-types";
 import type {
+  ScenarioGenerateInput,
+  ScenarioGenerationResult,
+} from "./scenario-generate-types";
+import type {
   CorrectionAnalysisResult,
   CorrectionAnalyzeInput,
   ReportGenerateInput,
@@ -19,4 +23,11 @@ export interface LlmGoalJudgeProvider extends ProviderIdentity {
   evaluateGoals(input: GoalJudgeInput): Promise<GoalJudgeResult>;
 }
 
-export type LlmProvider = LlmCorrectionProvider & LlmReportProvider & LlmGoalJudgeProvider;
+export interface LlmScenarioGenerateProvider extends ProviderIdentity {
+  generateScenario(input: ScenarioGenerateInput): Promise<ScenarioGenerationResult>;
+}
+
+export type LlmProvider = LlmCorrectionProvider &
+  LlmReportProvider &
+  LlmGoalJudgeProvider &
+  LlmScenarioGenerateProvider;

@@ -93,6 +93,110 @@
   font-weight: 600;
 }
 
+.scenario-card--create {
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.scenario-card--preview {
+  cursor: default;
+}
+
+.scenario-card--preview:hover,
+.scenario-card--preview:focus-visible {
+  transform: none;
+}
+
+.scenario-create {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.scenario-create__header {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.scenario-create__panel,
+.scenario-create__preview {
+  background: var(--surface);
+  border: 1px solid var(--accent-muted);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: 0 8px 24px rgba(44, 40, 37, 0.05);
+}
+
+.scenario-create__label {
+  display: block;
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.65rem;
+}
+
+.scenario-create__textarea {
+  width: 100%;
+  border: 1px solid var(--accent-muted);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  font: inherit;
+  resize: vertical;
+  min-height: 8rem;
+  background: var(--background);
+}
+
+.scenario-create__textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.scenario-create__actions,
+.scenario-create__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.scenario-create__mission {
+  color: var(--muted);
+  font-size: 0.925rem;
+}
+
+.scenario-create__details-toggle {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 1rem;
+}
+
+.scenario-create__details {
+  margin-top: 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.scenario-create__details-section h3 {
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.scenario-create__details-section ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+  color: var(--muted);
+}
+
 .conversation-page {
   min-height: 100vh;
   display: flex;

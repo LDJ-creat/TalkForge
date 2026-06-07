@@ -1,10 +1,12 @@
 import { APP_NAME, APP_TAGLINE } from "@/lib/app-info";
-import { listSeedScenarios } from "@/server/scenario/catalog";
+import { getDb } from "@/server/db/client";
+import { listAllScenarios } from "@/server/scenario/catalog";
 
 import { ScenarioPicker } from "@/components/scenario-picker";
 
-export default function HomePage() {
-  const scenarios = listSeedScenarios();
+export default async function HomePage() {
+  const db = getDb();
+  const scenarios = await listAllScenarios(db);
 
   return (
     <main className="scenario-page">

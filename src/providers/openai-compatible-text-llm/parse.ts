@@ -9,6 +9,8 @@ import {
   type ParsedReportSections,
   type RawCorrectionResponse,
 } from "./schemas";
+import { parseScenarioGenerateResponse } from "./schemas/scenario-generate";
+import type { ScenarioDraft } from "@/providers/llm/scenario-generate-types";
 
 export type ParseJsonResult<T> =
   | { ok: true; value: T; schemaFallback?: boolean }
@@ -106,5 +108,27 @@ export function parseReportSectionsFromContent(
   return {
     ok: true,
     value: parseReportResponse(parsed.value),
+  };
+}
+
+export function parseScenarioGenerateFromContent(
+  rawContent: string,
+): ParseJsonResult<ScenarioDraft> {
+  const parsed = parseJsonContent(rawContent);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  const scenario = parseScenarioGenerateResponse(parsed.value);
+  if (!scenario) {
+    return {
+      ok: false,
+      error: "Scenario JSON did not match the required schema.",
+    };
+  }
+
+  return {
+    ok: true,
+    value: scenario,
   };
 }

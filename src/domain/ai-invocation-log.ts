@@ -4,6 +4,7 @@ export const AI_INVOCATION_OPERATIONS = [
   "llm.correction",
   "llm.report",
   "llm.scenarioJudge",
+  "llm.scenarioGenerate",
   "tts.generate",
   "pronunciation.evaluate",
 ] as const;
