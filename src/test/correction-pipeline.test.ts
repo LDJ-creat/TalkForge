@@ -8,6 +8,7 @@ import type { Turn } from "@/domain/turn";
 import { createMockLlmProvider } from "@/providers/mock/llm";
 import { typedEnqueue, createMemoryQueueAdapter } from "@/queue";
 import { JobProcessingError } from "@/queue/errors";
+import { resetRuntimeConfigForTests } from "@/server/config";
 import {
   analyzeTurnCorrections,
   getLlmCorrectionProvider,
@@ -341,11 +342,13 @@ describe("correction analysis pipeline", () => {
 
   it("defaults to the mock LLM provider through the configuration boundary", () => {
     resetLlmCorrectionProviderForTests();
+    resetRuntimeConfigForTests();
     process.env.LLM_CORRECTION_PROVIDER = "mock";
 
     expect(getLlmCorrectionProvider().name).toBe("mock-llm");
 
     resetLlmCorrectionProviderForTests();
+    resetRuntimeConfigForTests();
   });
 
   it("wires database repositories through createDbCorrectionAnalyzeDeps", () => {
@@ -364,6 +367,7 @@ describe("correction analysis pipeline", () => {
 
   it("registers the correction worker through registerP0WorkerHandlers", () => {
     resetLlmCorrectionProviderForTests();
+    resetRuntimeConfigForTests();
     process.env.LLM_CORRECTION_PROVIDER = "mock";
 
     const registry = createWorkerRegistry();
