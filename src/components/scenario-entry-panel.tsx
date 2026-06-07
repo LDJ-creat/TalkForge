@@ -6,6 +6,8 @@ import Link from "next/link";
 import type { Scenario } from "@/domain/scenario";
 import type { ScenarioHistoricalReport } from "@/domain/scenario-report-history";
 import { fetchScenarioReportsFromServer } from "@/features/conversation/fetch-scenario-reports-api";
+import { formatScenarioEntrySubtitle } from "@/lib/format-scenario-display";
+import { navCopy, scenarioEntryCopy } from "@/lib/ui-copy";
 
 import { HistoricalReportCard } from "./historical-report-card";
 
@@ -45,12 +47,10 @@ export function ScenarioEntryPanel({ scenario, onStartPractice }: ScenarioEntryP
       <header className="scenario-entry__header">
         <div className="scenario-entry__info">
           <Link href="/" className="scenario-entry__back">
-            ← All scenarios
+            {navCopy.allScenarios}
           </Link>
           <h1 className="scenario-entry__title">{scenario.title}</h1>
-          <p className="scenario-entry__subtitle">
-            {scenario.userRole} · {scenario.level} · {scenario.situation}
-          </p>
+          <p className="scenario-entry__subtitle">{formatScenarioEntrySubtitle(scenario)}</p>
           <p className="scenario-entry__description">{scenario.description}</p>
         </div>
         <button
@@ -59,30 +59,30 @@ export function ScenarioEntryPanel({ scenario, onStartPractice }: ScenarioEntryP
           data-testid="start-practice-button"
           onClick={onStartPractice}
         >
-          Start conversation
+          {scenarioEntryCopy.startConversation}
         </button>
       </header>
 
       <section className="scenario-entry__history" aria-labelledby="scenario-history-title">
         <h2 id="scenario-history-title" className="scenario-entry__history-title">
-          Practice history
+          {scenarioEntryCopy.practiceHistory}
         </h2>
 
         {status === "loading" ? (
           <p className="scenario-entry__history-message" data-testid="scenario-history-loading">
-            Loading past reports…
+            {scenarioEntryCopy.loadingHistory}
           </p>
         ) : null}
 
         {status === "error" ? (
           <p className="scenario-entry__history-message scenario-entry__history-message--error">
-            Could not load practice history. You can still start a new conversation.
+            {scenarioEntryCopy.loadHistoryError}
           </p>
         ) : null}
 
         {status === "ready" && reports.length === 0 ? (
           <p className="scenario-entry__history-message" data-testid="scenario-history-empty">
-            No past reports yet. Start your first conversation below.
+            {scenarioEntryCopy.emptyHistory}
           </p>
         ) : null}
 
