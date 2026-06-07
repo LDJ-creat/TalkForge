@@ -16,3 +16,12 @@ export function isUploadCapableStorageProvider(
 ): provider is UploadCapableStorageProvider {
   return typeof (provider as UploadCapableStorageProvider).writeUploadedObject === "function";
 }
+
+export function hasUploadedObjectSize(
+  provider: StorageProvider,
+): provider is StorageProvider & {
+  getUploadedObjectSize: (objectKey: string) => Promise<number>;
+} {
+  return typeof (provider as UploadCapableStorageProvider).getUploadedObjectSize ===
+    "function";
+}
