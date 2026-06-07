@@ -1,3 +1,7 @@
+import { loadEnvFile } from "./load-env";
+
+loadEnvFile();
+
 import { closeDb, getDb } from "@/server/db/client";
 import { bootstrapDevData } from "@/server/db/seeds/bootstrap";
 

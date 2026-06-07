@@ -1,3 +1,7 @@
+import { loadEnvFile } from "./scripts/load-env";
+
+loadEnvFile();
+
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({

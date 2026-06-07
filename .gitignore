@@ -40,3 +40,6 @@ next-env.d.ts
 .vitest
 
 .data/
+
+# git worktrees for parallel task development
+.worktree/

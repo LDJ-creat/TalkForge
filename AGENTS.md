@@ -8,6 +8,11 @@ The current authoritative design document is:
 
 - `TalkForge-Design.md`
 
+Development plans:
+
+- P0 mock/framework plan: `plans/talkforge-p0/plan.md`
+- P1 real-provider plan: `plans/talkforge-p1/plan.md`
+
 Agents working in new sessions must read this file before implementation. If a task file conflicts with the design document, follow the task file for the current PR and note the discrepancy in the PR description.
 
 ## Architecture Summary
@@ -26,6 +31,13 @@ P0 decisions:
 - Scenario design: structured scenarios with role, situation, goals, stages, exit policy, and evaluation rubric.
 - Scenario ending: manual user end + max duration/turn count + AI suggestion after required goals complete.
 - Pronunciation: free conversation gets lightweight evaluation; strict phoneme/word-level evaluation belongs to Shadowing.
+
+P1 objective:
+
+- Replace P0 mock providers with real, configurable providers.
+- Run the complete real loop: realtime voice session, user-turn audio upload, ASR, correction, scenario progress, report, TTS standard audio, and Shadowing evaluation.
+- Keep provider integrations isolated behind existing contracts.
+- Add AI invocation tracing, observability, cost controls, provider health checks, and fallback behavior before treating the app as real-user ready.
 
 ## Expected Development Workflow
 
@@ -85,8 +97,11 @@ Mock external providers by default in P0 implementation tasks unless the task ex
 - Realtime model access must use backend-created short-lived sessions or tokens.
 - Audio objects must be private by default.
 - Audio deletion and retention rules must be considered in storage-related tasks.
+- P1 real-provider tasks must document required environment variables and must not commit secrets.
+- External provider integrations should include timeout, retry, and normalized error handling.
+- LLM/AI provider calls should be traceable through the P1 AI invocation tracing layer. Store queryable summaries in the database and raw request/response payloads only when tracing is enabled.
+- Do not log raw audio bytes, secrets, authorization headers, or unbounded sensitive payloads. Use object keys and redacted summaries for traces by default.
 
 ## CodeGraph
 
 If CodeGraph MCP tools are available in a future implementation session, use them for structural code questions such as definitions, callers, callees, and impact analysis. Use native text search only for literal strings, logs, comments, or when CodeGraph is not initialized.
-
