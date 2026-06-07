@@ -97,7 +97,32 @@ function asEvaluationRubric(value: unknown): EvaluationRubric {
     throw new Error("Scenario evaluationRubric is missing or invalid.");
   }
 
-  return value as EvaluationRubric;
+  const record = value as EvaluationRubric & {
+    userRoleLabel?: string;
+    aiRoleLabel?: string;
+  };
+
+  return {
+    dimensions: asStringArray(record.dimensions),
+  };
+}
+
+function readScenarioDisplayLabels(value: unknown): Pick<Scenario, "userRoleLabel" | "aiRoleLabel"> {
+  if (typeof value !== "object" || value === null) {
+    return {};
+  }
+
+  const record = value as {
+    userRoleLabel?: unknown;
+    aiRoleLabel?: unknown;
+  };
+
+  return {
+    ...(typeof record.userRoleLabel === "string"
+      ? { userRoleLabel: record.userRoleLabel }
+      : {}),
+    ...(typeof record.aiRoleLabel === "string" ? { aiRoleLabel: record.aiRoleLabel } : {}),
+  };
 }
 
 function asTranscriptSegments(value: unknown): TranscriptSegment[] {
@@ -116,6 +141,7 @@ export function toScenario(row: DbScenario): Scenario {
     level: row.level,
     userRole: row.userRole,
     aiRole: row.aiRole,
+    ...readScenarioDisplayLabels(row.evaluationRubric),
     situation: row.situation,
     mission: row.mission,
     goals: asScenarioGoals(row.goals),
@@ -144,7 +170,11 @@ export function fromScenario(scenario: Scenario): NewDbScenario {
     targetExpressions: scenario.targetExpressions,
     constraints: scenario.constraints,
     exitPolicy: scenario.exitPolicy,
-    evaluationRubric: scenario.evaluationRubric,
+    evaluationRubric: {
+      ...scenario.evaluationRubric,
+      ...(scenario.userRoleLabel ? { userRoleLabel: scenario.userRoleLabel } : {}),
+      ...(scenario.aiRoleLabel ? { aiRoleLabel: scenario.aiRoleLabel } : {}),
+    },
   };
 }
 

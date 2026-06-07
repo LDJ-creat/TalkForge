@@ -36,6 +36,8 @@ export type Scenario = {
   level: CefrLevel;
   userRole: string;
   aiRole: string;
+  userRoleLabel?: string;
+  aiRoleLabel?: string;
   situation: string;
   mission: string;
   goals: ScenarioGoal[];
