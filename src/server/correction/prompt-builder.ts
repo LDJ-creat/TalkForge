@@ -53,7 +53,7 @@ export function buildRecentContextTurns(
 
   return priorTurns.flatMap((turn) => {
     const transcript = transcriptsByTurnId.get(turn.id);
-    const text = transcript?.text.trim() ?? turn.transcriptText?.trim();
+    const text = turn.transcriptText?.trim() ?? transcript?.text.trim();
     if (!text) {
       return [];
     }
@@ -95,7 +95,7 @@ function formatRecentContext(context: CorrectionContextTurn[]): string {
       (turn, index) =>
         `${index + 1}. ${turn.role}: ${turn.text}${
           turn.confidence !== undefined
-            ? ` (ASR confidence: ${turn.confidence.toFixed(2)})`
+            ? ` (transcription confidence: ${turn.confidence.toFixed(2)})`
             : ""
         }`,
     )
@@ -143,10 +143,12 @@ export function buildCorrectionPrompt(input: CorrectionPromptInput): CorrectionP
 }`;
 
   const system = [
-    "You analyze English learner speech transcripts from an ASR pipeline.",
+    "You analyze English learner speech transcripts from realtime voice conversation.",
     "Identify grammar, expression, vocabulary, and clarity issues in the learner's latest turn.",
-    "Do not treat obvious ASR misrecognitions as learner grammar errors.",
+    "Do not treat obvious transcription misrecognitions as learner grammar errors.",
     "When transcript confidence is low or wording looks like a recognition artifact, prefer type asr_uncertain.",
+    "Write each correction explanation in Simplified Chinese.",
+    "Keep originalText and correctedText in English exactly as spoken or improved.",
     "Return JSON only. Do not wrap the JSON in markdown fences.",
     `Learner level: ${input.scenarioLevel}. ${LEVEL_GUIDANCE[input.scenarioLevel]}`,
     `Low-confidence transcript threshold: ${ASR_UNCERTAIN_CONFIDENCE_THRESHOLD}.`,
@@ -162,7 +164,7 @@ export function buildCorrectionPrompt(input: CorrectionPromptInput): CorrectionP
     "Current learner transcript:",
     input.transcriptText,
     "",
-    `Overall ASR confidence: ${confidenceLabel}${
+    `Overall transcription confidence: ${confidenceLabel}${
       lowConfidence ? " (low — avoid over-correction)" : ""
     }`,
     "",

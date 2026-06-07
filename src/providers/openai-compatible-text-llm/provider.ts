@@ -41,6 +41,8 @@ import {
 import { buildGoalJudgePrompt } from "./prompts/goal-judge";
 import { buildReportPrompt } from "./prompts/report";
 import { buildScenarioGeneratePrompt } from "@/server/scenario-generation/prompt-builder";
+import { logScenarioGenerate } from "@/server/scenario-generation/log";
+import { SCENARIO_GENERATE_TIMEOUT_MS, TEXT_LLM_REPORT_TIMEOUT_MS } from "./timeouts";
 
 export type CreateOpenAiCompatibleTextLlmProviderOptions = {
   providerName: string;
@@ -107,6 +109,7 @@ export class OpenAiCompatibleTextLlmProvider
     const { result } = await executeProviderCall({
       provider: this.name,
       operation: "llm.report",
+      timeoutMs: TEXT_LLM_REPORT_TIMEOUT_MS,
       fn: (context) => this.invokeReportGeneration(input, context),
     });
 
@@ -127,6 +130,8 @@ export class OpenAiCompatibleTextLlmProvider
     const { result } = await executeProviderCall({
       provider: this.name,
       operation: "llm.scenarioGenerate",
+      timeoutMs: SCENARIO_GENERATE_TIMEOUT_MS,
+      retry: false,
       fn: (context) => this.invokeScenarioGeneration(input, context),
     });
 
@@ -310,6 +315,13 @@ export class OpenAiCompatibleTextLlmProvider
     context: ProviderCallContext,
   ): Promise<ScenarioGenerationResult> {
     const prompt = buildScenarioGeneratePrompt(input);
+    const startedAtMs = Date.now();
+
+    logScenarioGenerate("chat_completion_started", {
+      provider: this.name,
+      model: this.config.model,
+      descriptionLength: input.description.trim().length,
+    });
 
     const result = await createChatCompletion(
       this.config,
@@ -324,6 +336,15 @@ export class OpenAiCompatibleTextLlmProvider
       },
       context,
     );
+
+    logScenarioGenerate("chat_completion_finished", {
+      provider: this.name,
+      model: result.model,
+      latencyMs: Date.now() - startedAtMs,
+      finishReason: result.finishReason,
+      inputTokens: result.usage?.prompt_tokens,
+      outputTokens: result.usage?.completion_tokens,
+    });
 
     const parsed = parseScenarioGenerateFromContent(result.content);
     const metadata = {
