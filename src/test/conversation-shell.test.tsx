@@ -1,5 +1,5 @@
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { coffeeOrderingScenario } from "@/server/db/seeds/scenarios";
@@ -29,6 +29,7 @@ function createFetchMock(options?: { backendLinked?: boolean }) {
             status: "active",
             startedAt: "2026-06-06T00:00:00.000Z",
             realtimeProvider: "mock-realtime",
+            backendLinked: true,
           },
           realtimeCredentials: {
             provider: "mock-realtime",
@@ -114,7 +115,7 @@ describe("ConversationShell", () => {
     vi.useRealTimers();
   });
 
-  it("shows the practice button for backend-linked sessions", async () => {
+  it("shows the practice button only in fallback mode for backend-linked sessions", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("fetch", createFetchMock({ backendLinked: true }));
 
@@ -124,6 +125,13 @@ describe("ConversationShell", () => {
       vi.advanceTimersByTimeAsync(1_300),
       vi.runOnlyPendingTimersAsync(),
     ]);
+
+    expect(screen.queryByTestId("mock-practice-turn-button")).not.toBeInTheDocument();
+
+    await act(async () => {
+      useConversationStore.getState().enterRealtimeFallback();
+      await vi.runOnlyPendingTimersAsync();
+    });
 
     expect(screen.getByTestId("mock-practice-turn-button")).toBeInTheDocument();
 

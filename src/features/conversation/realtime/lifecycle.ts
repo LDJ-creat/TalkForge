@@ -1,3 +1,4 @@
+import type { RealtimeAudioDiagnostics } from "./audio/audio-diagnostics";
 import type { ConnectionStatus, TurnStatus } from "../types";
 
 export const REALTIME_LIFECYCLE_STATUSES = [
@@ -5,6 +6,7 @@ export const REALTIME_LIFECYCLE_STATUSES = [
   "connecting",
   "connected",
   "listening",
+  "user_speaking",
   "assistant_speaking",
   "interrupted",
   "reconnecting",
@@ -20,6 +22,7 @@ export type RealtimeConnectionDiagnostics = {
   lastEventLatencyMs?: number;
   reconnectAttempt?: number;
   provider?: string;
+  audio?: RealtimeAudioDiagnostics;
 };
 
 export const REALTIME_LIFECYCLE_LABELS: Record<RealtimeLifecycleStatus, string> = {
@@ -27,6 +30,7 @@ export const REALTIME_LIFECYCLE_LABELS: Record<RealtimeLifecycleStatus, string> 
   connecting: "Connecting…",
   connected: "Connected",
   listening: "Listening",
+  user_speaking: "You're speaking",
   assistant_speaking: "AI is speaking",
   interrupted: "Interrupted",
   reconnecting: "Reconnecting…",
@@ -45,6 +49,7 @@ export function deriveConnectionStatus(
       return "connecting";
     case "connected":
     case "listening":
+    case "user_speaking":
     case "assistant_speaking":
     case "interrupted":
     case "fallback":
@@ -61,6 +66,8 @@ export function deriveConnectionStatus(
 export function deriveTurnStatus(lifecycle: RealtimeLifecycleStatus): TurnStatus {
   switch (lifecycle) {
     case "listening":
+      return "idle";
+    case "user_speaking":
       return "user_speaking";
     case "assistant_speaking":
       return "assistant_speaking";
@@ -75,6 +82,7 @@ export function isRealtimeSessionActive(lifecycle: RealtimeLifecycleStatus): boo
   return (
     lifecycle === "connected" ||
     lifecycle === "listening" ||
+    lifecycle === "user_speaking" ||
     lifecycle === "assistant_speaking" ||
     lifecycle === "interrupted" ||
     lifecycle === "fallback"

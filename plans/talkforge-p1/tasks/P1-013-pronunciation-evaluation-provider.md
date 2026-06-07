@@ -37,9 +37,13 @@ Implement:
 - **Client integration**: wiring conversation UI to upload shadowing attempts and call `POST /api/sessions/:sessionId/shadowing/evaluate`.
 - **In-app evaluation UX**: recording controls, processing/scored/failed states, and score presentation in `ShadowingPracticePanel` (backend API + worker are ready; UI copy may note the deferral).
 
+Follow-up implemented after P1-013:
+
+- Free-conversation pronunciation now reuses iFlytek ISE `read_sentence` with the ASR transcript as `referenceText`.
+- Transcript panel shows per-turn scores and weak words; raw provider XML stays server-side.
+
 Do not implement:
 
-- Free-conversation phoneme-level scoring.
 - New provider-specific UI that leaks raw response structure.
 
 ## Implementation Notes

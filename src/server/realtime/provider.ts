@@ -7,6 +7,7 @@ import {
   DEFAULT_QWEN_OMNI_MODEL,
   DEFAULT_QWEN_OMNI_TOKEN_TTL_SEC,
   DEFAULT_QWEN_OMNI_VOICE,
+  resolveQwenOmniVoice,
 } from "@/providers/qwen-omni";
 import { getRuntimeConfig } from "@/server/config";
 import type { AiInvocationTraceWriter } from "@/server/ai-tracing";
@@ -23,11 +24,13 @@ let qwenOmniRealtimeCacheKey: string | undefined;
 
 function buildQwenOmniCacheKey(): string {
   const { secrets } = getRuntimeConfig();
+  const model = secrets.realtimeModel ?? DEFAULT_QWEN_OMNI_MODEL;
+  const voice = resolveQwenOmniVoice(model, secrets.realtimeVoice ?? DEFAULT_QWEN_OMNI_VOICE);
   return [
     secrets.realtimeApiKey ?? "",
     secrets.realtimeBaseUrl ?? DEFAULT_QWEN_OMNI_API_BASE_URL,
-    secrets.realtimeModel ?? DEFAULT_QWEN_OMNI_MODEL,
-    secrets.realtimeVoice ?? DEFAULT_QWEN_OMNI_VOICE,
+    model,
+    voice,
     secrets.realtimeTokenTtlSec ?? DEFAULT_QWEN_OMNI_TOKEN_TTL_SEC,
   ].join("|");
 }
@@ -37,11 +40,12 @@ function createConfiguredQwenOmniProvider(): RealtimeProvider {
   const cacheKey = buildQwenOmniCacheKey();
 
   if (!qwenOmniRealtimeProvider || qwenOmniRealtimeCacheKey !== cacheKey) {
+    const model = secrets.realtimeModel ?? DEFAULT_QWEN_OMNI_MODEL;
     qwenOmniRealtimeProvider = createQwenOmniRealtimeProvider({
       apiKey: secrets.realtimeApiKey ?? "",
       apiBaseUrl: secrets.realtimeBaseUrl ?? DEFAULT_QWEN_OMNI_API_BASE_URL,
-      model: secrets.realtimeModel ?? DEFAULT_QWEN_OMNI_MODEL,
-      voice: secrets.realtimeVoice ?? DEFAULT_QWEN_OMNI_VOICE,
+      model,
+      voice: resolveQwenOmniVoice(model, secrets.realtimeVoice ?? DEFAULT_QWEN_OMNI_VOICE),
       tokenTtlSec: secrets.realtimeTokenTtlSec ?? DEFAULT_QWEN_OMNI_TOKEN_TTL_SEC,
     });
     qwenOmniRealtimeCacheKey = cacheKey;

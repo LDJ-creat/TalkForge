@@ -33,6 +33,8 @@ export function createWebsocketRealtimeClient(
   let parserState: {
     lifecycle: RealtimeLifecycleStatus;
     activeResponseId?: string;
+    activeUserItemId?: string;
+    sessionReady?: boolean;
   } = { lifecycle: "idle" };
   let credentialsProvider = "";
 
@@ -142,12 +144,15 @@ export function createWebsocketRealtimeClient(
             socket?.send(JSON.stringify(sessionUpdateEvent));
           }
 
-          if (options?.openingTranscript) {
-            emit({ type: "transcript", entry: options.openingTranscript });
+          if (!isQwenOmniRealtimeProvider(credentialsProvider)) {
+            if (options?.openingTranscript) {
+              emit({ type: "transcript", entry: options.openingTranscript });
+            }
+
+            emit({ type: "lifecycle", status: "connected" });
+            emit({ type: "lifecycle", status: "listening" });
           }
 
-          emit({ type: "lifecycle", status: "connected" });
-          emit({ type: "lifecycle", status: "listening" });
           resolve();
         });
 
@@ -234,7 +239,7 @@ export function createWebsocketRealtimeClient(
 
     async disconnect() {
       connected = false;
-      parserState = { lifecycle: "ended" };
+      parserState = { lifecycle: "ended", sessionReady: false };
 
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.close(1000, "session ended");

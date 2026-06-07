@@ -16,6 +16,7 @@ import {
   QWEN_OMNI_BROWSER_AUTH_MODE,
   QWEN_OMNI_PROVIDER_NAME,
   resolveQwenOmniEndpoints,
+  resolveQwenOmniVoice,
   type QwenOmniProviderConfig,
 } from "./config";
 import {
@@ -53,10 +54,11 @@ export class QwenOmniRealtimeProvider implements RealtimeProvider {
     }
 
     const apiBaseUrl = options.apiBaseUrl ?? options.endpoints?.apiBaseUrl;
+    const model = options.model ?? DEFAULT_QWEN_OMNI_MODEL;
     this.config = {
       apiKey: options.apiKey,
-      model: options.model ?? DEFAULT_QWEN_OMNI_MODEL,
-      voice: options.voice ?? DEFAULT_QWEN_OMNI_VOICE,
+      model,
+      voice: resolveQwenOmniVoice(model, options.voice ?? DEFAULT_QWEN_OMNI_VOICE),
       tokenTtlSec: options.tokenTtlSec ?? DEFAULT_QWEN_OMNI_TOKEN_TTL_SEC,
       endpoints:
         options.endpoints ??
@@ -69,6 +71,7 @@ export class QwenOmniRealtimeProvider implements RealtimeProvider {
     const sessionConfig = buildQwenOmniSessionConfig({
       instructions: input.systemInstructions,
       voice: this.config.voice,
+      model: this.config.model,
     });
 
     const { result } = await executeProviderCall({

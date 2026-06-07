@@ -1,3 +1,4 @@
+import type { PronunciationMode } from "@/domain/enums";
 import { createProviderError } from "@/providers/errors";
 import type { PronunciationEvaluationResult } from "@/providers/pronunciation/types";
 
@@ -89,6 +90,7 @@ export function normalizeIflytekIseEvaluation(
   response: IflytekIseEvaluationResponse,
   input: {
     referenceText: string;
+    mode?: PronunciationMode;
     includeRawXml?: boolean;
   },
 ): PronunciationEvaluationResult {
@@ -131,7 +133,7 @@ export function normalizeIflytekIseEvaluation(
 
   return {
     provider: IFLYTEK_ISE_PROVIDER_NAME,
-    mode: "shadowing",
+    mode: input.mode ?? "shadowing",
     overallScore: scores.totalScore,
     fluencyScore: scores.fluencyScore,
     accuracyScore: scores.accuracyScore,

@@ -43,6 +43,15 @@ const baseTurn = {
   evaluationStatus: "none" as const,
 };
 
+const baseTranscript = {
+  id: "44444444-4444-4444-8444-444444444444",
+  turnId: TURN_ID,
+  provider: "dashscope-paraformer-asr",
+  text: "Could I get a medium latte?",
+  confidence: 0.95,
+  segments: [],
+};
+
 const baseAudioSegment = {
   id: AUDIO_SEGMENT_ID,
   turnId: TURN_ID,
@@ -294,7 +303,7 @@ describe("evaluation.shadowing worker", () => {
 });
 
 describe("evaluation.freeSpeech worker", () => {
-  it("runs lightweight mock evaluation without reference text", async () => {
+  it("evaluates free speech with ASR transcript as reference text", async () => {
     const pronunciationProvider = createMockPronunciationEvaluationProvider();
     const evaluateSpy = vi.spyOn(pronunciationProvider, "evaluate");
     let prepared = false;
@@ -309,6 +318,7 @@ describe("evaluation.freeSpeech worker", () => {
       {
         pronunciationProvider,
         getTurnById: async () => baseTurn,
+        getTranscriptByTurnId: async () => baseTranscript,
         getAudioSegmentById: async () => baseAudioSegment,
         prepareFreeSpeechEvaluation: async () => {
           prepared = true;
@@ -342,9 +352,47 @@ describe("evaluation.freeSpeech worker", () => {
     expect(evaluateSpy).toHaveBeenCalledWith({
       audioObjectKey: OBJECT_KEY,
       mode: "free_speech",
+      referenceText: "Could I get a medium latte?",
       language: "en",
+      sessionId: SESSION_ID,
+      turnId: TURN_ID,
     });
-    expect(evaluateSpy.mock.calls[0]?.[0]).not.toHaveProperty("referenceText");
+  });
+
+  it("fails when ASR reference text is too short", async () => {
+    let failed = false;
+
+    await expect(
+      evaluateFreeSpeechTurn(
+        {
+          turnId: TURN_ID,
+          sessionId: SESSION_ID,
+          audioSegmentId: AUDIO_SEGMENT_ID,
+        },
+        {
+          pronunciationProvider: createMockPronunciationEvaluationProvider(),
+          getTurnById: async () => ({
+            ...baseTurn,
+            transcriptText: "Hi",
+          }),
+          getTranscriptByTurnId: async () => null,
+          getAudioSegmentById: async () => baseAudioSegment,
+          prepareFreeSpeechEvaluation: async () => ({ status: "ready" }),
+          saveFreeSpeechEvaluationForTurnIfAbsent: async () => {
+            throw new Error("Should not save evaluation.");
+          },
+          markTurnEvaluationFailed: async () => {
+            failed = true;
+          },
+        },
+        { attempts: 1 },
+      ),
+    ).rejects.toMatchObject({
+      code: "validation",
+      retryable: false,
+    });
+
+    expect(failed).toBe(true);
   });
 
   it("is idempotent for an existing free-speech evaluation", async () => {
@@ -364,6 +412,7 @@ describe("evaluation.freeSpeech worker", () => {
       {
         pronunciationProvider: createMockPronunciationEvaluationProvider(),
         getTurnById: async () => baseTurn,
+        getTranscriptByTurnId: async () => baseTranscript,
         getAudioSegmentById: async () => baseAudioSegment,
         prepareFreeSpeechEvaluation: async () => ({
           status: "exists",
@@ -394,6 +443,7 @@ describe("evaluation.freeSpeech worker", () => {
         pronunciationProvider,
         deps: {
           getTurnById: async () => baseTurn,
+          getTranscriptByTurnId: async () => baseTranscript,
           getAudioSegmentById: async () => baseAudioSegment,
           prepareFreeSpeechEvaluation: async () => ({ status: "ready" }),
           saveFreeSpeechEvaluationForTurnIfAbsent: async (input) => {

@@ -357,6 +357,7 @@ describe("P1 real-provider staging readiness (CI-safe mock loop)", () => {
         pronunciationProvider: tracedProviders.pronunciation,
         deps: {
           getTurnById: async (turnId) => state.turns.find((turn) => turn.id === turnId) ?? null,
+          getTranscriptByTurnId: async (turnId) => state.transcripts.get(turnId) ?? null,
           getAudioSegmentById: async (segmentId) =>
             state.audioSegments.get(segmentId) ?? null,
           prepareFreeSpeechEvaluation: async () => ({ status: "ready" }),

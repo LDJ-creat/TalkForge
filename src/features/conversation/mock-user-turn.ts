@@ -87,9 +87,15 @@ export async function submitMockUserTurn(
     userId,
   });
 
+  const userTranscript = createTranscriptEntry("user", input.transcriptText, "final");
+  userTranscript.id = turn.id;
+  userTranscript.pronunciationFeedback = {
+    evaluationStatus: "pending",
+  };
+
   return {
     turnId: turn.id,
-    userTranscript: createTranscriptEntry("user", input.transcriptText, "final"),
+    userTranscript,
     assistantTranscript: createTranscriptEntry("assistant", assistantText, "final"),
   };
 }

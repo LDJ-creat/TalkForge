@@ -30,6 +30,7 @@ function connectionPillClass(
   if (
     lifecycle === "connected" ||
     lifecycle === "listening" ||
+    lifecycle === "user_speaking" ||
     lifecycle === "assistant_speaking" ||
     lifecycle === "fallback"
   ) {
@@ -98,6 +99,17 @@ export function SessionStatusBar({
               : ""}
             {typeof diagnostics?.reconnectAttempt === "number" && diagnostics.reconnectAttempt > 0
               ? ` · retry=${diagnostics.reconnectAttempt}`
+              : ""}
+            {diagnostics?.audio
+              ? ` · mic=${diagnostics.audio.micChunks} append=${diagnostics.audio.appendMessages} speech=${diagnostics.audio.speechStartedCount}${
+                  typeof diagnostics.audio.micPeakLevel === "number"
+                    ? ` peak=${diagnostics.audio.micPeakLevel.toFixed(4)}`
+                    : ""
+                }${
+                  typeof diagnostics.audio.captureSampleRate === "number"
+                    ? ` rate=${diagnostics.audio.captureSampleRate}`
+                    : ""
+                }`
               : ""}
           </span>
         </div>

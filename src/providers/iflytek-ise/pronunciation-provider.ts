@@ -75,12 +75,11 @@ export class IflytekIsePronunciationProvider implements PronunciationEvaluationP
   }
 
   async evaluate(input: PronunciationEvaluateInput): Promise<PronunciationEvaluationResult> {
-    if (input.mode !== "shadowing") {
+    if (input.mode !== "shadowing" && input.mode !== "free_speech") {
       throw createProviderError({
         provider: this.name,
         code: "invalid_request",
-        message:
-          "The iFlytek ISE provider only supports shadowing evaluation. Free conversation uses lightweight mock scoring.",
+        message: `Unsupported pronunciation evaluation mode "${input.mode}".`,
         retryable: false,
       });
     }
@@ -89,7 +88,7 @@ export class IflytekIsePronunciationProvider implements PronunciationEvaluationP
       throw createProviderError({
         provider: this.name,
         code: "invalid_request",
-        message: "Shadowing evaluation requires referenceText.",
+        message: "Pronunciation evaluation requires referenceText.",
         retryable: false,
       });
     }
@@ -142,6 +141,7 @@ export class IflytekIsePronunciationProvider implements PronunciationEvaluationP
 
         return normalizeIflytekIseEvaluation(response, {
           referenceText: input.referenceText!.trim(),
+          mode: input.mode,
         });
       },
     });

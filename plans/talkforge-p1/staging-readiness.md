@@ -63,6 +63,8 @@ REALTIME_API_KEY=<server-only>
 REALTIME_BASE_URL=https://dashscope.aliyuncs.com
 REALTIME_MODEL=qwen3-omni-flash-realtime
 REALTIME_VOICE=Cherry
+REALTIME_PROXY_PORT=3002
+NEXT_PUBLIC_REALTIME_PROXY_URL=ws://localhost:3002
 ```
 
 ### ASR
@@ -155,12 +157,17 @@ Work through these steps in order. Record the `sessionId` from step 2 for trace 
 - [ ] Select **Order Coffee at a Cafe**
 - [ ] Confirm the scenario card loads without API errors
 
-### 2. Realtime voice session
+### 2. Realtime voice session (bidirectional PCM)
 
 - [ ] Session connects with real realtime credentials (not client-only fallback)
 - [ ] Browser receives only ephemeral token + WebSocket endpoint (no long-lived API key in network tab)
-- [ ] Speak at least one short English utterance or use text-practice fallback if microphone is unavailable
-- [ ] Assistant turn appears in the conversation transcript
+- [ ] Realtime proxy is reachable (`ws://localhost:3002/realtime?model=...`)
+- [ ] **AI speaks first** after `session.updated` (opening via `response.create`, not a local mock transcript)
+- [ ] Status bar shows `AI is speaking`, then returns to `Listening`
+- [ ] Speak at least one short English utterance; assistant replies with audible voice
+- [ ] User and assistant turns appear in the transcript panel as realtime events arrive
+- [ ] **Send practice response** button is hidden during live voice mode (only visible in text fallback)
+- [ ] If microphone is unavailable, use **Continue with text practice** fallback instead
 
 ### 3. User-turn audio upload
 
@@ -260,7 +267,7 @@ Scenario select
 
 - **Authentication:** Dev header auth (`x-talkforge-user-id`) is not production-ready.
 - **Doubao realtime:** Not implemented; only `mock` and `qwen-omni` are supported today.
-- **Free-conversation pronunciation:** Stays lightweight even when `iflytek-ise` is configured; phoneme-level scoring is Shadowing-only.
+- **Free-conversation pronunciation:** When `iflytek-ise` is configured, each user turn is evaluated with `read_sentence` using the ASR transcript as reference text (UI shows word-level weak spots). Use `PRONUNCIATION_PROVIDER=mock` for local dev without ISE credentials.
 - **Paraformer input format:** Requires mono PCM 8 kHz; worker converts uploaded webm/wav via `ffmpeg`.
 - **iFlytek ISE input format:** Requires mono PCM 16 kHz; worker converts via `ffmpeg`.
 - **Redis worker required:** With `QUEUE_PROVIDER=redis`, background jobs do not run unless `npm run worker` is active.

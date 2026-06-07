@@ -7,7 +7,12 @@ export type RealtimeClientEvent =
   | { type: "transcript"; entry: TranscriptEntry }
   | { type: "transcript_delta"; entryId: string; text: string; role: TranscriptEntry["role"] }
   | { type: "diagnostics"; diagnostics: Partial<RealtimeConnectionDiagnostics> }
-  | { type: "error"; message: string; recoverable: boolean };
+  | { type: "error"; message: string; recoverable: boolean }
+  | { type: "session_ready" }
+  | { type: "provider_audio_delta"; base64Pcm: string }
+  | { type: "provider_audio_done" }
+  | { type: "user_speech_started" }
+  | { type: "user_speech_stopped" };
 
 export type RealtimeClientConnectOptions = {
   openingTranscript?: TranscriptEntry;

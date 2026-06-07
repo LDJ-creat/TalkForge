@@ -1,6 +1,7 @@
 import type { TalkForgeDatabase } from "@/server/db/client";
 import {
   getAudioSegmentById,
+  getTranscriptByTurnId,
   getTurnById,
   markTurnEvaluationFailed,
   prepareFreeSpeechEvaluation,
@@ -33,6 +34,9 @@ export function createDbEvaluationFreeSpeechDeps(
       getFreeSpeechPronunciationProvider(),
     getTurnById:
       deps?.getTurnById ?? ((turnId) => getTurnById(db, turnId)),
+    getTranscriptByTurnId:
+      deps?.getTranscriptByTurnId ??
+      ((turnId) => getTranscriptByTurnId(db, turnId)),
     getAudioSegmentById:
       deps?.getAudioSegmentById ??
       ((audioSegmentId) => getAudioSegmentById(db, audioSegmentId)),

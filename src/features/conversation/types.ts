@@ -2,6 +2,7 @@ import type { Report } from "@/domain/report";
 import type { ShadowingItem } from "@/domain/shadowing";
 import type { Scenario } from "@/domain/scenario";
 import type { SessionStatus } from "@/domain/enums";
+import type { TurnPronunciationFeedback } from "@/domain/pronunciation-feedback";
 
 import type { EndingSuggestionReason } from "@/domain/scenario-ending";
 
@@ -56,6 +57,7 @@ export type TranscriptEntry = {
   text: string;
   status: TranscriptStatus;
   timestamp: string;
+  pronunciationFeedback?: TurnPronunciationFeedback;
 };
 
 export type ConversationSession = {

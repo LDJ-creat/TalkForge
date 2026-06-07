@@ -6,6 +6,7 @@ import { useShallow } from "zustand/react/shallow";
 
 import type { Scenario } from "@/domain/scenario";
 import { useConversationStore } from "@/features/conversation";
+import { formatLatestEvaluationPlaceholder } from "@/features/conversation/format-pronunciation-feedback";
 import { isSessionUsageBlocked } from "@/shared/usage-limit-messages";
 import {
   canEnterFallback,
@@ -26,6 +27,8 @@ type ConversationShellProps = {
 
 const SHOW_REALTIME_DEBUG =
   typeof process !== "undefined" && process.env.NODE_ENV === "development";
+
+let conversationShellMountSeq = 0;
 
 export function ConversationShell({ scenario }: ConversationShellProps) {
   const {
@@ -75,14 +78,22 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
   const interruptRealtimeAssistant = useConversationStore(
     (state) => state.interruptRealtimeAssistant,
   );
+  const retrySessionReport = useConversationStore((state) => state.retrySessionReport);
 
   useEffect(() => {
+    const mountId = ++conversationShellMountSeq;
+
     void startSession(scenario);
 
     return () => {
-      void useConversationStore.getState().teardownSession();
+      const teardownMountId = mountId;
+      window.setTimeout(() => {
+        if (conversationShellMountSeq === teardownMountId) {
+          void useConversationStore.getState().teardownSession();
+        }
+      }, 50);
     };
-  }, [scenario, startSession]);
+  }, [scenario.id, startSession]);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,9 +145,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
   const showMockPracticeButton =
     isSessionActive &&
     session?.backendLinked === true &&
-    (realtimeLifecycleStatus === "fallback" ||
-      realtimeLifecycleStatus === "connected" ||
-      realtimeLifecycleStatus === "listening") &&
+    realtimeLifecycleStatus === "fallback" &&
     !isEnding &&
     !usageBlocked;
   const showEndingSuggestion =
@@ -148,6 +157,11 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
     isSessionActive &&
     (realtimeLifecycleStatus === "assistant_speaking" ||
       realtimeLifecycleStatus === "interrupted");
+  const micSignalTooLow =
+    isSessionActive &&
+    realtimeLifecycleStatus === "listening" &&
+    (realtimeDiagnostics.audio?.micChunks ?? 0) > 40 &&
+    (realtimeDiagnostics.audio?.micPeakLevel ?? 0) < 0.01;
 
   const endingSuggestionMessage =
     endingSuggestionReason === "required_goals_complete"
@@ -187,6 +201,20 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
         <section className="conversation-panel">
           <h2 className="conversation-panel__title">Voice practice</h2>
           <VoiceVisualizer turnStatus={turnStatus} />
+          {micSignalTooLow ? (
+            <p className="conversation-panel__hint conversation-panel__hint--warning">
+              Microphone level is very low (peak &lt; 0.01). Check Windows input
+              volume, pick the correct input device, use headphones, or raise gain via{" "}
+              <code>NEXT_PUBLIC_REALTIME_MIC_GAIN=8</code> in <code>.env</code>.
+            </p>
+          ) : null}
+          {isSessionActive &&
+          realtimeLifecycleStatus === "assistant_speaking" &&
+          process.env.NEXT_PUBLIC_REALTIME_BARGE_IN === "true" ? (
+            <p className="conversation-panel__hint">
+              Speak clearly to interrupt the AI, or use the Interrupt AI button.
+            </p>
+          ) : null}
           {showInterruptButton ? (
             <button
               type="button"
@@ -241,6 +269,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
             sessionStatus={session?.status}
             diagnostics={realtimeDiagnostics}
             showDebugDetails={SHOW_REALTIME_DEBUG}
+            evaluationPlaceholder={formatLatestEvaluationPlaceholder(transcripts)}
           />
           {errorMessage ? <p className="error-banner">{errorMessage}</p> : null}
           {showEndingSuggestion ? (
@@ -253,7 +282,17 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
               Practice ended. Review your session report below when processing finishes.
             </p>
           ) : null}
-          {isCompleted ? <SessionReportPanel report={report} status={reportStatus} /> : null}
+          {isCompleted ? (
+            <SessionReportPanel
+              report={report}
+              status={reportStatus}
+              onRetry={
+                reportStatus === "unavailable" && session?.backendLinked
+                  ? () => void retrySessionReport()
+                  : undefined
+              }
+            />
+          ) : null}
           {isCompleted ? (
             <ShadowingPracticePanel items={shadowingItems} status={shadowingStatus} />
           ) : null}

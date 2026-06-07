@@ -6,8 +6,7 @@ import { completeSessionOnServer } from "./complete-session-api";
 import { fetchSessionTurnsFromServer } from "./create-turn-api";
 import { mapRealtimeCredentials } from "./credentials";
 import { evaluateLocalScenarioProgress } from "./evaluate-local-progress";
-import { pollSessionReportFromServer } from "./fetch-report-api";
-import { pollSessionShadowingFromServer } from "./fetch-shadowing-api";
+import { refreshSessionReportAndShadowing } from "./refresh-session-results";
 import {
   fetchSessionProgressFromServer,
   type ServerScenarioProgressSnapshot,
@@ -23,18 +22,21 @@ import {
   deriveTurnStatus,
   type RealtimeLifecycleStatus,
 } from "./realtime/lifecycle";
+import { isQwenOmniRealtimeProvider } from "./realtime/adapters/qwen-omni-connect";
 import {
   configureRealtimeSessionController,
   connectRealtimeSession,
   disconnectRealtimeSession,
   enterRealtimeFallbackMode,
+  getRealtimeSessionControllerLifecycle,
   interruptRealtimeAssistant as sendRealtimeInterrupt,
   retryRealtimeSession,
   type RealtimeSessionControllerEvent,
 } from "./realtime/session-controller";
 import { teardownRealtimeAudioCapture } from "./realtime/realtime-audio-bridge";
 import { startSessionOnServer } from "./start-session-api";
-import { mergeTranscriptsWithServerTurns } from "./sync-transcripts";
+import { pollTurnPronunciationFeedback } from "./poll-turn-pronunciation-feedback";
+import { applyServerTurnUpdate, mergeTranscriptsWithServerTurns } from "./sync-transcripts";
 import { resolveUsageLimitBannerMessage } from "@/shared/usage-limit-messages";
 
 import type {
@@ -56,6 +58,7 @@ type ConversationStore = ConversationViewState & {
   enterRealtimeFallback: () => void;
   interruptRealtimeAssistant: () => void;
   requestEndSession: () => Promise<void>;
+  retrySessionReport: () => Promise<void>;
   teardownSession: () => Promise<void>;
   reset: () => void;
 };
@@ -247,6 +250,7 @@ function shouldDisconnectRealtime(lifecycle: RealtimeLifecycleStatus): boolean {
     lifecycle === "connecting" ||
     lifecycle === "connected" ||
     lifecycle === "listening" ||
+    lifecycle === "user_speaking" ||
     lifecycle === "assistant_speaking" ||
     lifecycle === "interrupted" ||
     lifecycle === "reconnecting" ||
@@ -259,16 +263,33 @@ async function startRealtimeConnection(
   scenario: Scenario,
   credentials: ConversationViewState["realtimeCredentials"],
   epoch: number,
+  set: StoreSet,
+  get: StoreGet,
 ): Promise<void> {
   if (!credentials) {
     return;
   }
 
+  if (!isSessionEpochCurrent(get, epoch) || isSessionEnding(get)) {
+    return;
+  }
+
+  applyRealtimeLifecycle(set, "connecting");
+
+  const useMockOpening =
+    !credentials || !isQwenOmniRealtimeProvider(credentials.provider);
+
   await connectRealtimeSession({
     credentials,
-    openingTranscript: createOpeningTranscript(scenario),
+    openingTranscript: useMockOpening ? createOpeningTranscript(scenario) : undefined,
     sessionEpoch: epoch,
   });
+
+  if (!isSessionEpochCurrent(get, epoch) || isSessionEnding(get)) {
+    return;
+  }
+
+  applyRealtimeLifecycle(set, getRealtimeSessionControllerLifecycle());
 }
 
 async function syncSessionTranscriptsFromServer(
@@ -294,6 +315,48 @@ async function syncSessionTranscriptsFromServer(
   }
 }
 
+function scheduleTurnEvaluationPoll(
+  set: StoreSet,
+  get: StoreGet,
+  turnId: string,
+): void {
+  const { session } = get();
+  if (!session?.backendLinked || session.status !== "active") {
+    return;
+  }
+
+  const sessionId = session.id;
+  const sessionEpoch = get().sessionEpoch;
+
+  set((state) => ({
+    transcripts: state.transcripts.map((entry) =>
+      entry.id === turnId
+        ? {
+            ...entry,
+            pronunciationFeedback: {
+              evaluationStatus: "processing",
+            },
+          }
+        : entry,
+    ),
+  }));
+
+  void (async () => {
+    const serverTurn = await pollTurnPronunciationFeedback(sessionId, turnId);
+    if (!isSessionEpochCurrent(get, sessionEpoch) || get().session?.id !== sessionId) {
+      return;
+    }
+
+    if (!serverTurn) {
+      return;
+    }
+
+    set((state) => ({
+      transcripts: applyServerTurnUpdate(state.transcripts, serverTurn),
+    }));
+  })();
+}
+
 export const useConversationStore = create<ConversationStore>((set, get) => ({
   ...initialState,
 
@@ -312,13 +375,10 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       session.scenarioId === scenario.id &&
       (realtimeLifecycleStatus === "connected" ||
         realtimeLifecycleStatus === "listening" ||
+        realtimeLifecycleStatus === "user_speaking" ||
         realtimeLifecycleStatus === "assistant_speaking" ||
         realtimeLifecycleStatus === "fallback")
     ) {
-      return;
-    }
-
-    if (realtimeLifecycleStatus === "connecting" || realtimeLifecycleStatus === "reconnecting") {
       return;
     }
 
@@ -362,11 +422,21 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
           session: serverStart.session,
           realtimeCredentials: serverStart.realtimeCredentials,
           progressSource: "server",
+          realtimeDiagnostics: {
+            provider: serverStart.realtimeCredentials.provider,
+          },
         });
+
+        if (!isSessionEpochCurrent(get, epoch) || isSessionEnding(get)) {
+          return;
+        }
+
         await startRealtimeConnection(
           scenario,
           serverStart.realtimeCredentials,
           epoch,
+          set,
+          get,
         );
         await get().syncSessionProgressFromServer();
         return;
@@ -392,9 +462,16 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
           realtimeProvider: realtimeCredentials.provider,
         },
         realtimeCredentials,
+        realtimeDiagnostics: {
+          provider: realtimeCredentials.provider,
+        },
       });
 
-      await startRealtimeConnection(scenario, realtimeCredentials, epoch);
+      if (!isSessionEpochCurrent(get, epoch) || isSessionEnding(get)) {
+        return;
+      }
+
+      await startRealtimeConnection(scenario, realtimeCredentials, epoch, set, get);
       applyLocalScenarioProgress(set, get);
       await get().syncSessionProgressFromServer();
     } catch (error) {
@@ -449,6 +526,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         } else if (
           event.status === "connected" ||
           event.status === "listening" ||
+          event.status === "user_speaking" ||
           event.status === "fallback"
         ) {
           set({ errorMessage: null });
@@ -479,6 +557,22 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         set({
           errorMessage: event.message,
         });
+        break;
+      case "turn_persisted":
+        set((state) => ({
+          transcripts: state.transcripts.map((entry) =>
+            entry.id === event.clientEntryId
+              ? {
+                  ...entry,
+                  id: event.serverTurnId,
+                  pronunciationFeedback: {
+                    evaluationStatus: "pending",
+                  },
+                }
+              : entry,
+          ),
+        }));
+        scheduleTurnEvaluationPoll(set, get, event.serverTurnId);
         break;
       default:
         break;
@@ -529,9 +623,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       !session ||
       session.status !== "active" ||
       session.backendLinked !== true ||
-      (realtimeLifecycleStatus !== "fallback" &&
-        realtimeLifecycleStatus !== "connected" &&
-        realtimeLifecycleStatus !== "listening") ||
+      realtimeLifecycleStatus !== "fallback" ||
       (endingState !== "none" && endingState !== "ai_suggested")
     ) {
       return;
@@ -566,6 +658,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       set({ progressSource: "server" });
       await syncSessionTranscriptsFromServer(set, get);
       await get().syncSessionProgressFromServer();
+      scheduleTurnEvaluationPoll(set, get, result.turnId);
     } catch (error) {
       setTurnStatus(set, "idle");
       set({
@@ -660,11 +753,9 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
 
       if (session.backendLinked) {
         try {
-          await completeSessionOnServer(session.id);
-          const report = await pollSessionReportFromServer(session.id);
-          const shadowingItems = report
-            ? await pollSessionShadowingFromServer(session.id)
-            : [];
+          const { report, shadowingItems } = await refreshSessionReportAndShadowing(
+            session.id,
+          );
           set({
             report,
             reportStatus: report ? "ready" : "unavailable",
@@ -697,10 +788,49 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
     }
   },
 
+  async retrySessionReport() {
+    const { session } = get();
+
+    if (!session || session.status !== "completed" || !session.backendLinked) {
+      return;
+    }
+
+    set({
+      report: null,
+      reportStatus: "loading",
+      shadowingItems: [],
+      shadowingStatus: "loading",
+    });
+
+    try {
+      const { report, shadowingItems } = await refreshSessionReportAndShadowing(session.id);
+      set({
+        report,
+        reportStatus: report ? "ready" : "unavailable",
+        shadowingItems,
+        shadowingStatus:
+          shadowingItems.length > 0
+            ? "ready"
+            : report
+              ? "unavailable"
+              : "unavailable",
+      });
+    } catch {
+      set({
+        reportStatus: "unavailable",
+        shadowingStatus: "unavailable",
+      });
+    }
+  },
+
   async teardownSession() {
     const { session, realtimeLifecycleStatus, endingState } = get();
+    const nextEpoch = bumpSessionEpoch(set, get);
 
-    bumpSessionEpoch(set, get);
+    set({
+      ...initialState,
+      sessionEpoch: nextEpoch,
+    });
 
     try {
       await teardownRealtimeAudioCapture();
@@ -719,8 +849,6 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         // Best-effort cleanup when navigating away from the shell.
       }
     }
-
-    set(initialState);
   },
 
   reset() {

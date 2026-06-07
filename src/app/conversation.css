@@ -324,6 +324,52 @@
   font-style: italic;
 }
 
+.transcript-entry__pronunciation {
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--accent-muted);
+}
+
+.transcript-entry__pronunciation-summary {
+  font-size: 0.82rem;
+  color: var(--foreground);
+  margin-bottom: 0.45rem;
+}
+
+.transcript-entry__pronunciation--pending,
+.transcript-entry__pronunciation--failed {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.transcript-entry__word-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.transcript-entry__word {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--accent-muted);
+  font-size: 0.78rem;
+}
+
+.transcript-entry__word--weak {
+  border-color: #d97757;
+  background: rgba(217, 119, 87, 0.12);
+  color: #9a3412;
+}
+
+.transcript-entry__pronunciation-note {
+  margin-top: 0.45rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
 .button {
   appearance: none;
   border: none;

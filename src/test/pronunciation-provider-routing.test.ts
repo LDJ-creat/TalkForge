@@ -17,7 +17,7 @@ describe("pronunciation provider routing", () => {
     delete process.env.PRONUNCIATION_APP_ID;
   });
 
-  it("keeps free speech on mock scoring when iflytek-ise is configured", () => {
+  it("routes free speech and shadowing to iflytek-ise when configured", () => {
     resetRuntimeConfigForTests();
     resetPronunciationProviderForTests();
     process.env.PRONUNCIATION_PROVIDER = "iflytek-ise";
@@ -25,7 +25,7 @@ describe("pronunciation provider routing", () => {
     process.env.PRONUNCIATION_API_SECRET = "secret-test";
     process.env.PRONUNCIATION_APP_ID = "app-test";
 
-    expect(getFreeSpeechPronunciationProvider().name).toBe("mock-pronunciation");
+    expect(getFreeSpeechPronunciationProvider().name).toBe("iflytek-ise-pronunciation");
     expect(getShadowingPronunciationProvider().name).toBe("iflytek-ise-pronunciation");
   });
 });

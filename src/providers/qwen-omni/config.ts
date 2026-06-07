@@ -5,6 +5,31 @@ export const QWEN_OMNI_BROWSER_AUTH_MODE = "sec-websocket-protocol-bearer" as co
 
 export const DEFAULT_QWEN_OMNI_MODEL = "qwen3-omni-flash-realtime";
 export const DEFAULT_QWEN_OMNI_VOICE = "Cherry";
+export const QWEN_OMNI_35_DEFAULT_VOICE = "Tina";
+export const QWEN_OMNI_TURBO_DEFAULT_VOICE = "Chelsie";
+
+export function resolveQwenOmniVoice(model: string, configuredVoice?: string | null): string {
+  const normalizedModel = model.toLowerCase();
+  const defaultVoice = normalizedModel.includes("qwen3.5")
+    ? QWEN_OMNI_35_DEFAULT_VOICE
+    : normalizedModel.includes("qwen-omni-turbo")
+      ? QWEN_OMNI_TURBO_DEFAULT_VOICE
+      : DEFAULT_QWEN_OMNI_VOICE;
+
+  const configured = configuredVoice?.trim();
+  if (!configured) {
+    return defaultVoice;
+  }
+
+  if (
+    normalizedModel.includes("qwen3.5") &&
+    (configured === DEFAULT_QWEN_OMNI_VOICE || configured === QWEN_OMNI_TURBO_DEFAULT_VOICE)
+  ) {
+    return defaultVoice;
+  }
+
+  return configured;
+}
 export const DEFAULT_QWEN_OMNI_API_BASE_URL = "https://dashscope.aliyuncs.com";
 export const DEFAULT_QWEN_OMNI_TOKEN_TTL_SEC = 300;
 export const MAX_QWEN_OMNI_TOKEN_TTL_SEC = 1800;

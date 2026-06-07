@@ -3,12 +3,14 @@ import { getDb } from "@/server/db/client";
 import { countAsrTranscribeAttemptsForSession } from "@/server/db/repositories/ai-invocation-metrics-repository";
 import {
   createTurn,
+  getFreeSpeechEvaluationsByTurnIds,
   getScenarioById,
   getSessionById,
   listTurnsBySessionId,
 } from "@/server/db/repositories";
 import { SessionServiceError } from "@/server/session";
-import { createTurnForUser, listSessionTurnsForUser } from "@/server/session/create-turn";
+import { createTurnForUser } from "@/server/session/create-turn";
+import { listSessionTurnsWithFeedbackForUser } from "@/server/session/list-session-turns-with-feedback";
 import type { TurnRole } from "@/domain/enums";
 
 type CreateTurnRequestBody = {
@@ -27,9 +29,11 @@ export async function GET(
     const { sessionId } = await context.params;
     const db = getDb();
 
-    const turns = await listSessionTurnsForUser(sessionId, userId, {
+    const turns = await listSessionTurnsWithFeedbackForUser(sessionId, userId, {
       getSessionById: (id) => getSessionById(db, id),
       listTurnsBySessionId: (id) => listTurnsBySessionId(db, id),
+      getFreeSpeechEvaluationsByTurnIds: (turnIds) =>
+        getFreeSpeechEvaluationsByTurnIds(db, turnIds),
     });
 
     return Response.json({ turns });

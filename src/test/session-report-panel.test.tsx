@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { SessionReportPanel } from "@/components/session-report-panel";
 
@@ -28,5 +28,16 @@ describe("SessionReportPanel", () => {
     expect(screen.getByTestId("session-report-panel")).toBeInTheDocument();
     expect(screen.getByText(/Nice work practicing coffee ordering/i)).toBeInTheDocument();
     expect(screen.getByText(/Could I get a medium latte/i)).toBeInTheDocument();
+  });
+
+  it("shows a retry button when the report is unavailable", () => {
+    const onRetry = vi.fn();
+
+    render(
+      <SessionReportPanel status="unavailable" report={null} onRetry={onRetry} />,
+    );
+
+    fireEvent.click(screen.getByTestId("retry-report-button"));
+    expect(onRetry).toHaveBeenCalledTimes(1);
   });
 });
