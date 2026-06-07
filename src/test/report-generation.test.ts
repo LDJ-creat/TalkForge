@@ -291,7 +291,7 @@ describe("report generation worker", () => {
     expect(result.report.sessionId).toBe(SESSION_ID);
     expect(result.report.keyCorrections.length).toBeGreaterThan(0);
     expect(result.report.shadowingRecommendations.length).toBeGreaterThan(0);
-    expect(reports.get(SESSION_ID)?.summary).toContain("Order Coffee at a Cafe");
+    expect(reports.get(SESSION_ID)?.summary).toContain("在咖啡馆点咖啡");
   });
 
   it("returns an existing report without regenerating", async () => {

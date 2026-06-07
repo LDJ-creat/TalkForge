@@ -130,9 +130,7 @@ describe("scenario catalog", () => {
       "travel_directions_a2",
     ]);
 
-    expect(getSeedScenarioById("travel_directions_a2")?.title).toBe(
-      "Ask for Travel Directions",
-    );
+    expect(getSeedScenarioById("travel_directions_a2")?.title).toBe("问路");
     expect(getSeedScenarioOrThrow("english_interview_b1").level).toBe("B1");
     expect(getSeedScenarioById("unknown_scenario")).toBeNull();
   });

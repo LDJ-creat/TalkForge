@@ -151,7 +151,7 @@ describe("provider observability helpers", () => {
 
   it("maps provider failures to user-safe messages", () => {
     expect(mapProviderErrorToUserMessage("provider_unavailable")).toContain(
-      "temporarily unavailable",
+      "暂时不可用",
     );
   });
 

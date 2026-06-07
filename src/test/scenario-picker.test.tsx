@@ -29,7 +29,7 @@ describe("ScenarioPicker", () => {
 
     expect(screen.getByTestId("scenario-grid")).toBeInTheDocument();
     expect(screen.getByTestId("scenario-card-create")).toBeInTheDocument();
-    expect(screen.getByText("Order Coffee at a Cafe")).toBeInTheDocument();
+    expect(screen.getByText("在咖啡馆点咖啡")).toBeInTheDocument();
 
     await user.click(screen.getByTestId("scenario-card-coffee_ordering_a2"));
 

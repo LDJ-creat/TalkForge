@@ -75,19 +75,19 @@ describe("ConversationShell", () => {
     render(<ConversationShell scenario={coffeeOrderingScenario} />);
 
     expect(screen.getAllByTestId("conversation-shell")[0]).toBeInTheDocument();
-    expect(screen.getByText("Connecting…")).toBeInTheDocument();
+    expect(screen.getByText("连接中…")).toBeInTheDocument();
 
     await Promise.all([
       vi.advanceTimersByTimeAsync(1_300),
       vi.runOnlyPendingTimersAsync(),
     ]);
 
-    expect(screen.getByText("Listening")).toBeInTheDocument();
+    expect(screen.getByText("聆听中")).toBeInTheDocument();
     expect(screen.getByTestId("transcript-entry-assistant")).toBeInTheDocument();
     expect(screen.queryByTestId("mock-practice-turn-button")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getAllByTestId("end-practice-button")[0]!);
-    expect(screen.getByText("Ending session…")).toBeInTheDocument();
+    expect(screen.getByText("正在结束会话…")).toBeInTheDocument();
 
     await Promise.all([
       vi.advanceTimersByTimeAsync(300),

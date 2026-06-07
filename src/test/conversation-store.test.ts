@@ -251,7 +251,7 @@ describe("conversation store", () => {
 
     const state = useConversationStore.getState();
     expect(state.connectionStatus).toBe("error");
-    expect(state.errorMessage).toContain("Could not end the session");
+    expect(state.errorMessage).toContain("无法正常结束会话");
     expect(state.session?.status).toBe("active");
 
     vi.useRealTimers();
