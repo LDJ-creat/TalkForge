@@ -75,6 +75,17 @@ export {
   listAiInvocationLogsBySessionId,
 } from "./ai-invocation-log-repository";
 export {
+  aggregateAiInvocationMetrics,
+  countAiInvocationLogsBySessionAndOperation,
+  countAsrTranscribeAttemptsForSession,
+  countReportGenerationAttemptsForSession,
+  listAiInvocationProviderBreakdown,
+} from "./ai-invocation-metrics-repository";
+export type {
+  AiInvocationAggregateMetrics,
+  AiInvocationProviderBreakdown,
+} from "./ai-invocation-metrics-repository";
+export {
   createDbStandardAudioMetadataRepository,
   findStandardAudioAssetByCacheKey,
   upsertStandardAudioAsset,
