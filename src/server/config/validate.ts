@@ -105,6 +105,12 @@ export function collectRuntimeConfigIssues(
       "LLM_API_KEY",
       `LLM_GOAL_JUDGE_PROVIDER="${providers.llmGoalJudge.name}"`,
     );
+    requireTextLlmBaseUrl(
+      issues,
+      providers.llmGoalJudge.name,
+      secrets.llmBaseUrl,
+      "LLM_GOAL_JUDGE_PROVIDER",
+    );
   }
 
   if (providers.tts.mode === "real") {

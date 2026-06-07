@@ -12,6 +12,7 @@ import {
   type QueueProviderName,
   type RuntimeConfig,
   type RuntimeSecrets,
+  type ScenarioProgressConfig,
   type StorageProviderName,
 } from "./types";
 
@@ -181,6 +182,16 @@ function parseAiTracingConfig(
   };
 }
 
+function parseScenarioProgressConfig(env: NodeJS.ProcessEnv): ScenarioProgressConfig {
+  const interval =
+    parseOptionalPositiveInt(readEnv(env, "SCENARIO_PROGRESS_JUDGE_USER_TURN_INTERVAL")) ??
+    1;
+
+  return {
+    judgeUserTurnInterval: interval,
+  };
+}
+
 function usesOnlyMockProviders(
   providers: RuntimeConfig["providers"],
 ): boolean {
@@ -257,6 +268,7 @@ export function parseRuntimeConfigFromEnv(
   return {
     nodeEnv,
     appBaseUrl,
+    scenarioProgress: parseScenarioProgressConfig(env),
     providers,
     secrets,
     public: parsePublicConfig(env),
