@@ -32,6 +32,11 @@ Implement:
 - Word/phoneme-level details where provider supports them.
 - User-facing evaluation status and error handling if UI exists.
 
+### Follow-up (out of scope for P1-013)
+
+- **Client integration**: wiring conversation UI to upload shadowing attempts and call `POST /api/sessions/:sessionId/shadowing/evaluate`.
+- **In-app evaluation UX**: recording controls, processing/scored/failed states, and score presentation in `ShadowingPracticePanel` (backend API + worker are ready; UI copy may note the deferral).
+
 Do not implement:
 
 - Free-conversation phoneme-level scoring.

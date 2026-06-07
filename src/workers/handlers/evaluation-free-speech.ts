@@ -9,7 +9,7 @@ import {
 import type { PronunciationEvaluationProvider } from "@/providers/pronunciation/contract";
 import type { WorkerHandler } from "@/queue/worker-types";
 
-import { getPronunciationProvider } from "@/server/pronunciation/provider";
+import { getFreeSpeechPronunciationProvider } from "@/server/pronunciation/provider";
 import {
   evaluateFreeSpeechTurn,
   type EvaluateFreeSpeechDeps,
@@ -30,7 +30,7 @@ export function createDbEvaluationFreeSpeechDeps(
     pronunciationProvider:
       deps?.pronunciationProvider ??
       pronunciationProvider ??
-      getPronunciationProvider(),
+      getFreeSpeechPronunciationProvider(),
     getTurnById:
       deps?.getTurnById ?? ((turnId) => getTurnById(db, turnId)),
     getAudioSegmentById:

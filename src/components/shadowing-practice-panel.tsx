@@ -58,7 +58,9 @@ export function ShadowingPracticePanel({
     <section className="shadowing-practice" data-testid="shadowing-practice-panel">
       <h2 className="shadowing-practice__title">Shadowing practice</h2>
       <p className="shadowing-practice__summary">
-        Practice these sentences with standard audio. Pronunciation scoring can be added later.
+        Practice these sentences with standard audio. Server-side pronunciation scoring is available
+        via the shadowing evaluate API; in-app recording and score display will ship in a follow-up
+        task.
       </p>
       <ol className="shadowing-practice__list">
         {items.map((item) => (

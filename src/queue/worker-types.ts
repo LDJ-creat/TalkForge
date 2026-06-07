@@ -31,6 +31,9 @@ export type WorkerRegistry = {
     evaluationFreeSpeech: (
       handler: WorkerHandler<"evaluation.freeSpeech">,
     ) => WorkerRegistry;
+    evaluationShadowing: (
+      handler: WorkerHandler<"evaluation.shadowing">,
+    ) => WorkerRegistry;
     scenarioProgressEvaluate: (
       handler: WorkerHandler<"scenarioProgress.evaluate">,
     ) => WorkerRegistry;
@@ -66,6 +69,9 @@ export function createWorkerRegistry(): WorkerRegistry {
       },
       evaluationFreeSpeech(handler) {
         return registry.register("evaluation.freeSpeech", handler);
+      },
+      evaluationShadowing(handler) {
+        return registry.register("evaluation.shadowing", handler);
       },
       scenarioProgressEvaluate(handler) {
         return registry.register("scenarioProgress.evaluate", handler);

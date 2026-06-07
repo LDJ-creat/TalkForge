@@ -59,11 +59,13 @@ export {
   getPronunciationEvaluationByTurnIdAndMode,
   markTurnEvaluationFailed,
   prepareFreeSpeechEvaluation,
+  prepareShadowingEvaluation,
   saveFreeSpeechEvaluationForTurnIfAbsent,
   saveShadowingEvaluationForTurnIfAbsent,
 } from "./pronunciation-evaluation-repository";
 export type {
   PrepareFreeSpeechEvaluationResult,
+  PrepareShadowingEvaluationResult,
   SavePronunciationEvaluationResult,
 } from "./pronunciation-evaluation-repository";
 export {

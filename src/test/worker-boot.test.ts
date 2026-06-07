@@ -35,6 +35,8 @@ vi.mock("@/server/scenario-progress/provider", () => ({
 }));
 
 vi.mock("@/server/pronunciation/provider", () => ({
+  getFreeSpeechPronunciationProvider: () => ({ name: "mock-pronunciation" }),
+  getShadowingPronunciationProvider: () => ({ name: "mock-pronunciation" }),
   getPronunciationProvider: () => ({ name: "mock-pronunciation" }),
   resetPronunciationProviderForTests: vi.fn(),
 }));

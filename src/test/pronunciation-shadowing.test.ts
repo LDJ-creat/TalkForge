@@ -12,15 +12,18 @@ import {
 import {
   createMemoryQueueAdapter,
   enqueueEvaluationFreeSpeechJob,
+  enqueueEvaluationShadowingJob,
 } from "@/queue";
 import { getSeedScenarioById } from "@/server/scenario/catalog";
 import { evaluateFreeSpeechTurn } from "@/server/pronunciation/evaluate-free-speech";
+import { evaluateShadowingTurn } from "@/server/shadowing/evaluate-shadowing-turn";
 import {
   evaluateAndSaveShadowingAttempt,
   evaluateShadowingAttempt,
 } from "@/server/shadowing/evaluate-shadowing";
 import {
   createEvaluationFreeSpeechHandler,
+  createEvaluationShadowingHandler,
   createWorkerRegistry,
   createWorkerRuntime,
 } from "@/workers";
@@ -150,6 +153,143 @@ describe("shadowing evaluation", () => {
     expect(result.created).toBe(true);
     expect(result.evaluation.mode).toBe("shadowing");
     expect(savedInputs).toEqual([{ mode: "shadowing", turnId: TURN_ID }]);
+  });
+});
+
+describe("evaluation.shadowing worker", () => {
+  it("runs strong shadowing evaluation with reference text", async () => {
+    const pronunciationProvider = createMockPronunciationEvaluationProvider();
+    const evaluateSpy = vi.spyOn(pronunciationProvider, "evaluate");
+    let prepared = false;
+    let saved = false;
+
+    const result = await evaluateShadowingTurn(
+      {
+        turnId: TURN_ID,
+        sessionId: SESSION_ID,
+        audioSegmentId: AUDIO_SEGMENT_ID,
+        standardText: "Could I get a medium latte?",
+      },
+      {
+        pronunciationProvider,
+        getTurnById: async () => baseTurn,
+        getAudioSegmentById: async () => baseAudioSegment,
+        prepareShadowingEvaluation: async () => {
+          prepared = true;
+          return { status: "ready" };
+        },
+        saveShadowingEvaluationForTurnIfAbsent: async (input) => {
+          saved = true;
+          return {
+            created: true,
+            evaluation: {
+              id: "shadowing-eval-1",
+              turnId: input.turnId,
+              mode: input.mode,
+              accuracyScore: input.accuracyScore,
+              completenessScore: input.completenessScore,
+            },
+          };
+        },
+      },
+      { attempts: 1, jobId: "job-shadowing-1" },
+    );
+
+    expect(result.created).toBe(true);
+    expect(result.evaluation.mode).toBe("shadowing");
+    expect(prepared).toBe(true);
+    expect(saved).toBe(true);
+    expect(evaluateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        audioObjectKey: OBJECT_KEY,
+        mode: "shadowing",
+        referenceText: "Could I get a medium latte?",
+        sessionId: SESSION_ID,
+        turnId: TURN_ID,
+        jobId: "job-shadowing-1",
+      }),
+    );
+  });
+
+  it("is idempotent for an existing shadowing evaluation", async () => {
+    const existing = {
+      id: "shadowing-eval-existing",
+      turnId: TURN_ID,
+      mode: "shadowing" as const,
+      accuracyScore: 86,
+      completenessScore: 88,
+    };
+
+    const result = await evaluateShadowingTurn(
+      {
+        turnId: TURN_ID,
+        sessionId: SESSION_ID,
+        audioSegmentId: AUDIO_SEGMENT_ID,
+        standardText: "Could I get a medium latte?",
+      },
+      {
+        pronunciationProvider: createMockPronunciationEvaluationProvider(),
+        getTurnById: async () => baseTurn,
+        getAudioSegmentById: async () => baseAudioSegment,
+        prepareShadowingEvaluation: async () => ({
+          status: "exists",
+          evaluation: existing,
+        }),
+        saveShadowingEvaluationForTurnIfAbsent: async () => {
+          throw new Error("Should not create a duplicate evaluation.");
+        },
+      },
+      { attempts: 1 },
+    );
+
+    expect(result.created).toBe(false);
+    expect(result.evaluation).toEqual(existing);
+  });
+
+  it("processes queued jobs through the registered worker handler", async () => {
+    const pronunciationProvider = createMockPronunciationEvaluationProvider();
+    const registry = createWorkerRegistry();
+    const evaluations: string[] = [];
+
+    registry.handlers.evaluationShadowing(
+      createEvaluationShadowingHandler({
+        db: {} as never,
+        pronunciationProvider,
+        deps: {
+          getTurnById: async () => baseTurn,
+          getAudioSegmentById: async () => baseAudioSegment,
+          prepareShadowingEvaluation: async () => ({ status: "ready" }),
+          saveShadowingEvaluationForTurnIfAbsent: async (input) => {
+            evaluations.push(input.turnId);
+            return {
+              created: true,
+              evaluation: {
+                id: "shadowing-eval-queued",
+                turnId: input.turnId,
+                mode: input.mode,
+                accuracyScore: input.accuracyScore,
+              },
+            };
+          },
+        },
+      }),
+    );
+
+    const adapter = createMemoryQueueAdapter({ registry });
+    const runtime = createWorkerRuntime({ adapter, registry });
+
+    await enqueueEvaluationShadowingJob(adapter, {
+      turnId: TURN_ID,
+      sessionId: SESSION_ID,
+      audioSegmentId: AUDIO_SEGMENT_ID,
+      standardText: "Could I get a medium latte?",
+    });
+
+    const snapshot =
+      runtime.mode === "memory" ? await runtime.processNext() : null;
+
+    expect(snapshot?.status).toBe("succeeded");
+    expect(evaluations).toEqual([TURN_ID]);
   });
 });
 

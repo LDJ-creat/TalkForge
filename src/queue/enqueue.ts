@@ -26,6 +26,14 @@ export function enqueueEvaluationFreeSpeechJob(
   return adapter.enqueue("evaluation.freeSpeech", payload, options);
 }
 
+export function enqueueEvaluationShadowingJob(
+  adapter: QueueAdapter,
+  payload: JobPayloadMap["evaluation.shadowing"],
+  options?: EnqueueOptions,
+): Promise<JobSnapshot<"evaluation.shadowing">> {
+  return adapter.enqueue("evaluation.shadowing", payload, options);
+}
+
 export function enqueueScenarioProgressEvaluateJob(
   adapter: QueueAdapter,
   payload: JobPayloadMap["scenarioProgress.evaluate"],
@@ -54,6 +62,7 @@ export const typedEnqueue = {
   asrTranscribe: enqueueAsrTranscribeJob,
   correctionAnalyze: enqueueCorrectionAnalyzeJob,
   evaluationFreeSpeech: enqueueEvaluationFreeSpeechJob,
+  evaluationShadowing: enqueueEvaluationShadowingJob,
   scenarioProgressEvaluate: enqueueScenarioProgressEvaluateJob,
   reportGenerate: enqueueReportGenerateJob,
   shadowingGenerate: enqueueShadowingGenerateJob,

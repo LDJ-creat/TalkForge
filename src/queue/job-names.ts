@@ -2,6 +2,7 @@ export const JOB_NAMES = [
   "asr.transcribe",
   "correction.analyze",
   "evaluation.freeSpeech",
+  "evaluation.shadowing",
   "scenarioProgress.evaluate",
   "report.generate",
   "shadowing.generate",
