@@ -13,6 +13,7 @@ import {
   type DashScopeParaformerProviderConfig,
 } from "./config";
 import type {
+  DashScopeParaformerResultGeneratedEvent,
   DashScopeParaformerServerEvent,
   DashScopeParaformerSentence,
   DashScopeParaformerTranscriptionResult,
@@ -199,12 +200,14 @@ export async function transcribeDashScopeParaformerAudio(
             cleanup(error);
           }
           return;
-        case "result-generated":
-          sentences.push(event.payload.output.sentence);
-          if (event.payload.usage?.duration !== undefined) {
-            durationSec = event.payload.usage.duration;
+        case "result-generated": {
+          const generated = event as DashScopeParaformerResultGeneratedEvent;
+          sentences.push(generated.payload.output.sentence);
+          if (generated.payload.usage?.duration !== undefined) {
+            durationSec = generated.payload.usage.duration;
           }
           return;
+        }
         case "task-failed":
           cleanup(
             createProviderError({

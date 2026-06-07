@@ -2,10 +2,10 @@ export const MOCK_PROVIDER_NAME = "mock" as const;
 
 export type ProviderMode = "mock" | "real";
 
+/** Implemented: mock, qwen-omni. "doubao" is planned but not wired yet. */
 export type RealtimeProviderName =
   | typeof MOCK_PROVIDER_NAME
   | "qwen-omni"
-  | "doubao"
   | (string & {});
 
 export type AsrProviderName = typeof MOCK_PROVIDER_NAME | "paraformer" | (string & {});
