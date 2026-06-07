@@ -38,7 +38,7 @@ export function createP0WorkerRegistry(
     shadowingPronunciationProvider:
       overrides.shadowingPronunciationProvider ??
       getShadowingPronunciationProvider({ traceWriter }),
-    ttsProvider: overrides.ttsProvider ?? getTtsProvider(),
+    ttsProvider: overrides.ttsProvider ?? getTtsProvider({ traceWriter }),
   });
 
   return registry;
