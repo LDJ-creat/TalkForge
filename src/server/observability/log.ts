@@ -1,3 +1,11 @@
+import type { ProviderErrorCode } from "@/providers/errors";
+
+import {
+  classifyProviderErrorCode,
+  classifySessionServiceErrorCode,
+  type OperationalErrorCategory,
+} from "./error-categories";
+
 type LogContext = Record<string, unknown>;
 
 function formatContext(context?: LogContext): string {
@@ -5,6 +13,30 @@ function formatContext(context?: LogContext): string {
     return "";
   }
   return ` ${JSON.stringify(context)}`;
+}
+
+export type { ProviderCallLogInput } from "@/providers/runtime";
+export { logProviderCall } from "@/providers/runtime";
+
+export function resolveOperationalErrorCategory(input: {
+  providerErrorCode?: ProviderErrorCode | string;
+  serviceErrorCode?: string;
+}): OperationalErrorCategory {
+  if (input.serviceErrorCode) {
+    const sessionCategory = classifySessionServiceErrorCode(input.serviceErrorCode);
+    if (sessionCategory !== "internal") {
+      return sessionCategory;
+    }
+  }
+
+  return classifyProviderErrorCode(input.providerErrorCode);
+}
+
+export function logOperationalAlert(
+  event: string,
+  context: LogContext & { category: OperationalErrorCategory },
+): void {
+  console.warn(`[talkforge:ops] ${event}${formatContext(context)}`);
 }
 
 export function logSessionLifecycle(
