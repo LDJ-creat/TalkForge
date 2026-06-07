@@ -1,4 +1,5 @@
 import type { Report } from "@/domain/report";
+import type { ShadowingItem } from "@/domain/shadowing";
 import type { Scenario } from "@/domain/scenario";
 import type { SessionStatus } from "@/domain/enums";
 
@@ -85,4 +86,6 @@ export type ConversationViewState = {
   errorMessage: string | null;
   report: Report | null;
   reportStatus: "idle" | "loading" | "ready" | "unavailable";
+  shadowingItems: ShadowingItem[];
+  shadowingStatus: "idle" | "loading" | "ready" | "unavailable";
 };

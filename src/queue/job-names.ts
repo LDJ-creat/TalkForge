@@ -4,6 +4,7 @@ export const JOB_NAMES = [
   "evaluation.freeSpeech",
   "scenarioProgress.evaluate",
   "report.generate",
+  "shadowing.generate",
 ] as const;
 
 export type JobName = (typeof JOB_NAMES)[number];

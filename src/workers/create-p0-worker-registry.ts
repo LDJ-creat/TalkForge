@@ -8,6 +8,7 @@ import { getPronunciationProvider } from "@/server/pronunciation/provider";
 import { getLlmReportProvider } from "@/server/report/provider";
 import { getGoalJudgeProvider } from "@/server/scenario-progress/provider";
 import { getQueueAdapter } from "@/server/queue/provider";
+import { getTtsProvider } from "@/server/tts/provider";
 
 import {
   registerP0WorkerHandlers,
@@ -34,6 +35,7 @@ export function createP0WorkerRegistry(
       overrides.llmGoalJudgeProvider ?? getGoalJudgeProvider({ traceWriter }),
     pronunciationProvider:
       overrides.pronunciationProvider ?? getPronunciationProvider(),
+    ttsProvider: overrides.ttsProvider ?? getTtsProvider(),
   });
 
   return registry;
