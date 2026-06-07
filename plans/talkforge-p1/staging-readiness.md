@@ -267,7 +267,7 @@ Scenario select
 
 - **Authentication:** Dev header auth (`x-talkforge-user-id`) is not production-ready.
 - **Doubao realtime:** Not implemented; only `mock` and `qwen-omni` are supported today.
-- **Free-conversation pronunciation:** Stays lightweight even when `iflytek-ise` is configured; phoneme-level scoring is Shadowing-only.
+- **Free-conversation pronunciation:** When `iflytek-ise` is configured, each user turn is evaluated with `read_sentence` using the ASR transcript as reference text (UI shows word-level weak spots). Use `PRONUNCIATION_PROVIDER=mock` for local dev without ISE credentials.
 - **Paraformer input format:** Requires mono PCM 8 kHz; worker converts uploaded webm/wav via `ffmpeg`.
 - **iFlytek ISE input format:** Requires mono PCM 16 kHz; worker converts via `ffmpeg`.
 - **Redis worker required:** With `QUEUE_PROVIDER=redis`, background jobs do not run unless `npm run worker` is active.
