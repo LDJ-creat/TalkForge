@@ -63,6 +63,8 @@ REALTIME_API_KEY=<server-only>
 REALTIME_BASE_URL=https://dashscope.aliyuncs.com
 REALTIME_MODEL=qwen3-omni-flash-realtime
 REALTIME_VOICE=Cherry
+REALTIME_PROXY_PORT=3002
+NEXT_PUBLIC_REALTIME_PROXY_URL=ws://localhost:3002
 ```
 
 ### ASR
@@ -155,12 +157,17 @@ Work through these steps in order. Record the `sessionId` from step 2 for trace 
 - [ ] Select **Order Coffee at a Cafe**
 - [ ] Confirm the scenario card loads without API errors
 
-### 2. Realtime voice session
+### 2. Realtime voice session (bidirectional PCM)
 
 - [ ] Session connects with real realtime credentials (not client-only fallback)
 - [ ] Browser receives only ephemeral token + WebSocket endpoint (no long-lived API key in network tab)
-- [ ] Speak at least one short English utterance or use text-practice fallback if microphone is unavailable
-- [ ] Assistant turn appears in the conversation transcript
+- [ ] Realtime proxy is reachable (`ws://localhost:3002/realtime?model=...`)
+- [ ] **AI speaks first** after `session.updated` (opening via `response.create`, not a local mock transcript)
+- [ ] Status bar shows `AI is speaking`, then returns to `Listening`
+- [ ] Speak at least one short English utterance; assistant replies with audible voice
+- [ ] User and assistant turns appear in the transcript panel as realtime events arrive
+- [ ] **Send practice response** button is hidden during live voice mode (only visible in text fallback)
+- [ ] If microphone is unavailable, use **Continue with text practice** fallback instead
 
 ### 3. User-turn audio upload
 
