@@ -375,6 +375,15 @@ describe("ASR transcription pipeline", () => {
     delete process.env.ASR_API_KEY;
   });
 
+  it("wires the DashScope Paraformer provider through the configuration boundary", () => {
+    resetAsrProviderForTests();
+    resetRuntimeConfigForTests();
+    process.env.ASR_PROVIDER = "paraformer";
+    process.env.ASR_API_KEY = "sk-test-asr";
+
+    expect(getAsrProvider().name).toBe("dashscope-paraformer-asr");
+  });
+
   it("wires database repositories through createDbAsrTranscribeDeps", () => {
     const dbDeps = createDbAsrTranscribeDeps({
       db: {} as never,
