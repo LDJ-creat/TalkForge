@@ -8,6 +8,7 @@ import {
   buildTurnAudioObjectKey,
   parseTurnAudioObjectKey,
 } from "@/server/storage/object-keys";
+import { buildAiTraceObjectKey } from "@/server/ai-tracing";
 
 const SESSION_ID = "11111111-1111-4111-8111-111111111111";
 const TURN_ID = "22222222-2222-4222-8222-222222222222";
@@ -40,6 +41,18 @@ describe("storage object keys", () => {
     );
 
     expect(objectKey).toBe(`artifacts/${SESSION_ID}/${TURN_ID}/asr_input.wav`);
+    expect(() => assertValidStorageObjectKey(objectKey)).not.toThrow();
+  });
+
+  it("accepts AI trace object keys for private raw payload storage", () => {
+    const objectKey = buildAiTraceObjectKey(
+      "33333333-3333-4333-8333-333333333333",
+      "request",
+    );
+
+    expect(objectKey).toBe(
+      "ai-traces/33333333-3333-4333-8333-333333333333/request.json",
+    );
     expect(() => assertValidStorageObjectKey(objectKey)).not.toThrow();
   });
 

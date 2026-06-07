@@ -4,6 +4,7 @@ import type { Scenario } from "@/domain/scenario";
 import { fromScenario, toScenario } from "@/server/db/mappers";
 import { coffeeOrderingScenario, seedScenarios } from "@/server/db/seeds/scenarios";
 import {
+  aiInvocationLogs,
   audioSegments,
   corrections,
   pronunciationEvaluations,
@@ -27,6 +28,7 @@ describe("domain schema contracts", () => {
     expect(transcripts).toBeDefined();
     expect(corrections).toBeDefined();
     expect(pronunciationEvaluations).toBeDefined();
+    expect(aiInvocationLogs).toBeDefined();
     expect(reports).toBeDefined();
   });
 
