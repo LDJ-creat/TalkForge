@@ -30,6 +30,13 @@ export type EvaluationFreeSpeechPayload = {
   audioSegmentId: string;
 };
 
+export type EvaluationShadowingPayload = {
+  turnId: string;
+  sessionId: string;
+  audioSegmentId: string;
+  standardText: string;
+};
+
 export type ScenarioProgressEvaluatePayload = {
   sessionId: string;
   triggerTurnId?: string;
@@ -47,6 +54,7 @@ export type JobPayloadMap = {
   "asr.transcribe": AsrTranscribePayload;
   "correction.analyze": CorrectionAnalyzePayload;
   "evaluation.freeSpeech": EvaluationFreeSpeechPayload;
+  "evaluation.shadowing": EvaluationShadowingPayload;
   "scenarioProgress.evaluate": ScenarioProgressEvaluatePayload;
   "report.generate": ReportGeneratePayload;
   "shadowing.generate": ShadowingGeneratePayload;
@@ -213,6 +221,39 @@ export function validateEvaluationFreeSpeechPayload(
   };
 }
 
+export function validateEvaluationShadowingPayload(
+  input: unknown,
+): PayloadValidationResult<EvaluationShadowingPayload> {
+  const errors: PayloadValidationError[] = [];
+
+  if (typeof input !== "object" || input === null) {
+    return {
+      valid: false,
+      errors: [{ field: "payload", message: "Payload must be an object." }],
+    };
+  }
+
+  const payload = input as Record<string, unknown>;
+  requireUuid(errors, "turnId", payload.turnId);
+  requireUuid(errors, "sessionId", payload.sessionId);
+  requireUuid(errors, "audioSegmentId", payload.audioSegmentId);
+  requireNonEmptyString(errors, "standardText", payload.standardText);
+
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
+  return {
+    valid: true,
+    payload: {
+      turnId: payload.turnId as string,
+      sessionId: payload.sessionId as string,
+      audioSegmentId: payload.audioSegmentId as string,
+      standardText: (payload.standardText as string).trim(),
+    },
+  };
+}
+
 export function validateScenarioProgressEvaluatePayload(
   input: unknown,
 ): PayloadValidationResult<ScenarioProgressEvaluatePayload> {
@@ -304,6 +345,7 @@ const payloadValidators: {
   "asr.transcribe": validateAsrTranscribePayload,
   "correction.analyze": validateCorrectionAnalyzePayload,
   "evaluation.freeSpeech": validateEvaluationFreeSpeechPayload,
+  "evaluation.shadowing": validateEvaluationShadowingPayload,
   "scenarioProgress.evaluate": validateScenarioProgressEvaluatePayload,
   "report.generate": validateReportGeneratePayload,
   "shadowing.generate": validateShadowingGeneratePayload,
