@@ -234,6 +234,31 @@ export const aiInvocationLogs = pgTable(
   }),
 );
 
+export const standardAudioAssets = pgTable(
+  "standard_audio_assets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    cacheKey: text("cache_key").notNull(),
+    provider: text("provider").notNull(),
+    objectKey: text("object_key").notNull(),
+    format: audioFormatEnum("format").notNull(),
+    codec: audioCodecEnum("codec"),
+    sampleRate: integer("sample_rate"),
+    durationMs: integer("duration_ms"),
+    sizeBytes: integer("size_bytes").notNull(),
+    voice: text("voice").notNull(),
+    speed: doublePrecision("speed").notNull(),
+    language: text("language").notNull().default("en"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    cacheKeyUnique: uniqueIndex("standard_audio_assets_cache_key_unique").on(table.cacheKey),
+    objectKeyUnique: uniqueIndex("standard_audio_assets_object_key_unique").on(table.objectKey),
+  }),
+);
+
 export const reports = pgTable("reports", {
   id: uuid("id").primaryKey().defaultRandom(),
   sessionId: uuid("session_id")
@@ -361,6 +386,9 @@ export type DbTranscript = typeof transcripts.$inferSelect;
 export type DbCorrection = typeof corrections.$inferSelect;
 export type DbPronunciationEvaluation =
   typeof pronunciationEvaluations.$inferSelect;
+export type DbStandardAudioAsset = typeof standardAudioAssets.$inferSelect;
+export type NewDbStandardAudioAsset = typeof standardAudioAssets.$inferInsert;
+
 export type DbReport = typeof reports.$inferSelect;
 export type DbAiInvocationLog = typeof aiInvocationLogs.$inferSelect;
 
@@ -386,6 +414,7 @@ export const schema = {
   corrections,
   pronunciationEvaluations,
   aiInvocationLogs,
+  standardAudioAssets,
   reports,
   usersRelations,
   scenariosRelations,
