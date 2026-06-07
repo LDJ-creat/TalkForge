@@ -11,3 +11,4 @@ export * from "./correction";
 export * from "./pronunciation-evaluation";
 export * from "./report";
 export * from "./shadowing";
+export * from "./ai-invocation-log";
