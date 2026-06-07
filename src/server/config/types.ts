@@ -1,3 +1,5 @@
+import type { SessionUsageLimitsConfig } from "@/domain/session-usage-limits";
+
 export const MOCK_PROVIDER_NAME = "mock" as const;
 
 export type ProviderMode = "mock" | "real";
@@ -67,6 +69,7 @@ export type RuntimeSecrets = {
   databaseUrl?: string;
   redisUrl?: string;
   localStorageRoot?: string;
+  opsHealthDetailToken?: string;
 };
 
 export type PublicClientConfig = {
@@ -99,10 +102,13 @@ export type ScenarioProgressConfig = {
   judgeUserTurnInterval: number;
 };
 
+export type { SessionUsageLimitsConfig };
+
 export type RuntimeConfig = {
   nodeEnv: "development" | "production" | "test";
   appBaseUrl: string;
   scenarioProgress: ScenarioProgressConfig;
+  sessionUsageLimits: SessionUsageLimitsConfig;
   providers: {
     realtime: ProviderSelection<RealtimeProviderName>;
     asr: ProviderSelection<AsrProviderName>;

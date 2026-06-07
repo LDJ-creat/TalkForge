@@ -13,6 +13,7 @@ import {
   type RuntimeConfig,
   type RuntimeSecrets,
   type ScenarioProgressConfig,
+  type SessionUsageLimitsConfig,
   type StorageProviderName,
 } from "./types";
 
@@ -107,6 +108,7 @@ function parseSecrets(env: NodeJS.ProcessEnv): RuntimeSecrets {
     databaseUrl: readEnv(env, "DATABASE_URL"),
     redisUrl: readEnv(env, "REDIS_URL"),
     localStorageRoot: readEnv(env, "LOCAL_STORAGE_ROOT"),
+    opsHealthDetailToken: readEnv(env, "OPS_HEALTH_DETAIL_TOKEN"),
   };
 }
 
@@ -197,6 +199,29 @@ function parseScenarioProgressConfig(env: NodeJS.ProcessEnv): ScenarioProgressCo
   };
 }
 
+function parseNonNegativeInt(value: string | undefined, fallback: number): number {
+  if (!value) {
+    return fallback;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function parseSessionUsageLimitsConfig(env: NodeJS.ProcessEnv): SessionUsageLimitsConfig {
+  return {
+    maxRealtimeDurationSec: parseNonNegativeInt(
+      readEnv(env, "SESSION_MAX_REALTIME_DURATION_SEC"),
+      0,
+    ),
+    maxTurns: parseNonNegativeInt(readEnv(env, "SESSION_MAX_TURNS"), 0),
+    maxAsrJobs: parseNonNegativeInt(readEnv(env, "SESSION_MAX_ASR_JOBS"), 50),
+    maxReportGenerationAttempts: parseNonNegativeInt(
+      readEnv(env, "SESSION_MAX_REPORT_ATTEMPTS"),
+      5,
+    ),
+  };
+}
+
 function usesOnlyMockProviders(
   providers: RuntimeConfig["providers"],
 ): boolean {
@@ -274,6 +299,7 @@ export function parseRuntimeConfigFromEnv(
     nodeEnv,
     appBaseUrl,
     scenarioProgress: parseScenarioProgressConfig(env),
+    sessionUsageLimits: parseSessionUsageLimitsConfig(env),
     providers,
     secrets,
     public: parsePublicConfig(env),
