@@ -89,7 +89,7 @@ export async function startSessionForUser(
     throw new SessionServiceError(
       isProviderError(error) ? 503 : 500,
       "realtime_unavailable",
-      "Could not start the mock realtime session.",
+      "Could not start the realtime session.",
     );
   }
 }

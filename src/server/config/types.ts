@@ -38,6 +38,9 @@ export type RuntimeSecrets = {
   realtimeApiKey?: string;
   realtimeApiSecret?: string;
   realtimeBaseUrl?: string;
+  realtimeModel?: string;
+  realtimeVoice?: string;
+  realtimeTokenTtlSec?: number;
   asrApiKey?: string;
   llmApiKey?: string;
   ttsApiKey?: string;
