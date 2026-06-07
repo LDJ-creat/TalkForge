@@ -12,7 +12,7 @@ export default function HomePage() {
         <p className="scenario-page__eyebrow">{APP_NAME}</p>
         <h1 className="scenario-page__title">Choose a practice scenario</h1>
         <p className="scenario-page__subtitle">
-          {APP_TAGLINE}. Pick a role-play to enter the mock conversation shell.
+          {APP_TAGLINE}. Pick a role-play to review past reports and start a new conversation.
         </p>
       </header>
       <ScenarioPicker scenarios={scenarios} />

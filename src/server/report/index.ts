@@ -22,6 +22,10 @@ export {
   type FetchSessionReportDeps,
 } from "./fetch-session-report";
 export {
+  listScenarioReportsForUser,
+  type ListScenarioReportsDeps,
+} from "./list-scenario-reports";
+export {
   generateSessionReport,
   type GenerateSessionReportDeps,
   type GenerateSessionReportResult,
