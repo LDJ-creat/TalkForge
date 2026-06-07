@@ -27,6 +27,7 @@ import {
   SESSION_STATUSES,
   TURN_ROLES,
 } from "@/domain/enums";
+import { SHADOWING_ITEM_SOURCES } from "@/domain/shadowing";
 
 export const cefrLevelEnum = pgEnum("cefr_level", CEFR_LEVELS);
 export const sessionStatusEnum = pgEnum("session_status", SESSION_STATUSES);
@@ -41,6 +42,10 @@ export const correctionTypeEnum = pgEnum("correction_type", CORRECTION_TYPES);
 export const pronunciationModeEnum = pgEnum(
   "pronunciation_mode",
   PRONUNCIATION_MODES,
+);
+export const shadowingItemSourceEnum = pgEnum(
+  "shadowing_item_source",
+  SHADOWING_ITEM_SOURCES,
 );
 export const aiInvocationOperationEnum = pgEnum(
   "ai_invocation_operation",
@@ -251,6 +256,33 @@ export const reports = pgTable("reports", {
     .defaultNow(),
 });
 
+export const shadowingItems = pgTable(
+  "shadowing_items",
+  {
+    id: text("id").primaryKey(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    standardText: text("standard_text").notNull(),
+    originalText: text("original_text"),
+    reason: text("reason"),
+    source: shadowingItemSourceEnum("source").notNull(),
+    turnId: uuid("turn_id").references(() => turns.id, { onDelete: "set null" }),
+    sortOrder: integer("sort_order").notNull(),
+    standardAudio: jsonb("standard_audio"),
+    standardAudioStatus: text("standard_audio_status").notNull().default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    sessionSortIdx: index("shadowing_items_session_sort_idx").on(
+      table.sessionId,
+      table.sortOrder,
+    ),
+  }),
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
 }));
@@ -278,6 +310,7 @@ export const sessionsRelations = relations(sessions, ({ one, many }) => ({
     fields: [sessions.id],
     references: [reports.sessionId],
   }),
+  shadowingItems: many(shadowingItems),
 }));
 
 export const scenarioProgressRelations = relations(scenarioProgress, ({ one }) => ({
@@ -351,6 +384,17 @@ export const reportsRelations = relations(reports, ({ one }) => ({
   }),
 }));
 
+export const shadowingItemsRelations = relations(shadowingItems, ({ one }) => ({
+  session: one(sessions, {
+    fields: [shadowingItems.sessionId],
+    references: [sessions.id],
+  }),
+  turn: one(turns, {
+    fields: [shadowingItems.turnId],
+    references: [turns.id],
+  }),
+}));
+
 export type DbUser = typeof users.$inferSelect;
 export type DbScenario = typeof scenarios.$inferSelect;
 export type DbSession = typeof sessions.$inferSelect;
@@ -362,6 +406,7 @@ export type DbCorrection = typeof corrections.$inferSelect;
 export type DbPronunciationEvaluation =
   typeof pronunciationEvaluations.$inferSelect;
 export type DbReport = typeof reports.$inferSelect;
+export type DbShadowingItem = typeof shadowingItems.$inferSelect;
 export type DbAiInvocationLog = typeof aiInvocationLogs.$inferSelect;
 
 export type NewDbScenario = typeof scenarios.$inferInsert;
@@ -373,6 +418,7 @@ export type NewDbCorrection = typeof corrections.$inferInsert;
 export type NewDbPronunciationEvaluation =
   typeof pronunciationEvaluations.$inferInsert;
 export type NewDbReport = typeof reports.$inferInsert;
+export type NewDbShadowingItem = typeof shadowingItems.$inferInsert;
 export type NewDbAiInvocationLog = typeof aiInvocationLogs.$inferInsert;
 
 export const schema = {
@@ -387,6 +433,7 @@ export const schema = {
   pronunciationEvaluations,
   aiInvocationLogs,
   reports,
+  shadowingItems,
   usersRelations,
   scenariosRelations,
   sessionsRelations,
@@ -398,4 +445,5 @@ export const schema = {
   pronunciationEvaluationsRelations,
   aiInvocationLogsRelations,
   reportsRelations,
+  shadowingItemsRelations,
 };

@@ -4,6 +4,11 @@ import type { Correction } from "@/domain/correction";
 import type { PronunciationEvaluation } from "@/domain/pronunciation-evaluation";
 import type { Report } from "@/domain/report";
 import type {
+  ShadowingItem,
+  ShadowingStandardAudio,
+  ShadowingStandardAudioStatus,
+} from "@/domain/shadowing";
+import type {
   EvaluationRubric,
   ExitPolicy,
   Scenario,
@@ -21,6 +26,7 @@ import type {
   DbCorrection,
   DbPronunciationEvaluation,
   DbReport,
+  DbShadowingItem,
   DbScenario,
   DbScenarioProgress,
   DbSession,
@@ -243,6 +249,54 @@ export function toReport(row: DbReport): Report {
     shadowingRecommendations:
       row.shadowingRecommendations as Report["shadowingRecommendations"],
     nextPracticeSuggestion: row.nextPracticeSuggestion,
+    createdAt: row.createdAt,
+  };
+}
+
+function asShadowingStandardAudio(value: unknown): ShadowingStandardAudio | undefined {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+
+  const record = value as Partial<ShadowingStandardAudio>;
+  if (
+    typeof record.provider !== "string" ||
+    typeof record.objectKey !== "string" ||
+    typeof record.format !== "string" ||
+    typeof record.sizeBytes !== "number" ||
+    typeof record.voice !== "string" ||
+    typeof record.speed !== "number" ||
+    record.language !== "en" ||
+    typeof record.cacheKey !== "string"
+  ) {
+    return undefined;
+  }
+
+  return record as ShadowingStandardAudio;
+}
+
+function asShadowingStandardAudioStatus(
+  value: string,
+): ShadowingStandardAudioStatus {
+  if (value === "ready" || value === "failed") {
+    return value;
+  }
+
+  return "pending";
+}
+
+export function toShadowingItem(row: DbShadowingItem): ShadowingItem {
+  return {
+    id: row.id,
+    sessionId: row.sessionId,
+    standardText: row.standardText,
+    originalText: row.originalText ?? undefined,
+    reason: row.reason ?? undefined,
+    source: row.source,
+    turnId: row.turnId ?? undefined,
+    sortOrder: row.sortOrder,
+    standardAudio: asShadowingStandardAudio(row.standardAudio),
+    standardAudioStatus: asShadowingStandardAudioStatus(row.standardAudioStatus),
     createdAt: row.createdAt,
   };
 }
