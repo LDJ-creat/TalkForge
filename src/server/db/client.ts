@@ -1,6 +1,8 @@
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
+import { getRuntimeSecret } from "@/server/config";
+
 import { schema } from "./schema";
 
 export type TalkForgeDatabase = PostgresJsDatabase<typeof schema>;
@@ -9,7 +11,7 @@ let client: ReturnType<typeof postgres> | undefined;
 let database: TalkForgeDatabase | undefined;
 
 export function getDatabaseUrl(): string {
-  const url = process.env.DATABASE_URL;
+  const url = getRuntimeSecret("databaseUrl");
   if (!url) {
     throw new Error(
       "DATABASE_URL is required to initialize the TalkForge database client.",

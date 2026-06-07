@@ -1,10 +1,11 @@
 import type { LlmReportProvider } from "@/providers/llm/contract";
 import { createMockLlmProvider } from "@/providers/mock/llm";
+import { getRuntimeConfig } from "@/server/config";
 
 let mockLlmReportProvider: ReturnType<typeof createMockLlmProvider> | undefined;
 
 export function getLlmReportProvider(): LlmReportProvider {
-  const providerName = process.env.LLM_REPORT_PROVIDER ?? process.env.LLM_CORRECTION_PROVIDER ?? "mock";
+  const providerName = getRuntimeConfig().providers.llmReport.name;
 
   if (providerName === "mock") {
     mockLlmReportProvider ??= createMockLlmProvider();

@@ -1,13 +1,14 @@
 import type { PronunciationEvaluationProvider } from "@/providers/pronunciation/contract";
 import { createProviderError } from "@/providers/errors";
 import { createMockPronunciationEvaluationProvider } from "@/providers/mock/pronunciation";
+import { getRuntimeConfig } from "@/server/config";
 
 let mockPronunciationProvider:
   | ReturnType<typeof createMockPronunciationEvaluationProvider>
   | undefined;
 
 export function getPronunciationProvider(): PronunciationEvaluationProvider {
-  const providerName = process.env.PRONUNCIATION_PROVIDER ?? "mock";
+  const providerName = getRuntimeConfig().providers.pronunciation.name;
 
   if (providerName === "mock") {
     mockPronunciationProvider ??= createMockPronunciationEvaluationProvider();

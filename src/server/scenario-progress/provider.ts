@@ -1,10 +1,11 @@
 import type { LlmGoalJudgeProvider } from "@/providers/llm/contract";
 import { createMockGoalJudgeProvider } from "@/providers/mock/goal-judge";
+import { getRuntimeConfig } from "@/server/config";
 
 let mockGoalJudgeProvider: ReturnType<typeof createMockGoalJudgeProvider> | undefined;
 
 export function getGoalJudgeProvider(): LlmGoalJudgeProvider {
-  const providerName = process.env.LLM_GOAL_JUDGE_PROVIDER ?? "mock";
+  const providerName = getRuntimeConfig().providers.llmGoalJudge.name;
 
   if (providerName === "mock") {
     mockGoalJudgeProvider ??= createMockGoalJudgeProvider();

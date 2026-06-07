@@ -1,8 +1,8 @@
 ﻿import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
-import { AudioUploadServiceError } from "./errors";
+import { getRuntimeConfig, resolveStorageSigningSecret } from "@/server/config";
 
-const DEV_STORAGE_SIGNING_SECRET = "talkforge-dev-storage-secret";
+import { AudioUploadServiceError } from "./errors";
 
 export type StorageUploadTokenClaims = {
   objectKey: string;
@@ -12,16 +12,7 @@ export type StorageUploadTokenClaims = {
 };
 
 export function getStorageSigningSecret(): string {
-  const configured = process.env.STORAGE_SIGNING_SECRET;
-  if (process.env.NODE_ENV === "production") {
-    if (!configured) {
-      throw new Error(
-        "STORAGE_SIGNING_SECRET is required when NODE_ENV=production.",
-      );
-    }
-    return configured;
-  }
-  return configured ?? DEV_STORAGE_SIGNING_SECRET;
+  return resolveStorageSigningSecret(getRuntimeConfig());
 }
 
 export function createLocalStorageSigningSecret(): string {
@@ -79,7 +70,7 @@ export function decodeStorageUploadToken(
 }
 
 export function getAppBaseUrl(): string {
-  return process.env.APP_BASE_URL ?? "http://localhost:3000";
+  return getRuntimeConfig().appBaseUrl;
 }
 
 export function createStorageUploadUrl(token: string, baseUrl = getAppBaseUrl()): string {

@@ -2,6 +2,7 @@
 import path from "node:path";
 
 import { addSecondsIso } from "@/providers/mock/utils";
+import { getRuntimeSecret } from "@/server/config";
 import type {
   CreateDownloadUrlInput,
   CreateUploadTargetInput,
@@ -27,7 +28,7 @@ export type LocalFilesystemStorageProviderOptions = {
 };
 
 function getDefaultRootDir(): string {
-  return process.env.LOCAL_STORAGE_ROOT ?? path.join(process.cwd(), ".data", "storage");
+  return getRuntimeSecret("localStorageRoot") ?? path.join(process.cwd(), ".data", "storage");
 }
 
 function assertResolvedObjectPath(rootDir: string, objectKey: string): string {

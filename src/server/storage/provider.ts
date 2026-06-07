@@ -1,4 +1,5 @@
 ﻿import { createMockStorageProvider } from "@/providers/mock/storage";
+import { getRuntimeConfig } from "@/server/config";
 
 import { LocalFilesystemStorageProvider } from "./local-storage";
 import {
@@ -11,7 +12,7 @@ let mockStorageProvider: ReturnType<typeof createMockStorageProvider> | undefine
 let localStorageProvider: LocalFilesystemStorageProvider | undefined;
 
 export function getStorageProvider() {
-  const providerName = process.env.STORAGE_PROVIDER ?? "mock";
+  const providerName = getRuntimeConfig().providers.storage.name;
 
   if (providerName === "local") {
     localStorageProvider ??= new LocalFilesystemStorageProvider();

@@ -9,6 +9,7 @@ import {
   typedEnqueue,
 } from "@/queue";
 import { JobProcessingError } from "@/queue/errors";
+import { resetRuntimeConfigForTests } from "@/server/config";
 import { getAsrProvider, resetAsrProviderForTests } from "@/server/asr/provider";
 import { transcribeTurnAudio } from "@/server/asr/transcribe-turn";
 import {
@@ -354,6 +355,7 @@ describe("ASR transcription pipeline", () => {
 
   it("defaults to the mock ASR provider through the configuration boundary", () => {
     resetAsrProviderForTests();
+    resetRuntimeConfigForTests();
     process.env.ASR_PROVIDER = "mock";
 
     expect(getAsrProvider().name).toBe("mock-asr");
@@ -361,12 +363,16 @@ describe("ASR transcription pipeline", () => {
 
   it("throws a configuration provider error for unsupported ASR providers", () => {
     resetAsrProviderForTests();
+    resetRuntimeConfigForTests();
     process.env.ASR_PROVIDER = "unsupported-vendor";
+    process.env.ASR_API_KEY = "test-asr-key";
 
     expect(() => getAsrProvider()).toThrow(/Unsupported ASR provider/);
 
     resetAsrProviderForTests();
+    resetRuntimeConfigForTests();
     process.env.ASR_PROVIDER = "mock";
+    delete process.env.ASR_API_KEY;
   });
 
   it("wires database repositories through createDbAsrTranscribeDeps", () => {
@@ -381,6 +387,7 @@ describe("ASR transcription pipeline", () => {
 
   it("registers the ASR worker through registerP0WorkerHandlers", () => {
     resetAsrProviderForTests();
+    resetRuntimeConfigForTests();
     process.env.ASR_PROVIDER = "mock";
 
     const registry = createWorkerRegistry();
