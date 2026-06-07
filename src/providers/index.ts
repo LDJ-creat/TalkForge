@@ -68,6 +68,15 @@ export {
 export type { MockProviderBundle, MockProviderBundleOptions } from "./mock";
 
 export {
+  createOpenAiCompatibleTextLlmProvider,
+  buildReportPrompt,
+  CORRECTION_PROMPT_VERSION,
+  REPORT_PROMPT_VERSION,
+  parseCorrectionItemsFromContent,
+  parseReportSectionsFromContent,
+} from "./openai-compatible-text-llm";
+
+export {
   MockAsrProvider,
   MockLlmProvider,
   MockPronunciationEvaluationProvider,
