@@ -16,14 +16,29 @@ import {
   createConversationSessionId,
   createOpeningTranscript,
   mockStartRealtimeSession,
-  mockStopRealtimeSession,
 } from "./mock-session";
+import {
+  deriveConnectionStatus,
+  deriveTurnStatus,
+  type RealtimeLifecycleStatus,
+} from "./realtime/lifecycle";
+import {
+  configureRealtimeSessionController,
+  connectRealtimeSession,
+  disconnectRealtimeSession,
+  enterRealtimeFallbackMode,
+  interruptRealtimeAssistant as sendRealtimeInterrupt,
+  retryRealtimeSession,
+  type RealtimeSessionControllerEvent,
+} from "./realtime/session-controller";
+import { teardownRealtimeAudioCapture } from "./realtime/realtime-audio-bridge";
 import { startSessionOnServer } from "./start-session-api";
 import { mergeTranscriptsWithServerTurns } from "./sync-transcripts";
 import type {
   ConnectionStatus,
   ConversationViewState,
   EndingState,
+  TranscriptEntry,
   TurnStatus,
 } from "./types";
 
@@ -33,6 +48,10 @@ type ConversationStore = ConversationViewState & {
   submitMockPracticeTurn: () => Promise<void>;
   refreshScenarioProgress: () => void;
   syncSessionProgressFromServer: () => Promise<void>;
+  handleRealtimeControllerEvent: (event: RealtimeSessionControllerEvent) => void;
+  retryRealtimeConnection: () => Promise<void>;
+  enterRealtimeFallback: () => void;
+  interruptRealtimeAssistant: () => void;
   requestEndSession: () => Promise<void>;
   teardownSession: () => Promise<void>;
   reset: () => void;
@@ -43,6 +62,8 @@ const initialState: ConversationViewState = {
   session: null,
   realtimeCredentials: null,
   sessionEpoch: 0,
+  realtimeLifecycleStatus: "idle",
+  realtimeDiagnostics: {},
   connectionStatus: "idle",
   turnStatus: "idle",
   transcripts: [],
@@ -81,12 +102,67 @@ function isSessionEnding(get: StoreGet): boolean {
   );
 }
 
+function applyRealtimeLifecycle(
+  set: StoreSet,
+  lifecycle: RealtimeLifecycleStatus,
+): void {
+  set({
+    realtimeLifecycleStatus: lifecycle,
+    connectionStatus: deriveConnectionStatus(lifecycle),
+    turnStatus: deriveTurnStatus(lifecycle),
+  });
+}
+
 function setConnectionStatus(set: StoreSet, connectionStatus: ConnectionStatus) {
   set({ connectionStatus });
 }
 
 function setTurnStatus(set: StoreSet, turnStatus: TurnStatus) {
   set({ turnStatus });
+}
+
+function upsertTranscriptEntry(
+  transcripts: TranscriptEntry[],
+  entry: TranscriptEntry,
+): TranscriptEntry[] {
+  const existingIndex = transcripts.findIndex((item) => item.id === entry.id);
+  if (existingIndex === -1) {
+    return [...transcripts, entry];
+  }
+
+  const next = [...transcripts];
+  next[existingIndex] = entry;
+  return next;
+}
+
+function appendTranscriptDelta(
+  transcripts: TranscriptEntry[],
+  entryId: string,
+  role: TranscriptEntry["role"],
+  delta: string,
+): TranscriptEntry[] {
+  const existingIndex = transcripts.findIndex((item) => item.id === entryId);
+  if (existingIndex === -1) {
+    return [
+      ...transcripts,
+      {
+        id: entryId,
+        role,
+        text: delta,
+        status: "partial",
+        timestamp: new Date().toISOString(),
+      },
+    ];
+  }
+
+  const next = [...transcripts];
+  const existing = next[existingIndex]!;
+  next[existingIndex] = {
+    ...existing,
+    text: `${existing.text}${delta}`,
+    status: "partial",
+  };
+  return next;
 }
 
 function setEndingState(set: StoreSet, endingState: EndingState) {
@@ -156,12 +232,33 @@ function applyLocalScenarioProgress(set: StoreSet, get: StoreGet): void {
   maybeSuggestEnding(set, get, progress.shouldSuggestEnding);
 }
 
-function shouldStopMockSession(connectionStatus: ConnectionStatus): boolean {
+function shouldDisconnectRealtime(lifecycle: RealtimeLifecycleStatus): boolean {
   return (
-    connectionStatus === "connecting" ||
-    connectionStatus === "connected" ||
-    connectionStatus === "disconnecting"
+    lifecycle === "connecting" ||
+    lifecycle === "connected" ||
+    lifecycle === "listening" ||
+    lifecycle === "assistant_speaking" ||
+    lifecycle === "interrupted" ||
+    lifecycle === "reconnecting" ||
+    lifecycle === "fallback" ||
+    lifecycle === "failed"
   );
+}
+
+async function startRealtimeConnection(
+  scenario: Scenario,
+  credentials: ConversationViewState["realtimeCredentials"],
+  epoch: number,
+): Promise<void> {
+  if (!credentials) {
+    return;
+  }
+
+  await connectRealtimeSession({
+    credentials,
+    openingTranscript: createOpeningTranscript(scenario),
+    sessionEpoch: epoch,
+  });
 }
 
 async function syncSessionTranscriptsFromServer(
@@ -198,17 +295,20 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
   },
 
   async startSession(scenario) {
-    const { session, connectionStatus } = get();
+    const { session, realtimeLifecycleStatus } = get();
 
     if (
       session?.status === "active" &&
       session.scenarioId === scenario.id &&
-      connectionStatus === "connected"
+      (realtimeLifecycleStatus === "connected" ||
+        realtimeLifecycleStatus === "listening" ||
+        realtimeLifecycleStatus === "assistant_speaking" ||
+        realtimeLifecycleStatus === "fallback")
     ) {
       return;
     }
 
-    if (connectionStatus === "connecting") {
+    if (realtimeLifecycleStatus === "connecting" || realtimeLifecycleStatus === "reconnecting") {
       return;
     }
 
@@ -225,8 +325,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         startedAt,
       },
       realtimeCredentials: null,
-      connectionStatus: "connecting",
-      turnStatus: "idle",
+      realtimeDiagnostics: {},
       transcripts: [],
       mockTurnCount: 0,
       scenarioProgress: null,
@@ -237,6 +336,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       report: null,
       reportStatus: "idle",
     });
+    applyRealtimeLifecycle(set, "connecting");
 
     try {
       const serverStart = await startSessionOnServer(scenario.id);
@@ -246,18 +346,16 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       }
 
       if (serverStart) {
-        const openingTranscript = createOpeningTranscript(scenario);
-
         set({
           session: serverStart.session,
           realtimeCredentials: serverStart.realtimeCredentials,
-          connectionStatus: "connected",
-          turnStatus: "assistant_speaking",
-          transcripts: [openingTranscript],
           progressSource: "server",
         });
-
-        setTurnStatus(set, "idle");
+        await startRealtimeConnection(
+          scenario,
+          serverStart.realtimeCredentials,
+          epoch,
+        );
         await get().syncSessionProgressFromServer();
         return;
       }
@@ -271,7 +369,6 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         return;
       }
 
-      const openingTranscript = createOpeningTranscript(scenario);
       const realtimeCredentials = mapRealtimeCredentials(credentials);
 
       set({
@@ -283,12 +380,9 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
           realtimeProvider: realtimeCredentials.provider,
         },
         realtimeCredentials,
-        connectionStatus: "connected",
-        turnStatus: "assistant_speaking",
-        transcripts: [openingTranscript],
       });
 
-      setTurnStatus(set, "idle");
+      await startRealtimeConnection(scenario, realtimeCredentials, epoch);
       applyLocalScenarioProgress(set, get);
       await get().syncSessionProgressFromServer();
     } catch {
@@ -296,9 +390,8 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         return;
       }
 
+      applyRealtimeLifecycle(set, "failed");
       set({
-        connectionStatus: "error",
-        turnStatus: "idle",
         realtimeCredentials: null,
         session: {
           id: createConversationSessionId(),
@@ -312,14 +405,118 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
     }
   },
 
+  handleRealtimeControllerEvent(event) {
+    if (event.sessionEpoch !== get().sessionEpoch) {
+      return;
+    }
+
+    const { session } = get();
+
+    switch (event.type) {
+      case "lifecycle":
+        if (!session || session.status !== "active") {
+          return;
+        }
+        if (get().endingState === "user_requested") {
+          if (event.status === "ended") {
+            return;
+          }
+          setConnectionStatus(set, "disconnecting");
+          setTurnStatus(set, "idle");
+          return;
+        }
+        applyRealtimeLifecycle(set, event.status);
+        if (event.status === "failed") {
+          set({
+            errorMessage:
+              "Realtime voice connection failed. Retry or continue in text practice mode.",
+          });
+        } else if (
+          event.status === "connected" ||
+          event.status === "listening" ||
+          event.status === "fallback"
+        ) {
+          set({ errorMessage: null });
+        }
+        break;
+      case "transcript":
+        set((state) => ({
+          transcripts: upsertTranscriptEntry(state.transcripts, event.entry),
+        }));
+        break;
+      case "transcript_delta":
+        set((state) => ({
+          transcripts: appendTranscriptDelta(
+            state.transcripts,
+            event.entryId,
+            event.role,
+            event.text,
+          ),
+        }));
+        break;
+      case "diagnostics":
+        set({ realtimeDiagnostics: event.diagnostics });
+        break;
+      case "error":
+        if (event.failed) {
+          applyRealtimeLifecycle(set, "failed");
+        }
+        set({
+          errorMessage: event.message,
+        });
+        break;
+      default:
+        break;
+    }
+  },
+
+  async retryRealtimeConnection() {
+    const { realtimeLifecycleStatus, session } = get();
+    if (!session || session.status !== "active" || realtimeLifecycleStatus !== "failed") {
+      return;
+    }
+
+    set({ errorMessage: null });
+    applyRealtimeLifecycle(set, "reconnecting");
+    await retryRealtimeSession();
+  },
+
+  enterRealtimeFallback() {
+    const { session } = get();
+    if (!session || session.status !== "active") {
+      return;
+    }
+
+    enterRealtimeFallbackMode();
+    set({ errorMessage: null });
+  },
+
+  interruptRealtimeAssistant() {
+    const { session, realtimeLifecycleStatus } = get();
+    if (!session || session.status !== "active") {
+      return;
+    }
+
+    if (
+      realtimeLifecycleStatus !== "assistant_speaking" &&
+      realtimeLifecycleStatus !== "interrupted"
+    ) {
+      return;
+    }
+
+    sendRealtimeInterrupt();
+  },
+
   async submitMockPracticeTurn() {
-    const { session, connectionStatus, mockTurnCount, endingState } = get();
+    const { session, realtimeLifecycleStatus, mockTurnCount, endingState } = get();
 
     if (
       !session ||
       session.status !== "active" ||
       session.backendLinked !== true ||
-      connectionStatus !== "connected" ||
+      (realtimeLifecycleStatus !== "fallback" &&
+        realtimeLifecycleStatus !== "connected" &&
+        realtimeLifecycleStatus !== "listening") ||
       (endingState !== "none" && endingState !== "ai_suggested")
     ) {
       return;
@@ -398,13 +595,13 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
   },
 
   async requestEndSession() {
-    const { session, connectionStatus, endingState, selectedScenario } = get();
+    const { session, realtimeLifecycleStatus, endingState, selectedScenario } = get();
 
     if (!session || session.status !== "active") {
       return;
     }
 
-    if (connectionStatus === "disconnecting" || endingState === "completed") {
+    if (realtimeLifecycleStatus === "ended" || endingState === "completed") {
       return;
     }
 
@@ -421,8 +618,10 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
     setTurnStatus(set, "idle");
 
     try {
-      if (shouldStopMockSession(connectionStatus)) {
-        await mockStopRealtimeSession();
+      await teardownRealtimeAudioCapture();
+
+      if (shouldDisconnectRealtime(realtimeLifecycleStatus)) {
+        await disconnectRealtimeSession();
       }
 
       if (isSessionEnding(get) === false) {
@@ -431,6 +630,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
 
       const endedAt = new Date().toISOString();
 
+      applyRealtimeLifecycle(set, "ended");
       set({
         session: {
           ...session,
@@ -438,7 +638,6 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
           endedAt,
         },
         realtimeCredentials: null,
-        connectionStatus: "disconnected",
         endingState: "completed",
         reportStatus: session.backendLinked ? "loading" : "idle",
       });
@@ -470,17 +669,23 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
   },
 
   async teardownSession() {
-    const { session, connectionStatus, endingState } = get();
+    const { session, realtimeLifecycleStatus, endingState } = get();
 
     bumpSessionEpoch(set, get);
+
+    try {
+      await teardownRealtimeAudioCapture();
+    } catch {
+      // Best-effort audio cleanup when navigating away from the shell.
+    }
 
     if (
       session?.status === "active" &&
       endingState !== "completed" &&
-      shouldStopMockSession(connectionStatus)
+      shouldDisconnectRealtime(realtimeLifecycleStatus)
     ) {
       try {
-        await mockStopRealtimeSession();
+        await disconnectRealtimeSession();
       } catch {
         // Best-effort cleanup when navigating away from the shell.
       }
@@ -497,3 +702,9 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
 export function getConversationInitialState(): ConversationViewState {
   return { ...initialState };
 }
+
+configureRealtimeSessionController({
+  onEvent: (event) => {
+    useConversationStore.getState().handleRealtimeControllerEvent(event);
+  },
+});

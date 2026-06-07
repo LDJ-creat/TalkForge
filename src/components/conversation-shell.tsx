@@ -6,6 +6,11 @@ import { useShallow } from "zustand/react/shallow";
 
 import type { Scenario } from "@/domain/scenario";
 import { useConversationStore } from "@/features/conversation";
+import {
+  canEnterFallback,
+  canRetryRealtime,
+} from "@/features/conversation/realtime/lifecycle";
+import { syncRealtimeAudioCapture } from "@/features/conversation/realtime/realtime-audio-bridge";
 import { SCENARIO_PROGRESS_REFRESH_INTERVAL_MS } from "@/features/conversation/types";
 
 import { SessionReportPanel } from "./session-report-panel";
@@ -17,9 +22,15 @@ type ConversationShellProps = {
   scenario: Scenario;
 };
 
+const SHOW_REALTIME_DEBUG =
+  typeof process !== "undefined" && process.env.NODE_ENV === "development";
+
 export function ConversationShell({ scenario }: ConversationShellProps) {
   const {
     session,
+    realtimeCredentials,
+    realtimeLifecycleStatus,
+    realtimeDiagnostics,
     connectionStatus,
     turnStatus,
     transcripts,
@@ -32,6 +43,9 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
   } = useConversationStore(
     useShallow((state) => ({
       session: state.session,
+      realtimeCredentials: state.realtimeCredentials,
+      realtimeLifecycleStatus: state.realtimeLifecycleStatus,
+      realtimeDiagnostics: state.realtimeDiagnostics,
       connectionStatus: state.connectionStatus,
       turnStatus: state.turnStatus,
       transcripts: state.transcripts,
@@ -48,6 +62,11 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
   const submitMockPracticeTurn = useConversationStore((state) => state.submitMockPracticeTurn);
   const requestEndSession = useConversationStore((state) => state.requestEndSession);
   const refreshScenarioProgress = useConversationStore((state) => state.refreshScenarioProgress);
+  const retryRealtimeConnection = useConversationStore((state) => state.retryRealtimeConnection);
+  const enterRealtimeFallback = useConversationStore((state) => state.enterRealtimeFallback);
+  const interruptRealtimeAssistant = useConversationStore(
+    (state) => state.interruptRealtimeAssistant,
+  );
 
   useEffect(() => {
     void startSession(scenario);
@@ -56,6 +75,31 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
       void useConversationStore.getState().teardownSession();
     };
   }, [scenario, startSession]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      const micError = await syncRealtimeAudioCapture({
+        lifecycle: realtimeLifecycleStatus,
+        provider: realtimeCredentials?.provider ?? session?.realtimeProvider,
+        sessionId: session?.id ?? null,
+      });
+
+      if (!cancelled && micError) {
+        useConversationStore.setState({ errorMessage: micError });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    realtimeLifecycleStatus,
+    realtimeCredentials?.provider,
+    session?.id,
+    session?.realtimeProvider,
+  ]);
 
   useEffect(() => {
     if (connectionStatus !== "connected" || session?.status !== "active") {
@@ -75,15 +119,25 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
   const isSessionActive = session?.status === "active";
   const isEnding =
     connectionStatus === "disconnecting" ||
-    endingState === "user_requested";
+    endingState === "user_requested" ||
+    realtimeLifecycleStatus === "ended";
   const isCompleted = session?.status === "completed" || endingState === "completed";
   const showMockPracticeButton =
     isSessionActive &&
     session?.backendLinked === true &&
-    connectionStatus === "connected" &&
+    (realtimeLifecycleStatus === "fallback" ||
+      realtimeLifecycleStatus === "connected" ||
+      realtimeLifecycleStatus === "listening") &&
     !isEnding;
   const showEndingSuggestion =
     endingState === "ai_suggested" && scenarioProgress?.shouldSuggestEnding === true;
+  const showRetryRealtime = isSessionActive && canRetryRealtime(realtimeLifecycleStatus);
+  const showFallbackOption =
+    isSessionActive && canEnterFallback(realtimeLifecycleStatus);
+  const showInterruptButton =
+    isSessionActive &&
+    (realtimeLifecycleStatus === "assistant_speaking" ||
+      realtimeLifecycleStatus === "interrupted");
 
   const endingSuggestionMessage =
     endingSuggestionReason === "required_goals_complete"
@@ -112,7 +166,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
             className="button button--end"
             data-testid="end-practice-button"
             onClick={() => void requestEndSession()}
-            disabled={!isSessionActive || isEnding || isCompleted}
+            disabled={!isSessionActive || isCompleted}
           >
             End practice
           </button>
@@ -123,6 +177,16 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
         <section className="conversation-panel">
           <h2 className="conversation-panel__title">Voice practice</h2>
           <VoiceVisualizer turnStatus={turnStatus} />
+          {showInterruptButton ? (
+            <button
+              type="button"
+              className="button button--ghost conversation-practice-button"
+              data-testid="interrupt-assistant-button"
+              onClick={() => interruptRealtimeAssistant()}
+            >
+              Interrupt AI
+            </button>
+          ) : null}
           {showMockPracticeButton ? (
             <button
               type="button"
@@ -138,10 +202,35 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
               Send practice response
             </button>
           ) : null}
+          {showRetryRealtime ? (
+            <div className="conversation-recovery-actions">
+              <button
+                type="button"
+                className="button button--primary"
+                data-testid="retry-realtime-button"
+                onClick={() => void retryRealtimeConnection()}
+              >
+                Retry voice connection
+              </button>
+              {showFallbackOption ? (
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  data-testid="fallback-practice-button"
+                  onClick={() => enterRealtimeFallback()}
+                >
+                  Continue with text practice
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           <SessionStatusBar
+            realtimeLifecycleStatus={realtimeLifecycleStatus}
             connectionStatus={connectionStatus}
             turnStatus={turnStatus}
             sessionStatus={session?.status}
+            diagnostics={realtimeDiagnostics}
+            showDebugDetails={SHOW_REALTIME_DEBUG}
           />
           {errorMessage ? <p className="error-banner">{errorMessage}</p> : null}
           {showEndingSuggestion ? (

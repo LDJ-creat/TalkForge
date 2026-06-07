@@ -6,13 +6,20 @@ import type { EndingSuggestionReason } from "@/domain/scenario-ending";
 
 import type { ConversationRealtimeCredentials } from "./credentials";
 import type { LocalScenarioProgressSnapshot } from "./evaluate-local-progress";
+import type {
+  RealtimeConnectionDiagnostics,
+  RealtimeLifecycleStatus,
+} from "./realtime/lifecycle";
 
 export const CONNECTION_STATUSES = [
   "idle",
   "connecting",
   "connected",
+  "reconnecting",
   "disconnecting",
   "disconnected",
+  "failed",
+  "fallback",
   "error",
 ] as const;
 export type ConnectionStatus = (typeof CONNECTION_STATUSES)[number];
@@ -65,6 +72,8 @@ export type ConversationViewState = {
   session: ConversationSession | null;
   realtimeCredentials: ConversationRealtimeCredentials | null;
   sessionEpoch: number;
+  realtimeLifecycleStatus: RealtimeLifecycleStatus;
+  realtimeDiagnostics: RealtimeConnectionDiagnostics;
   connectionStatus: ConnectionStatus;
   turnStatus: TurnStatus;
   transcripts: TranscriptEntry[];

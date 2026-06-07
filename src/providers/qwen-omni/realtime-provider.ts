@@ -13,6 +13,7 @@ import {
   DEFAULT_QWEN_OMNI_TOKEN_TTL_SEC,
   DEFAULT_QWEN_OMNI_VOICE,
   MAX_QWEN_OMNI_TOKEN_TTL_SEC,
+  QWEN_OMNI_BROWSER_AUTH_MODE,
   QWEN_OMNI_PROVIDER_NAME,
   resolveQwenOmniEndpoints,
   type QwenOmniProviderConfig,
@@ -99,6 +100,7 @@ export class QwenOmniRealtimeProvider implements RealtimeProvider {
         sessionUpdateEvent: buildQwenOmniSessionUpdateEvent(sessionConfig),
         instructionsIncluded: true,
         providerSessionIdPending: true,
+        browserWebSocketAuth: QWEN_OMNI_BROWSER_AUTH_MODE,
       },
     };
   }

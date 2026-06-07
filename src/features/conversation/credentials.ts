@@ -2,7 +2,13 @@ import type { RealtimeSessionCredentials } from "@/providers/realtime/types";
 
 export type ConversationRealtimeCredentials = Pick<
   RealtimeSessionCredentials,
-  "provider" | "providerSessionId" | "token" | "expiresAt" | "connectionMode" | "endpointUrl"
+  | "provider"
+  | "providerSessionId"
+  | "token"
+  | "expiresAt"
+  | "connectionMode"
+  | "endpointUrl"
+  | "metadata"
 >;
 
 export function mapRealtimeCredentials(
@@ -15,5 +21,6 @@ export function mapRealtimeCredentials(
     expiresAt: credentials.expiresAt,
     connectionMode: credentials.connectionMode,
     endpointUrl: credentials.endpointUrl,
+    metadata: credentials.metadata,
   };
 }

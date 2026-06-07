@@ -166,6 +166,7 @@ describe("QwenOmniRealtimeProvider.createSession", () => {
       scenarioId: coffeeOrderingScenario.id,
       instructionsIncluded: true,
       providerSessionIdPending: true,
+      browserWebSocketAuth: "sec-websocket-protocol-bearer",
     });
     expect(credentials.metadata?.sessionUpdateEvent).toMatchObject({
       type: "session.update",

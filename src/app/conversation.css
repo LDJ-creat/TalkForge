@@ -270,6 +270,18 @@
   background: #c96b5a;
 }
 
+.conversation-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.status-row--debug .status-row__value {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
 .transcript-list {
   display: flex;
   flex-direction: column;
