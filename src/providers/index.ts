@@ -1,4 +1,5 @@
 export * from "./errors";
+export * from "./runtime";
 export * from "./types";
 
 export type { RealtimeProvider } from "./realtime/contract";
