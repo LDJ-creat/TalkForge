@@ -83,9 +83,18 @@ export type AiTracingConfig = {
   localRoot: string;
 };
 
+export type ScenarioProgressConfig = {
+  /**
+   * Run the scenario progress judge after every N user turns. Always runs at
+   * session end regardless of this interval.
+   */
+  judgeUserTurnInterval: number;
+};
+
 export type RuntimeConfig = {
   nodeEnv: "development" | "production" | "test";
   appBaseUrl: string;
+  scenarioProgress: ScenarioProgressConfig;
   providers: {
     realtime: ProviderSelection<RealtimeProviderName>;
     asr: ProviderSelection<AsrProviderName>;

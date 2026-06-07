@@ -191,6 +191,7 @@ describe("P0 mock happy path services", () => {
     );
 
     expect(result.reportJobEnqueued).toBe(true);
+    expect(result.scenarioProgressJobEnqueued).toBe(true);
 
     const mocks = createMockProviderBundle();
     const registry = createWorkerRegistry();
@@ -199,6 +200,8 @@ describe("P0 mock happy path services", () => {
       queueAdapter: adapter,
       llmReportProvider: mocks.llmReport,
     });
+
+    registry.handlers.scenarioProgressEvaluate(async () => {});
 
     registry.handlers.reportGenerate(
       createReportGenerateHandler({
@@ -238,8 +241,8 @@ describe("P0 mock happy path services", () => {
     const runtime = createWorkerRuntime({ adapter, registry });
     const processed = runtime.mode === "memory" ? await runtime.processAll() : [];
 
-    expect(processed).toHaveLength(1);
-    expect(processed[0]?.status).toBe("succeeded");
+    expect(processed).toHaveLength(2);
+    expect(processed.every((job) => job.status === "succeeded")).toBe(true);
 
     getSessionById.mockResolvedValue(completedSession);
     getReportBySessionId.mockResolvedValue({

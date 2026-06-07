@@ -1,7 +1,6 @@
-import { detectCompletedGoalsFromUserTexts } from "@/domain/scenario-goal-heuristics";
-import { mergeCompletedGoalIds } from "@/domain/scenario-ending";
 import { createProviderError } from "../errors";
 import type { LlmGoalJudgeProvider } from "../llm/contract";
+import { buildHeuristicGoalJudgeResult } from "../llm/goal-judge-heuristic";
 import type { GoalJudgeInput, GoalJudgeResult } from "../llm/goal-judge-types";
 
 export type MockGoalJudgeProviderOptions = {
@@ -27,42 +26,11 @@ export class MockGoalJudgeProvider implements LlmGoalJudgeProvider {
       });
     }
 
-    const userTexts = input.turns
-      .filter((turn) => turn.role === "user")
-      .map((turn) => turn.text)
-      .filter((text) => text.trim().length > 0);
-
-    const heuristic = detectCompletedGoalsFromUserTexts(
-      {
-        ...input.scenario,
-        description: "",
-        level: "A2",
-        userRole: "",
-        aiRole: "",
-        situation: "",
-        mission: "",
-        constraints: [],
-        evaluationRubric: { dimensions: [] },
-      },
-      userTexts,
-      input.previousProgress?.completedGoalIds ?? [],
-    );
-
-    const completedGoalIds = mergeCompletedGoalIds(
-      input.previousProgress?.completedGoalIds ?? [],
-      heuristic.completedGoalIds,
-    );
-
-    return {
-      provider: this.name,
-      completedGoalIds,
-      offTopic: heuristic.offTopic,
+    return buildHeuristicGoalJudgeResult(input, this.name, {
       metadata: {
-        sessionId: input.sessionId,
         mock: true,
-        userTurnCount: userTexts.length,
       },
-    };
+    });
   }
 }
 

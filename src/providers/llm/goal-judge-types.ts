@@ -28,5 +28,6 @@ export type GoalJudgeResult = {
   provider: string;
   completedGoalIds: string[];
   offTopic: boolean;
+  currentStageId?: string;
   metadata?: ProviderMetadata;
 };

@@ -1,8 +1,10 @@
 import type { TalkForgeDatabase } from "@/server/db/client";
+import { countUserTurns } from "@/domain/scenario-ending";
 import {
   getAudioSegmentById,
   getTranscriptByTurnId,
   getTurnById,
+  listTurnsBySessionId,
   saveTranscriptForTurn,
 } from "@/server/db/repositories";
 import type { QueueAdapter } from "@/queue/adapter";
@@ -42,6 +44,12 @@ export function createDbAsrTranscribeDeps(
     persistTranscriptForTurn:
       deps?.persistTranscriptForTurn ??
       ((input) => saveTranscriptForTurn(db, input)),
+    countUserTurnsBySessionId:
+      deps?.countUserTurnsBySessionId ??
+      (async (sessionId) => {
+        const turns = await listTurnsBySessionId(db, sessionId);
+        return countUserTurns(turns);
+      }),
   };
 }
 

@@ -8,9 +8,13 @@ import {
   createInitialScenarioProgress,
 } from "@/domain/scenario-ending";
 import type { LlmGoalJudgeProvider } from "@/providers/llm/contract";
-import { isProviderError } from "@/providers/errors";
+import type { GoalJudgeResult } from "@/providers/llm/goal-judge-types";
+import { isProviderError, isRetryableProviderError } from "@/providers/errors";
 import { JobProcessingError } from "@/queue/errors";
 import type { ScenarioProgressEvaluatePayload } from "@/queue/payloads";
+
+import { resolveJudgeCurrentStageId } from "./enqueue-policy";
+import { buildRuleFallbackGoalJudgeResult } from "./rule-fallback";
 
 export type EvaluateSessionProgressResult = {
   progress: ScenarioProgress;
@@ -67,35 +71,50 @@ export async function evaluateSessionProgress(
     userTurns.map((turn) => turn.id),
   );
 
-  let judgeResult;
+  const judgeInput = {
+    sessionId: payload.sessionId,
+    scenario: {
+      id: scenario.id,
+      title: scenario.title,
+      goals: scenario.goals,
+      stages: scenario.stages,
+      vocabulary: scenario.vocabulary,
+      targetExpressions: scenario.targetExpressions,
+      exitPolicy: scenario.exitPolicy,
+    },
+    turns: turns.map((turn) => ({
+      turnId: turn.id,
+      role: turn.role,
+      text:
+        transcriptsByTurnId.get(turn.id)?.text ??
+        turn.transcriptText ??
+        "",
+    })),
+    previousProgress,
+  };
+
+  let judgeResult: GoalJudgeResult;
   try {
-    judgeResult = await deps.goalJudgeProvider.evaluateGoals({
-      sessionId: payload.sessionId,
-      scenario: {
-        id: scenario.id,
-        title: scenario.title,
-        goals: scenario.goals,
-        stages: scenario.stages,
-        vocabulary: scenario.vocabulary,
-        targetExpressions: scenario.targetExpressions,
-        exitPolicy: scenario.exitPolicy,
-      },
-      turns: turns.map((turn) => ({
-        turnId: turn.id,
-        role: turn.role,
-        text:
-          transcriptsByTurnId.get(turn.id)?.text ??
-          turn.transcriptText ??
-          "",
-      })),
-      previousProgress,
-    });
+    judgeResult = await deps.goalJudgeProvider.evaluateGoals(judgeInput);
   } catch (error) {
-    throw mapProviderErrorToJobError(error, {
-      provider: deps.goalJudgeProvider.name,
-      attempts: context.attempts,
-    });
+    if (!isRetryableProviderError(error)) {
+      throw mapProviderErrorToJobError(error, {
+        provider: deps.goalJudgeProvider.name,
+        attempts: context.attempts,
+      });
+    }
+
+    judgeResult = buildRuleFallbackGoalJudgeResult(
+      judgeInput,
+      scenario,
+      deps.goalJudgeProvider.name,
+    );
   }
+
+  const judgeCurrentStageId = resolveJudgeCurrentStageId(
+    scenario.stages.map((stage) => stage.id),
+    judgeResult.currentStageId,
+  );
 
   const progressUpdate = buildScenarioProgressUpdate({
     sessionId: payload.sessionId,
@@ -104,6 +123,7 @@ export async function evaluateSessionProgress(
     turns,
     completedGoalIds: judgeResult.completedGoalIds,
     previousCompletedGoalIds: previousProgress.completedGoalIds,
+    judgeCurrentStageId,
     offTopic: judgeResult.offTopic,
   });
 

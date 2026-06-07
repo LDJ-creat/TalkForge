@@ -51,6 +51,10 @@ export function isProviderError(error: unknown): error is ProviderError {
   return error instanceof ProviderError;
 }
 
+export function isRetryableProviderError(error: unknown): error is ProviderError {
+  return isProviderError(error) && error.retryable;
+}
+
 export function createProviderError(options: ProviderErrorOptions): ProviderError {
   return new ProviderError(options);
 }

@@ -1,22 +1,22 @@
 import type { LlmGoalJudgeProvider } from "@/providers/llm/contract";
-import { createMockGoalJudgeProvider } from "@/providers/mock/goal-judge";
+import type { AiInvocationTraceWriter } from "@/server/ai-tracing";
 import { getRuntimeConfig } from "@/server/config";
+import {
+  getTextLlmGoalJudgeProvider,
+  resetTextLlmGoalJudgeProviderForTests,
+} from "@/server/llm/goal-judge-provider";
 
-let mockGoalJudgeProvider: ReturnType<typeof createMockGoalJudgeProvider> | undefined;
+export type GetGoalJudgeProviderOptions = {
+  traceWriter?: AiInvocationTraceWriter;
+};
 
-export function getGoalJudgeProvider(): LlmGoalJudgeProvider {
+export function getGoalJudgeProvider(
+  options?: GetGoalJudgeProviderOptions,
+): LlmGoalJudgeProvider {
   const providerName = getRuntimeConfig().providers.llmGoalJudge.name;
-
-  if (providerName === "mock") {
-    mockGoalJudgeProvider ??= createMockGoalJudgeProvider();
-    return mockGoalJudgeProvider;
-  }
-
-  throw new Error(
-    `Unsupported LLM goal judge provider "${providerName}". P0 supports "mock" only.`,
-  );
+  return getTextLlmGoalJudgeProvider(providerName, options);
 }
 
 export function resetGoalJudgeProviderForTests(): void {
-  mockGoalJudgeProvider = undefined;
+  resetTextLlmGoalJudgeProviderForTests();
 }

@@ -1,5 +1,12 @@
+import { mergeCompletedGoalIds } from "@/domain/scenario-ending";
 import { createProviderError } from "@/providers/errors";
-import type { LlmCorrectionProvider, LlmReportProvider } from "@/providers/llm/contract";
+import type {
+  LlmCorrectionProvider,
+  LlmGoalJudgeProvider,
+  LlmReportProvider,
+} from "@/providers/llm/contract";
+import { buildHeuristicGoalJudgeResult } from "@/providers/llm/goal-judge-heuristic";
+import type { GoalJudgeInput, GoalJudgeResult } from "@/providers/llm/goal-judge-types";
 import { executeProviderCall, type ProviderCallContext } from "@/providers/runtime";
 import type {
   CorrectionAnalysisResult,
@@ -16,12 +23,15 @@ import {
 } from "./config";
 import {
   parseCorrectionItemsFromContent,
+  parseGoalJudgeSectionsFromContent,
   parseReportSectionsFromContent,
 } from "./parse";
 import {
   CORRECTION_PROMPT_VERSION,
+  GOAL_JUDGE_PROMPT_VERSION,
   REPORT_PROMPT_VERSION,
 } from "./prompt-versions";
+import { buildGoalJudgePrompt } from "./prompts/goal-judge";
 import { buildReportPrompt } from "./prompts/report";
 
 export type CreateOpenAiCompatibleTextLlmProviderOptions = {
@@ -52,7 +62,7 @@ function buildProviderDisplayName(providerName: string): string {
 }
 
 export class OpenAiCompatibleTextLlmProvider
-  implements LlmCorrectionProvider, LlmReportProvider
+  implements LlmCorrectionProvider, LlmGoalJudgeProvider, LlmReportProvider
 {
   readonly name: string;
   private readonly config: OpenAiCompatibleTextLlmConfig;
@@ -86,6 +96,16 @@ export class OpenAiCompatibleTextLlmProvider
       provider: this.name,
       operation: "llm.report",
       fn: (context) => this.invokeReportGeneration(input, context),
+    });
+
+    return result;
+  }
+
+  async evaluateGoals(input: GoalJudgeInput): Promise<GoalJudgeResult> {
+    const { result } = await executeProviderCall({
+      provider: this.name,
+      operation: "llm.scenarioJudge",
+      fn: (context) => this.invokeGoalEvaluation(input, context),
     });
 
     return result;
@@ -134,6 +154,66 @@ export class OpenAiCompatibleTextLlmProvider
     return {
       provider: this.name,
       corrections: parsed.value,
+      metadata,
+    };
+  }
+
+  async invokeGoalEvaluation(
+    input: GoalJudgeInput,
+    context: ProviderCallContext,
+  ): Promise<GoalJudgeResult> {
+    const prompt = buildGoalJudgePrompt(input);
+    const validGoalIds = new Set(input.scenario.goals.map((goal) => goal.id));
+    const validStageIds = new Set(input.scenario.stages.map((stage) => stage.id));
+
+    const result = await createChatCompletion(
+      this.config,
+      {
+        model: this.config.model,
+        messages: [
+          { role: "system", content: prompt.system },
+          { role: "user", content: prompt.user },
+        ],
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+      },
+      context,
+    );
+
+    const parsed = parseGoalJudgeSectionsFromContent(result.content, {
+      validGoalIds,
+      validStageIds,
+    });
+    const previousCompletedGoalIds = input.previousProgress?.completedGoalIds ?? [];
+    const metadata = {
+      sessionId: input.sessionId,
+      model: result.model,
+      promptVersion: GOAL_JUDGE_PROMPT_VERSION,
+      finishReason: result.finishReason,
+      inputTokens: result.usage?.prompt_tokens,
+      outputTokens: result.usage?.completion_tokens,
+      parseFallback: !parsed.ok,
+      parseError: parsed.ok ? undefined : parsed.error,
+      judgeCurrentStageId: parsed.ok ? parsed.value.currentStageId : undefined,
+      judgeShouldSuggestEnding: parsed.ok ? parsed.value.shouldSuggestEnding : undefined,
+    };
+
+    if (!parsed.ok) {
+      return buildHeuristicGoalJudgeResult(input, this.name, {
+        metadata,
+      });
+    }
+
+    const completedGoalIds = mergeCompletedGoalIds(
+      previousCompletedGoalIds,
+      parsed.value.completedGoalIds,
+    );
+
+    return {
+      provider: this.name,
+      completedGoalIds,
+      offTopic: parsed.value.offTopic,
+      currentStageId: parsed.value.currentStageId,
       metadata,
     };
   }
@@ -211,7 +291,10 @@ export function createOpenAiCompatibleTextLlmProvider(
 }
 
 export function isOpenAiCompatibleTextLlmProvider(
-  provider: LlmCorrectionProvider | LlmReportProvider,
+  provider:
+    | LlmCorrectionProvider
+    | LlmGoalJudgeProvider
+    | LlmReportProvider,
 ): provider is OpenAiCompatibleTextLlmProvider {
   return provider instanceof OpenAiCompatibleTextLlmProvider;
 }
