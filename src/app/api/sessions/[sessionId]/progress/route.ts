@@ -1,6 +1,10 @@
 import { jsonError, requireRequestUserId } from "@/server/api/http";
 import { getDb } from "@/server/db/client";
 import {
+  countAsrTranscribeAttemptsForSession,
+  countReportGenerationAttemptsForSession,
+} from "@/server/db/repositories/ai-invocation-metrics-repository";
+import {
   getScenarioById,
   getScenarioProgressBySessionId,
   getSessionById,
@@ -23,6 +27,9 @@ export async function GET(
       getScenarioById: (id) => getScenarioById(db, id),
       listTurnsBySessionId: (id) => listTurnsBySessionId(db, id),
       getScenarioProgressBySessionId: (id) => getScenarioProgressBySessionId(db, id),
+      countReportGenerationAttempts: (id) =>
+        countReportGenerationAttemptsForSession(db, id),
+      countAsrInvocationAttempts: (id) => countAsrTranscribeAttemptsForSession(db, id),
     });
 
     return Response.json({ progress });

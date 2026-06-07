@@ -12,6 +12,9 @@ import { JobProcessingError } from "@/queue/errors";
 import type { ReportGeneratePayload } from "@/queue/payloads";
 import type { PrepareReportGenerationResult } from "@/server/db/repositories/report-repository";
 
+import { assertSessionWithinReportLimitsOrThrow } from "@/server/observability/enforce-session-limits";
+import { countReportGenerationAttemptsForSession } from "@/server/db/repositories/ai-invocation-metrics-repository";
+
 import {
   buildDeterministicReportSections,
   type ReportAggregationInput,
@@ -39,6 +42,7 @@ export type GenerateSessionReportDeps = {
     sessionId: string,
   ) => Promise<PrepareReportGenerationResult>;
   finalizeReport: (sessionId: string, input: CreateReportInput) => Promise<Report>;
+  countReportGenerationAttempts?: (sessionId: string) => Promise<number>;
 };
 
 function toScenarioContext(scenario: Scenario) {
@@ -127,6 +131,17 @@ export async function generateSessionReport(
   };
 
   const deterministic = buildDeterministicReportSections(aggregationInput);
+  const reportAttemptsUsed = deps.countReportGenerationAttempts
+    ? await deps.countReportGenerationAttempts(payload.sessionId)
+    : 0;
+
+  assertSessionWithinReportLimitsOrThrow({
+    scenario,
+    session,
+    turns,
+    reportAttemptsUsed,
+    attempts: context.attempts,
+  });
 
   let summary = deterministic.summary;
   let nextPracticeSuggestion = deterministic.nextPracticeSuggestion;

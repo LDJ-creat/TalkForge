@@ -11,12 +11,18 @@ import {
   getAudioSegmentById,
   getAudioSegmentByTurnId,
 } from "@/server/db/repositories/audio-segment-repository";
-import { getSessionById } from "@/server/db/repositories/scenario-session-repository";
+import { countAsrTranscribeAttemptsForSession } from "@/server/db/repositories/ai-invocation-metrics-repository";
+import {
+  getScenarioById,
+  getSessionById,
+} from "@/server/db/repositories/scenario-session-repository";
 import {
   clearTurnAudioSegment,
   getTurnById,
   linkTurnAudioSegment,
+  listTurnsBySessionId,
 } from "@/server/db/repositories/turn-repository";
+import { assertSessionWithinLimitsForAudioOrThrow } from "@/server/observability/enforce-session-limits";
 
 import { AudioUploadServiceError } from "./errors";
 import { buildTurnAudioObjectKey, parseTurnAudioObjectKey } from "./object-keys";
@@ -166,6 +172,7 @@ export async function finalizeTurnAudioUpload(
       return {
         turnId: input.turnId,
         audioSegment: existing,
+        created: false,
       };
     }
 
@@ -184,11 +191,31 @@ export async function finalizeTurnAudioUpload(
     return {
       turnId: input.turnId,
       audioSegment,
+      created: true,
     };
   });
 
   let asrJobEnqueued = false;
   if (options?.queueAdapter) {
+    const session = await getSessionById(db, input.sessionId);
+    if (session && result.created) {
+      const [scenario, turns, asrInvocationCount] = await Promise.all([
+        getScenarioById(db, session.scenarioId),
+        listTurnsBySessionId(db, input.sessionId),
+        countAsrTranscribeAttemptsForSession(db, input.sessionId),
+      ]);
+
+      if (scenario) {
+        assertSessionWithinLimitsForAudioOrThrow({
+          scenario,
+          session,
+          turns,
+          asrInvocationCount,
+          pending: { additionalAsrJobs: 1 },
+        });
+      }
+    }
+
     await enqueueAsrTranscribeJob(options.queueAdapter, {
       turnId: input.turnId,
       sessionId: input.sessionId,
