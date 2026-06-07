@@ -1,5 +1,6 @@
 import { createWorkerRegistry } from "@/queue/worker-types";
 import type { WorkerRegistry } from "@/queue/worker-types";
+import { createAiInvocationTraceService } from "@/server/ai-tracing";
 import { getAsrProvider } from "@/server/asr/provider";
 import { getLlmCorrectionProvider } from "@/server/correction/provider";
 import { getDb } from "@/server/db/client";
@@ -17,11 +18,13 @@ export function createP0WorkerRegistry(
   overrides: Partial<RegisterP0WorkerHandlersOptions> = {},
 ): WorkerRegistry {
   const registry = createWorkerRegistry();
+  const db = overrides.db ?? getDb();
+  const traceWriter = createAiInvocationTraceService({ db });
 
   registerP0WorkerHandlers(registry, {
-    db: overrides.db ?? getDb(),
+    db,
     queueAdapter: overrides.queueAdapter ?? getQueueAdapter(),
-    asrProvider: overrides.asrProvider ?? getAsrProvider(),
+    asrProvider: overrides.asrProvider ?? getAsrProvider({ traceWriter }),
     llmCorrectionProvider:
       overrides.llmCorrectionProvider ?? getLlmCorrectionProvider(),
     llmReportProvider: overrides.llmReportProvider ?? getLlmReportProvider(),
