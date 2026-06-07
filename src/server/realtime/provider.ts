@@ -65,7 +65,7 @@ function resolveBaseRealtimeProvider(): RealtimeProvider {
   throw createProviderError({
     provider: providerName,
     code: "configuration",
-    message: `Unsupported realtime provider "${providerName}". Supported values: "mock", "qwen-omni".`,
+    message: `Unsupported realtime provider "${providerName}". Supported values: "mock", "qwen-omni". ("doubao" is planned but not implemented yet.)`,
     retryable: false,
   });
 }
