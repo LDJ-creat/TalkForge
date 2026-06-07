@@ -81,7 +81,7 @@ export async function evaluateFreeSpeechTurn(
     await deps.markTurnEvaluationFailed(payload.turnId);
     throw new JobProcessingError({
       code: "validation",
-      message: `Pronunciation evaluation requires at least ${MIN_FREE_SPEECH_REFERENCE_WORD_COUNT} reference words from ASR transcript.`,
+      message: `Pronunciation evaluation requires at least ${MIN_FREE_SPEECH_REFERENCE_WORD_COUNT} reference words from the realtime transcript.`,
       attempts: context.attempts,
       retryable: false,
       metadata: {

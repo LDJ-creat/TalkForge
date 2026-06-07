@@ -34,6 +34,7 @@ describe("iFlytek ISE pronunciation adapter", () => {
     const parsed = new URL(url);
     expect(parsed.protocol).toBe("wss:");
     expect(parsed.host).toBe("ise-api.xfyun.cn");
+    expect(parsed.pathname).toBe("/v2/open-ise");
     expect(parsed.searchParams.get("authorization")).toBeTruthy();
     expect(parsed.searchParams.get("date")).toBeTruthy();
     expect(parsed.searchParams.get("host")).toBe("ise-api.xfyun.cn");
