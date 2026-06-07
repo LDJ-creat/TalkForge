@@ -5,6 +5,9 @@ export type AsrTranscribeInput = {
   audioObjectKey: string;
   language?: "en";
   wordTimestamps?: boolean;
+  sessionId?: string;
+  turnId?: string;
+  jobId?: string;
 };
 
 export type AsrTranscriptionResult = {

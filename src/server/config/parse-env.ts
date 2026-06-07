@@ -84,6 +84,8 @@ function parseSecrets(env: NodeJS.ProcessEnv): RuntimeSecrets {
     realtimeVoice: readEnv(env, "REALTIME_VOICE"),
     realtimeTokenTtlSec: parseOptionalPositiveInt(readEnv(env, "REALTIME_TOKEN_TTL_SEC")),
     asrApiKey: readEnv(env, "ASR_API_KEY"),
+    asrBaseUrl: readEnv(env, "ASR_BASE_URL"),
+    asrModel: readEnv(env, "ASR_MODEL"),
     llmApiKey: readEnv(env, "LLM_API_KEY"),
     ttsApiKey: readEnv(env, "TTS_API_KEY"),
     pronunciationApiKey: readEnv(env, "PRONUNCIATION_API_KEY"),
