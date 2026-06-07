@@ -1,10 +1,12 @@
 import { createProviderError } from "../errors";
-import { buildTtsCacheKey } from "../tts/cache-key";
+import {
+  buildTtsCacheKey,
+  buildTtsObjectKeyFromCacheKey,
+  DEFAULT_TTS_LANGUAGE,
+  DEFAULT_TTS_SPEED,
+} from "../tts/cache-key";
 import type { TtsProvider } from "../tts/contract";
 import type { TtsSynthesizeInput, TtsAudioResult } from "../tts/types";
-import { buildTtsStandardAudioObjectKey } from "@/server/storage/object-keys";
-
-import { hashString } from "./utils";
 
 export type MockTtsProviderOptions = {
   name?: string;
@@ -39,11 +41,20 @@ export class MockTtsProvider implements TtsProvider {
     const cacheKey = this.buildCacheKey(input);
     const cached = this.cache.get(cacheKey);
     if (cached) {
-      return cached;
+      return {
+        ...cached,
+        metadata: {
+          ...cached.metadata,
+          cached: true,
+        },
+      };
     }
 
-    const objectKey = buildTtsStandardAudioObjectKey(hashString(cacheKey));
+    const objectKey = buildTtsObjectKeyFromCacheKey(cacheKey);
     const sizeBytes = Math.max(input.text.length * 120, 4096);
+    const voice = input.voice ?? this.defaultVoice;
+    const speed = input.speed ?? DEFAULT_TTS_SPEED;
+    const language = input.language ?? DEFAULT_TTS_LANGUAGE;
     const result: TtsAudioResult = {
       provider: this.name,
       objectKey,
@@ -54,22 +65,15 @@ export class MockTtsProvider implements TtsProvider {
       sizeBytes,
       metadata: {
         text: input.text,
-        voice: input.voice ?? this.defaultVoice,
-        speed: input.speed ?? 1,
-        language: input.language ?? "en",
+        voice,
+        speed,
+        language,
         mock: true,
         cached: false,
       },
     };
 
-    this.cache.set(cacheKey, {
-      ...result,
-      metadata: {
-        ...result.metadata,
-        cached: true,
-      },
-    });
-
+    this.cache.set(cacheKey, result);
     return result;
   }
 
@@ -77,8 +81,9 @@ export class MockTtsProvider implements TtsProvider {
     return buildTtsCacheKey({
       text: input.text,
       voice: input.voice ?? this.defaultVoice,
-      speed: input.speed ?? 1,
-      language: input.language ?? "en",
+      speed: input.speed ?? DEFAULT_TTS_SPEED,
+      language: input.language ?? DEFAULT_TTS_LANGUAGE,
+      provider: this.name,
     });
   }
 }

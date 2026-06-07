@@ -12,7 +12,7 @@ export type AsrProviderName = typeof MOCK_PROVIDER_NAME | "paraformer" | (string
 
 export type TextLlmProviderName = typeof MOCK_PROVIDER_NAME | (string & {});
 
-export type TtsProviderName = typeof MOCK_PROVIDER_NAME | (string & {});
+export type TtsProviderName = typeof MOCK_PROVIDER_NAME | "cosyvoice" | (string & {});
 
 export type PronunciationProviderName = typeof MOCK_PROVIDER_NAME | (string & {});
 
@@ -48,6 +48,9 @@ export type RuntimeSecrets = {
   llmBaseUrl?: string;
   llmModel?: string;
   ttsApiKey?: string;
+  ttsBaseUrl?: string;
+  ttsModel?: string;
+  ttsVoice?: string;
   pronunciationApiKey?: string;
   pronunciationAppId?: string;
   storageEndpoint?: string;

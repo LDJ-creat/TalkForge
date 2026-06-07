@@ -31,18 +31,20 @@ export async function resolveStandardAudio(
   const voice = input.voice ?? deps.defaultVoice ?? DEFAULT_TTS_VOICE;
   const speed = input.speed ?? DEFAULT_TTS_SPEED;
   const language = input.language ?? DEFAULT_TTS_LANGUAGE;
-  const cacheKey = buildTtsCacheKey({
-    text: input.text,
-    voice,
-    speed,
-    language,
-  });
 
   const result = await deps.ttsProvider.synthesize({
     text: input.text,
     voice,
     speed,
     language,
+  });
+
+  const cacheKey = buildTtsCacheKey({
+    text: input.text,
+    voice,
+    speed,
+    language,
+    provider: result.provider,
   });
 
   return {

@@ -73,6 +73,11 @@ export {
   listAiInvocationLogsBySessionId,
 } from "./ai-invocation-log-repository";
 export {
+  createDbStandardAudioMetadataRepository,
+  findStandardAudioAssetByCacheKey,
+  upsertStandardAudioAsset,
+} from "./standard-audio-asset-repository";
+export {
   listShadowingItemsBySessionId,
   prepareShadowingGeneration,
   replaceShadowingItemsForSession,

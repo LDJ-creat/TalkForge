@@ -28,9 +28,11 @@ export type {
 export type { TtsProvider } from "./tts/contract";
 export {
   buildTtsCacheKey,
+  buildTtsObjectKeyFromCacheKey,
   DEFAULT_TTS_LANGUAGE,
   DEFAULT_TTS_SPEED,
   DEFAULT_TTS_VOICE,
+  hashTtsCacheKey,
 } from "./tts/cache-key";
 export type { TtsAudioResult, TtsCacheKeyInput, TtsSynthesizeInput } from "./tts/types";
 
@@ -75,6 +77,14 @@ export {
   parseCorrectionItemsFromContent,
   parseReportSectionsFromContent,
 } from "./openai-compatible-text-llm";
+
+export {
+  createDashScopeCosyVoiceTtsProvider,
+  DEFAULT_DASHSCOPE_COSYVOICE_MODEL,
+  DEFAULT_DASHSCOPE_COSYVOICE_VOICE,
+  DASHSCOPE_COSYVOICE_PROVIDER_NAME,
+  isSupportedCosyVoiceProviderName,
+} from "./dashscope-cosyvoice";
 
 export {
   MockAsrProvider,

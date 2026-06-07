@@ -1,4 +1,5 @@
 import type { AiInvocationLog } from "@/domain/ai-invocation-log";
+import type { StandardAudioAsset } from "@/domain/standard-audio-asset";
 import type { AudioSegment } from "@/domain/audio-segment";
 import type { Correction } from "@/domain/correction";
 import type { PronunciationEvaluation } from "@/domain/pronunciation-evaluation";
@@ -30,6 +31,7 @@ import type {
   DbScenario,
   DbScenarioProgress,
   DbSession,
+  DbStandardAudioAsset,
   DbTranscript,
   DbTurn,
   NewDbScenario,
@@ -249,6 +251,24 @@ export function toReport(row: DbReport): Report {
     shadowingRecommendations:
       row.shadowingRecommendations as Report["shadowingRecommendations"],
     nextPracticeSuggestion: row.nextPracticeSuggestion,
+    createdAt: row.createdAt,
+  };
+}
+
+export function toStandardAudioAsset(row: DbStandardAudioAsset): StandardAudioAsset {
+  return {
+    id: row.id,
+    cacheKey: row.cacheKey,
+    provider: row.provider,
+    objectKey: row.objectKey,
+    format: row.format,
+    codec: row.codec ?? undefined,
+    sampleRate: row.sampleRate ?? undefined,
+    durationMs: row.durationMs ?? undefined,
+    sizeBytes: row.sizeBytes,
+    voice: row.voice,
+    speed: row.speed,
+    language: row.language as "en",
     createdAt: row.createdAt,
   };
 }

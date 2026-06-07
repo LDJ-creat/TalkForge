@@ -23,5 +23,6 @@ export type TtsCacheKeyInput = {
   text: string;
   voice?: string;
   speed?: number;
+  provider: string;
   language?: "en";
 };
