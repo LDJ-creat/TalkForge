@@ -79,6 +79,14 @@ export {
 } from "./openai-compatible-text-llm";
 
 export {
+  createIflytekIsePronunciationProvider,
+  DEFAULT_IFLYTEK_ISE_WS_URL,
+  IFLYTEK_ISE_PROVIDER_ID,
+  IFLYTEK_ISE_PROVIDER_NAME,
+  isSupportedIflytekIseProviderName,
+} from "./iflytek-ise";
+
+export {
   createDashScopeCosyVoiceTtsProvider,
   DEFAULT_DASHSCOPE_COSYVOICE_MODEL,
   DEFAULT_DASHSCOPE_COSYVOICE_VOICE,

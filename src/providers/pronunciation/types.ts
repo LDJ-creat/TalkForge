@@ -6,6 +6,9 @@ export type PronunciationEvaluateInput = {
   mode: PronunciationMode;
   referenceText?: string;
   language?: "en";
+  sessionId?: string;
+  turnId?: string;
+  jobId?: string;
 };
 
 export type PronunciationEvaluationResult = {
