@@ -37,6 +37,9 @@ export type WorkerRegistry = {
     reportGenerate: (
       handler: WorkerHandler<"report.generate">,
     ) => WorkerRegistry;
+    shadowingGenerate: (
+      handler: WorkerHandler<"shadowing.generate">,
+    ) => WorkerRegistry;
   };
 };
 
@@ -69,6 +72,9 @@ export function createWorkerRegistry(): WorkerRegistry {
       },
       reportGenerate(handler) {
         return registry.register("report.generate", handler);
+      },
+      shadowingGenerate(handler) {
+        return registry.register("shadowing.generate", handler);
       },
     },
   };
