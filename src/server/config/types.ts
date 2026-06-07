@@ -59,6 +59,23 @@ export type PublicClientConfig = {
   devUserId?: string;
 };
 
+export type AiTracingRawStorageBackend = "file" | "object" | "none";
+
+export type AiTracingConfig = {
+  enabled: boolean;
+  captureRawRequest: boolean;
+  captureRawResponse: boolean;
+  rawStorageBackend: AiTracingRawStorageBackend;
+  sampleRate: number;
+  /**
+   * Hint for downstream retention jobs (for example P1-014 cleanup). This value
+   * is not enforced automatically when traces are written.
+   */
+  retentionDays?: number;
+  redactPii: boolean;
+  localRoot: string;
+};
+
 export type RuntimeConfig = {
   nodeEnv: "development" | "production" | "test";
   appBaseUrl: string;
@@ -76,5 +93,6 @@ export type RuntimeConfig = {
   };
   secrets: RuntimeSecrets;
   public: PublicClientConfig;
+  aiTracing: AiTracingConfig;
   usesOnlyMockProviders: boolean;
 };
