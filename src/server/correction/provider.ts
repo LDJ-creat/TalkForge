@@ -1,10 +1,11 @@
 import type { LlmCorrectionProvider } from "@/providers/llm/contract";
 import { createMockLlmProvider } from "@/providers/mock/llm";
+import { getRuntimeConfig } from "@/server/config";
 
 let mockLlmCorrectionProvider: ReturnType<typeof createMockLlmProvider> | undefined;
 
 export function getLlmCorrectionProvider(): LlmCorrectionProvider {
-  const providerName = process.env.LLM_CORRECTION_PROVIDER ?? "mock";
+  const providerName = getRuntimeConfig().providers.llmCorrection.name;
 
   if (providerName === "mock") {
     mockLlmCorrectionProvider ??= createMockLlmProvider();

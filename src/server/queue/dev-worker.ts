@@ -1,5 +1,6 @@
 import { isMemoryQueueAdapter } from "@/queue/memory-adapter";
 import { createWorkerRegistry } from "@/queue/worker-types";
+import { getRuntimeConfig } from "@/server/config";
 import { getAsrProvider } from "@/server/asr/provider";
 import { getDb } from "@/server/db/client";
 import { getLlmCorrectionProvider } from "@/server/correction/provider";
@@ -14,7 +15,7 @@ import { getQueueAdapter } from "./provider";
 let workersRegistered = false;
 
 function shouldAutoProcessJobs(): boolean {
-  return !process.env.REDIS_URL;
+  return getRuntimeConfig().providers.queue.name === "memory";
 }
 
 export function ensureP0WorkersRegistered(): void {
