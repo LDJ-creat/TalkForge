@@ -129,6 +129,18 @@ export function collectRuntimeConfigIssues(
       "PRONUNCIATION_API_KEY",
       `PRONUNCIATION_PROVIDER="${providers.pronunciation.name}"`,
     );
+    requireSecret(
+      issues,
+      secrets.pronunciationApiSecret,
+      "PRONUNCIATION_API_SECRET",
+      `PRONUNCIATION_PROVIDER="${providers.pronunciation.name}"`,
+    );
+    requireSecret(
+      issues,
+      secrets.pronunciationAppId,
+      "PRONUNCIATION_APP_ID",
+      `PRONUNCIATION_PROVIDER="${providers.pronunciation.name}"`,
+    );
   }
 
   if (providers.storage.mode === "real") {

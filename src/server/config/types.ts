@@ -14,7 +14,10 @@ export type TextLlmProviderName = typeof MOCK_PROVIDER_NAME | (string & {});
 
 export type TtsProviderName = typeof MOCK_PROVIDER_NAME | "cosyvoice" | (string & {});
 
-export type PronunciationProviderName = typeof MOCK_PROVIDER_NAME | (string & {});
+export type PronunciationProviderName =
+  | typeof MOCK_PROVIDER_NAME
+  | "iflytek-ise"
+  | (string & {});
 
 export type StorageProviderName =
   | typeof MOCK_PROVIDER_NAME
@@ -52,7 +55,9 @@ export type RuntimeSecrets = {
   ttsModel?: string;
   ttsVoice?: string;
   pronunciationApiKey?: string;
+  pronunciationApiSecret?: string;
   pronunciationAppId?: string;
+  pronunciationWsBaseUrl?: string;
   storageEndpoint?: string;
   storageBucket?: string;
   storageAccessKeyId?: string;
