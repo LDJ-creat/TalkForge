@@ -36,7 +36,7 @@ export function ScenarioPicker({ scenarios }: ScenarioPickerProps) {
           </div>
           <h2 className="scenario-card__title">{scenario.title}</h2>
           <p className="scenario-card__description">{scenario.description}</p>
-          <span className="scenario-card__cta">Start practice →</span>
+          <span className="scenario-card__cta">View history & practice →</span>
         </button>
       ))}
     </div>

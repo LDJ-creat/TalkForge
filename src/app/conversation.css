@@ -522,6 +522,131 @@
   font-size: 0.925rem;
 }
 
+.scenario-entry {
+  min-height: 100vh;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.scenario-entry__header {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.scenario-entry__back {
+  color: var(--muted);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.scenario-entry__back:hover {
+  color: var(--accent);
+}
+
+.scenario-entry__title {
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  margin-bottom: 0.35rem;
+}
+
+.scenario-entry__subtitle {
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.scenario-entry__description {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.scenario-entry__start {
+  align-self: flex-start;
+}
+
+.scenario-entry__history-title {
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+}
+
+.scenario-entry__history-message {
+  color: var(--muted);
+  padding: 1rem 1.1rem;
+  border-radius: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--accent-muted);
+}
+
+.scenario-entry__history-message--error {
+  color: #9a4f42;
+  background: rgba(201, 107, 90, 0.08);
+}
+
+.scenario-entry__history-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.historical-report-card {
+  background: var(--surface);
+  border: 1px solid var(--accent-muted);
+  border-radius: 0.85rem;
+  overflow: hidden;
+}
+
+.historical-report-card__details {
+  margin: 0;
+}
+
+.historical-report-card__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.historical-report-card__summary::-webkit-details-marker {
+  display: none;
+}
+
+.historical-report-card__summary-main {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.historical-report-card__date {
+  display: block;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.historical-report-card__headline {
+  line-height: 1.45;
+}
+
+.historical-report-card__meta {
+  font-size: 0.875rem;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.historical-report-card__body {
+  padding: 0 1.1rem 1rem;
+  border-top: 1px solid var(--accent-muted);
+}
+
+.historical-report-card__body .session-report__section:first-child {
+  margin-top: 0.75rem;
+}
+
 @keyframes breathe {
   0%,
   100% {
