@@ -2,6 +2,8 @@ import { createProviderError } from "../errors";
 import { buildTtsCacheKey } from "../tts/cache-key";
 import type { TtsProvider } from "../tts/contract";
 import type { TtsSynthesizeInput, TtsAudioResult } from "../tts/types";
+import { buildTtsStandardAudioObjectKey } from "@/server/storage/object-keys";
+
 import { hashString } from "./utils";
 
 export type MockTtsProviderOptions = {
@@ -40,7 +42,7 @@ export class MockTtsProvider implements TtsProvider {
       return cached;
     }
 
-    const objectKey = `tts/${hashString(cacheKey)}.wav`;
+    const objectKey = buildTtsStandardAudioObjectKey(hashString(cacheKey));
     const sizeBytes = Math.max(input.text.length * 120, 4096);
     const result: TtsAudioResult = {
       provider: this.name,

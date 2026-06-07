@@ -120,6 +120,15 @@ export function collectRuntimeConfigIssues(
       "STORAGE_SECRET_ACCESS_KEY",
       `STORAGE_PROVIDER="${providers.storage.name}"`,
     );
+
+    if (providers.storage.name === "oss") {
+      requireSecret(
+        issues,
+        secrets.storageRegion,
+        "STORAGE_REGION",
+        `STORAGE_PROVIDER="oss"`,
+      );
+    }
   }
 
   if (providers.queue.name === "redis") {
