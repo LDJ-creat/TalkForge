@@ -21,6 +21,10 @@ export type PrepareFreeSpeechEvaluationResult =
   | { status: "exists"; evaluation: PronunciationEvaluation }
   | { status: "ready" };
 
+export type PrepareShadowingEvaluationResult =
+  | { status: "exists"; evaluation: PronunciationEvaluation }
+  | { status: "ready" };
+
 async function createPronunciationEvaluation(
   db: TalkForgeDatabase,
   input: CreatePronunciationEvaluationInput,
@@ -110,6 +114,31 @@ export async function prepareFreeSpeechEvaluation(
     }
 
     await updateTurnEvaluationStatus(tx, turnId, "processing");
+    return { status: "ready" };
+  });
+}
+
+/** Locks the turn row before starting shadowing evaluation when no row exists yet. */
+export async function prepareShadowingEvaluation(
+  db: TalkForgeDatabase,
+  turnId: string,
+): Promise<PrepareShadowingEvaluationResult> {
+  return db.transaction(async (tx) => {
+    await tx
+      .select({ id: turns.id })
+      .from(turns)
+      .where(eq(turns.id, turnId))
+      .for("update");
+
+    const existing = await getPronunciationEvaluationByTurnIdAndMode(
+      tx,
+      turnId,
+      "shadowing",
+    );
+    if (existing) {
+      return { status: "exists", evaluation: existing };
+    }
+
     return { status: "ready" };
   });
 }

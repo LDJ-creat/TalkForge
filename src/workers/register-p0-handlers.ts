@@ -12,6 +12,7 @@ import { registerCorrectionAnalyzeWorker } from "./handlers/correction-analyze";
 import { registerEvaluationFreeSpeechWorker } from "./handlers/evaluation-free-speech";
 import { registerReportGenerateWorker } from "./handlers/report-generate";
 import { registerScenarioProgressEvaluateWorker } from "./handlers/scenario-progress-evaluate";
+import { registerEvaluationShadowingWorker } from "./handlers/evaluation-shadowing";
 import { registerShadowingGenerateWorker } from "./handlers/shadowing-generate";
 
 export type RegisterP0WorkerHandlersOptions = {
@@ -22,6 +23,7 @@ export type RegisterP0WorkerHandlersOptions = {
   llmReportProvider?: LlmReportProvider;
   llmGoalJudgeProvider?: LlmGoalJudgeProvider;
   pronunciationProvider?: PronunciationEvaluationProvider;
+  shadowingPronunciationProvider?: PronunciationEvaluationProvider;
   ttsProvider?: TtsProvider;
 };
 
@@ -43,6 +45,11 @@ export function registerP0WorkerHandlers(
   registerEvaluationFreeSpeechWorker(registry, {
     db: options.db,
     pronunciationProvider: options.pronunciationProvider,
+  });
+
+  registerEvaluationShadowingWorker(registry, {
+    db: options.db,
+    pronunciationProvider: options.shadowingPronunciationProvider,
   });
 
   registerReportGenerateWorker(registry, {

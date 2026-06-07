@@ -4,7 +4,7 @@ import { createAiInvocationTraceService } from "@/server/ai-tracing";
 import { getAsrProvider } from "@/server/asr/provider";
 import { getLlmCorrectionProvider } from "@/server/correction/provider";
 import { getDb } from "@/server/db/client";
-import { getPronunciationProvider } from "@/server/pronunciation/provider";
+import { getFreeSpeechPronunciationProvider, getShadowingPronunciationProvider } from "@/server/pronunciation/provider";
 import { getLlmReportProvider } from "@/server/report/provider";
 import { getGoalJudgeProvider } from "@/server/scenario-progress/provider";
 import { getQueueAdapter } from "@/server/queue/provider";
@@ -34,7 +34,10 @@ export function createP0WorkerRegistry(
     llmGoalJudgeProvider:
       overrides.llmGoalJudgeProvider ?? getGoalJudgeProvider({ traceWriter }),
     pronunciationProvider:
-      overrides.pronunciationProvider ?? getPronunciationProvider(),
+      overrides.pronunciationProvider ?? getFreeSpeechPronunciationProvider({ traceWriter }),
+    shadowingPronunciationProvider:
+      overrides.shadowingPronunciationProvider ??
+      getShadowingPronunciationProvider({ traceWriter }),
     ttsProvider: overrides.ttsProvider ?? getTtsProvider(),
   });
 
