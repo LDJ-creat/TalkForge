@@ -27,6 +27,16 @@ vi.mock("@/server/db/client", () => ({
   getDb: () => ({}),
 }));
 
+const countReportGenerationAttemptsForSession = vi.fn();
+const countAsrTranscribeAttemptsForSession = vi.fn();
+
+vi.mock("@/server/db/repositories/ai-invocation-metrics-repository", () => ({
+  countReportGenerationAttemptsForSession: (...args: unknown[]) =>
+    countReportGenerationAttemptsForSession(...args),
+  countAsrTranscribeAttemptsForSession: (...args: unknown[]) =>
+    countAsrTranscribeAttemptsForSession(...args),
+}));
+
 vi.mock("@/server/db/repositories", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/server/db/repositories")>();
   return {
@@ -46,6 +56,8 @@ describe("session progress API and service", () => {
     getScenarioById.mockResolvedValue(coffeeOrderingScenario);
     listTurnsBySessionId.mockResolvedValue([]);
     getScenarioProgressBySessionId.mockResolvedValue(null);
+    countReportGenerationAttemptsForSession.mockResolvedValue(0);
+    countAsrTranscribeAttemptsForSession.mockResolvedValue(0);
   });
 
   it("recomputes shouldSuggestEnding from live turns and stored progress", async () => {
@@ -72,6 +84,7 @@ describe("session progress API and service", () => {
 
     expect(progress.shouldSuggestEnding).toBe(true);
     expect(progress.endingSuggestionReason).toBe("required_goals_complete");
+    expect(progress.usageLimits.maxTurns).toBe(coffeeOrderingScenario.exitPolicy.maxTurns);
   });
 
   it("returns max turn boundary through the progress API route", async () => {

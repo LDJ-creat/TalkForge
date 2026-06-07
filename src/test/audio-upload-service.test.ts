@@ -7,6 +7,7 @@ import {
 } from "@/server/storage/audio-upload";
 import { MockStorageProvider } from "@/providers/mock/storage";
 import { createS3CompatibleStorageProvider } from "@/server/storage/s3-compatible-storage";
+import { coffeeOrderingScenario } from "@/server/db/seeds/scenarios";
 
 const SESSION_ID = "11111111-1111-4111-8111-111111111111";
 const TURN_ID = "22222222-2222-4222-8222-222222222222";
@@ -14,17 +15,21 @@ const USER_ID = "33333333-3333-4333-8333-333333333333";
 const OBJECT_KEY = `audio/${SESSION_ID}/${TURN_ID}.webm`;
 
 const getSessionById = vi.fn();
+const getScenarioById = vi.fn();
+const listTurnsBySessionId = vi.fn();
 const getTurnById = vi.fn();
 const createAudioSegment = vi.fn();
 const linkTurnAudioSegment = vi.fn();
 
 vi.mock("@/server/db/repositories/scenario-session-repository", () => ({
   getSessionById: (...args: unknown[]) => getSessionById(...args),
+  getScenarioById: (...args: unknown[]) => getScenarioById(...args),
 }));
 
 vi.mock("@/server/db/repositories/turn-repository", () => ({
   getTurnById: (...args: unknown[]) => getTurnById(...args),
   linkTurnAudioSegment: (...args: unknown[]) => linkTurnAudioSegment(...args),
+  listTurnsBySessionId: (...args: unknown[]) => listTurnsBySessionId(...args),
 }));
 
 const getAudioSegmentByTurnId = vi.fn();
@@ -33,6 +38,10 @@ const enqueueAsrTranscribeJob = vi.fn();
 vi.mock("@/server/db/repositories/audio-segment-repository", () => ({
   createAudioSegment: (...args: unknown[]) => createAudioSegment(...args),
   getAudioSegmentByTurnId: (...args: unknown[]) => getAudioSegmentByTurnId(...args),
+}));
+
+vi.mock("@/server/db/repositories/ai-invocation-metrics-repository", () => ({
+  countAsrTranscribeAttemptsForSession: vi.fn().mockResolvedValue(0),
 }));
 
 vi.mock("@/queue/enqueue", async (importOriginal) => {
@@ -55,7 +64,11 @@ describe("audio upload service", () => {
     getSessionById.mockResolvedValue({
       id: SESSION_ID,
       userId: USER_ID,
+      scenarioId: coffeeOrderingScenario.id,
+      startedAt: new Date().toISOString(),
     });
+    getScenarioById.mockResolvedValue(coffeeOrderingScenario);
+    listTurnsBySessionId.mockResolvedValue([]);
     getTurnById.mockResolvedValue({
       id: TURN_ID,
       sessionId: SESSION_ID,

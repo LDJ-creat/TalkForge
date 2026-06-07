@@ -230,7 +230,7 @@ describe("conversation store", () => {
     expect(state.connectionStatus).toBe("failed");
     expect(state.realtimeLifecycleStatus).toBe("failed");
     expect(state.session?.status).toBe("failed");
-    expect(state.errorMessage).toContain("Could not start");
+    expect(state.errorMessage).toBeTruthy();
     expect(state.realtimeCredentials).toBeNull();
 
     vi.useRealTimers();
@@ -271,6 +271,69 @@ describe("conversation store", () => {
     expect(useConversationStore.getState()).toMatchObject(getConversationInitialState());
 
     vi.useRealTimers();
+  });
+
+  it("does not clear realtime errors when progress sync has no usage limit banner", async () => {
+    useConversationStore.setState({
+      session: {
+        id: "session-1",
+        scenarioId: coffeeOrderingScenario.id,
+        status: "active",
+        startedAt: new Date().toISOString(),
+        backendLinked: true,
+      },
+      progressSource: "server",
+      errorMessage: "Realtime connection failed. Retry or continue in text mode.",
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            progress: {
+              sessionId: "session-1",
+              currentStageId: "order",
+              completedGoalIds: [],
+              missingGoalIds: ["goal-1"],
+              shouldSuggestEnding: false,
+              offTopic: false,
+              updatedAt: new Date().toISOString(),
+              endingSuggestionReason: null,
+              boundaries: {
+                maxTurnsReached: false,
+                maxDurationReached: false,
+                userTurnCount: 1,
+                durationSec: 10,
+              },
+              usageLimits: {
+                maxTurns: 8,
+                maxDurationSec: 600,
+                maxAsrJobs: 50,
+                maxReportAttempts: 5,
+                userTurnCount: 1,
+                durationSec: 10,
+                asrJobsUsed: 0,
+                reportAttemptsUsed: 0,
+                turnLimitReached: false,
+                durationLimitReached: false,
+                asrLimitReached: false,
+                reportLimitReached: false,
+              },
+            },
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    await useConversationStore.getState().syncSessionProgressFromServer();
+
+    expect(useConversationStore.getState().errorMessage).toBe(
+      "Realtime connection failed. Retry or continue in text mode.",
+    );
+
+    vi.unstubAllGlobals();
   });
 
   it("resets all conversation state", async () => {

@@ -229,6 +229,7 @@ function createInMemoryReportDeps(options?: {
       reports.set(sessionId, report);
       return report;
     },
+    countReportGenerationAttempts: async () => 0,
     ...options?.depOverrides,
   };
 

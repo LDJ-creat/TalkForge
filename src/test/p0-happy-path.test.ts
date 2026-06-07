@@ -36,7 +36,7 @@ const activeSession: Session = {
   scenarioId: coffeeOrderingScenario.id,
   realtimeProvider: "mock-realtime",
   status: "active",
-  startedAt: "2026-06-06T00:00:00.000Z",
+  startedAt: new Date().toISOString(),
 };
 
 const createSession = vi.fn();
@@ -45,6 +45,7 @@ const updateSessionRealtimeProviderSessionId = vi.fn();
 const getSessionById = vi.fn();
 const completeSession = vi.fn();
 const createTurn = vi.fn();
+const listTurnsBySessionId = vi.fn();
 const getReportBySessionId = vi.fn();
 
 vi.mock("@/server/db/seeds/ensure-dev-session-prerequisites", () => ({
@@ -72,7 +73,7 @@ vi.mock("@/server/db/repositories/scenario-session-repository", () => ({
 vi.mock("@/server/db/repositories/turn-repository", () => ({
   createTurn: (...args: unknown[]) => createTurn(...args),
   getTurnById: vi.fn(),
-  listTurnsBySessionId: vi.fn(),
+  listTurnsBySessionId: (...args: unknown[]) => listTurnsBySessionId(...args),
 }));
 
 vi.mock("@/server/db/repositories", async (importOriginal) => {
@@ -87,9 +88,15 @@ vi.mock("@/server/db/repositories", async (importOriginal) => {
     completeSession: (...args: unknown[]) => completeSession(...args),
     failSession: (...args: unknown[]) => failSession(...args),
     createTurn: (...args: unknown[]) => createTurn(...args),
+    listTurnsBySessionId: (...args: unknown[]) => listTurnsBySessionId(...args),
     getReportBySessionId: (...args: unknown[]) => getReportBySessionId(...args),
   };
 });
+
+vi.mock("@/server/db/repositories/ai-invocation-metrics-repository", () => ({
+  countAsrTranscribeAttemptsForSession: vi.fn().mockResolvedValue(0),
+  countReportGenerationAttemptsForSession: vi.fn().mockResolvedValue(0),
+}));
 
 vi.mock("@/server/realtime/provider", () => ({
   getRealtimeProvider: () => createMockRealtimeProvider(),
@@ -99,6 +106,7 @@ describe("P0 mock happy path services", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getScenarioById.mockResolvedValue(coffeeOrderingScenario);
+    listTurnsBySessionId.mockResolvedValue([]);
     createSession.mockResolvedValue(activeSession);
     updateSessionRealtimeProviderSessionId.mockResolvedValue({
       ...activeSession,
@@ -147,6 +155,8 @@ describe("P0 mock happy path services", () => {
 
   it("creates a user turn for an active session", async () => {
     getSessionById.mockResolvedValue(activeSession);
+    getScenarioById.mockResolvedValue(coffeeOrderingScenario);
+    listTurnsBySessionId.mockResolvedValue([]);
     createTurn.mockResolvedValue({
       id: TURN_ID,
       sessionId: SESSION_ID,
@@ -160,7 +170,12 @@ describe("P0 mock happy path services", () => {
       SESSION_ID,
       DEV_USER_ID,
       { role: "user", transcriptText: "Could I get a medium latte?" },
-      { getSessionById, createTurn },
+      {
+        getSessionById,
+        getScenarioById,
+        listTurnsBySessionId,
+        createTurn,
+      },
     );
 
     expect(turn.id).toBe(TURN_ID);
@@ -234,6 +249,7 @@ describe("P0 mock happy path services", () => {
             createdAt: "2026-06-06T00:11:00.000Z",
             ...input,
           }),
+          countReportGenerationAttempts: async () => 0,
         },
       }),
     );
