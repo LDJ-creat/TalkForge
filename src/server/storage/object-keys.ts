@@ -1,7 +1,11 @@
-﻿import { AudioUploadServiceError } from "./errors";
+﻿import { AI_TRACE_OBJECT_KEY_PATTERN } from "@/server/ai-tracing/object-keys";
+
+import { AudioUploadServiceError } from "./errors";
 
 const UUID_PATTERN =
   "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
+
+export { AI_TRACE_OBJECT_KEY_PATTERN };
 
 export const TURN_AUDIO_OBJECT_KEY_PATTERN = new RegExp(
   `^audio/${UUID_PATTERN}/${UUID_PATTERN}\\.webm$`,
@@ -19,6 +23,7 @@ export const STORAGE_OBJECT_KEY_PATTERNS = [
   TURN_AUDIO_OBJECT_KEY_PATTERN,
   TTS_STANDARD_AUDIO_OBJECT_KEY_PATTERN,
   CONVERTED_AUDIO_ARTIFACT_OBJECT_KEY_PATTERN,
+  AI_TRACE_OBJECT_KEY_PATTERN,
 ] as const;
 
 export function buildTurnAudioObjectKey(sessionId: string, turnId: string): string {
@@ -75,7 +80,7 @@ export function assertValidStorageObjectKey(objectKey: string): void {
   throw new AudioUploadServiceError(
     400,
     "invalid_object_key",
-    "Object keys must match TalkForge storage conventions for turn audio, TTS standard audio, or converted artifacts.",
+    "Object keys must match TalkForge storage conventions for turn audio, TTS standard audio, converted artifacts, or AI trace payloads.",
   );
 }
 
