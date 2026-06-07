@@ -13,6 +13,7 @@ export const EVALUATION_STATUSES = [
   "processing",
   "done",
   "failed",
+  "skipped",
 ] as const;
 export type EvaluationStatus = (typeof EVALUATION_STATUSES)[number];
 
