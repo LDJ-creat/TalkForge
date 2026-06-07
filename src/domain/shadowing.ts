@@ -5,10 +5,20 @@ import type { ReportShadowingRecommendation } from "./report";
 export const SHADOWING_ITEM_SOURCES = [
   "scenario_target_expression",
   "report_recommendation",
+  "corrected_expression",
   "manual",
 ] as const;
 
 export type ShadowingItemSource = (typeof SHADOWING_ITEM_SOURCES)[number];
+
+export const SHADOWING_STANDARD_AUDIO_STATUSES = [
+  "pending",
+  "ready",
+  "failed",
+] as const;
+
+export type ShadowingStandardAudioStatus =
+  (typeof SHADOWING_STANDARD_AUDIO_STATUSES)[number];
 
 export type ShadowingStandardAudio = {
   provider: string;
@@ -26,10 +36,16 @@ export type ShadowingStandardAudio = {
 
 export type ShadowingItem = {
   id: string;
+  sessionId?: string;
   standardText: string;
+  originalText?: string;
   reason?: string;
   source: ShadowingItemSource;
+  turnId?: string;
+  sortOrder?: number;
   standardAudio?: ShadowingStandardAudio;
+  standardAudioStatus?: ShadowingStandardAudioStatus;
+  createdAt?: string;
 };
 
 export class ShadowingValidationError extends Error {
