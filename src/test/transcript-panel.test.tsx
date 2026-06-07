@@ -30,7 +30,7 @@ describe("TranscriptPanel", () => {
     );
 
     expect(screen.getByTestId("transcript-pronunciation-feedback")).toBeInTheDocument();
-    expect(screen.getByText(/综合 82/)).toBeInTheDocument();
+    expect(screen.getByText(/Overall 82/)).toBeInTheDocument();
     expect(screen.getByText("latte")).toHaveClass("transcript-entry__word--weak");
     expect(screen.getByText("medium")).toHaveClass("transcript-entry__word");
     expect(screen.getByText(/识别出的文本/)).toBeInTheDocument();

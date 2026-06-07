@@ -26,17 +26,17 @@ export type RealtimeConnectionDiagnostics = {
 };
 
 export const REALTIME_LIFECYCLE_LABELS: Record<RealtimeLifecycleStatus, string> = {
-  idle: "未连接",
-  connecting: "连接中…",
-  connected: "已连接",
-  listening: "聆听中",
-  user_speaking: "你正在说话",
-  assistant_speaking: "AI 正在说话",
-  interrupted: "已打断",
-  reconnecting: "重新连接中…",
-  failed: "连接失败",
-  fallback: "文字练习模式",
-  ended: "会话已结束",
+  idle: "Not connected",
+  connecting: "Connecting…",
+  connected: "Connected",
+  listening: "Listening",
+  user_speaking: "You're speaking",
+  assistant_speaking: "AI speaking",
+  interrupted: "Interrupted",
+  reconnecting: "Reconnecting…",
+  failed: "Connection failed",
+  fallback: "Text mode",
+  ended: "Session ended",
 };
 
 export function deriveConnectionStatus(

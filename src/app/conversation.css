@@ -687,14 +687,12 @@
   margin-bottom: 2rem;
 }
 
-.scenario-entry__back {
-  color: var(--muted);
-  font-size: 0.875rem;
-  text-decoration: none;
+.scenario-entry__info > .back-link {
+  margin-bottom: 0.25rem;
 }
 
-.scenario-entry__back:hover {
-  color: var(--accent);
+.scenario-create > .back-link {
+  margin-bottom: 0.5rem;
 }
 
 .scenario-entry__title {
@@ -819,5 +817,209 @@
   50% {
     transform: scale(1.12);
     opacity: 0.95;
+  }
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  padding: 0.45rem 0.95rem 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--accent-muted);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.2;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(44, 40, 37, 0.05);
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.back-link:hover {
+  color: var(--foreground);
+  border-color: var(--accent);
+  box-shadow: 0 8px 22px rgba(44, 40, 37, 0.08);
+  transform: translateX(-1px);
+}
+
+.back-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.back-link__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.back-link__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.back-link:hover .back-link__icon {
+  transform: translateX(-2px);
+}
+
+.back-link__label {
+  white-space: nowrap;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.loading-state--page {
+  padding: 2rem 1rem;
+}
+
+.loading-state--inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.65rem;
+  padding: 0.35rem 0;
+}
+
+.loading-state--skeleton {
+  align-items: stretch;
+  width: 100%;
+}
+
+.loading-state__label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.925rem;
+}
+
+.loading-state--inline .loading-state__label {
+  font-size: 0.9rem;
+}
+
+.loading-state__orb {
+  position: relative;
+  width: 4.5rem;
+  height: 4.5rem;
+}
+
+.loading-state__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #f8ddd7, var(--accent));
+  opacity: 0.72;
+  animation: breathe 2.8s ease-in-out infinite;
+}
+
+.loading-state__ring--two {
+  inset: 0.65rem;
+  opacity: 0.5;
+  animation-delay: 0.45s;
+}
+
+.loading-state__ring--three {
+  inset: 1.3rem;
+  opacity: 0.35;
+  animation-delay: 0.9s;
+}
+
+.loading-state__dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.loading-state__dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: loading-dot 1.2s ease-in-out infinite;
+}
+
+.loading-state__dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.loading-state__dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.loading-state__skeleton-list {
+  display: grid;
+  gap: 0.85rem;
+  width: 100%;
+}
+
+.loading-state__skeleton-card {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem 1.1rem;
+  border-radius: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--accent-muted);
+}
+
+.loading-state__skeleton-line {
+  display: block;
+  height: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(243, 212, 204, 0.35) 0%,
+    rgba(232, 165, 152, 0.45) 50%,
+    rgba(243, 212, 204, 0.35) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.loading-state__skeleton-line--short {
+  width: 32%;
+}
+
+.loading-state__skeleton-line--medium {
+  width: 58%;
+}
+
+.loading-state__skeleton-line--long {
+  width: 88%;
+}
+
+@keyframes loading-dot {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.75);
+    opacity: 0.45;
+  }
+
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
   }
 }

@@ -15,10 +15,14 @@ export const homeCopy = {
 };
 
 export const navCopy = {
-  backToScenarios: "← 返回全部场景",
-  allScenarios: "← 全部场景",
+  backToScenarios: "返回全部场景",
+  allScenarios: "全部场景",
   changeScenario: "更换场景",
   backToScenariosButton: "返回场景列表",
+};
+
+export const loadingCopy = {
+  sessionAnalysis: "Loading session analysis…",
 };
 
 export const notFoundCopy = {
@@ -81,19 +85,19 @@ export const statusCopy = {
   session: "会话",
   evaluation: "发音反馈",
   debug: "调试",
-  endingSession: "正在结束会话…",
-  evaluationPlaceholder: "每轮对话后将显示反馈",
+  endingSession: "Ending session…",
+  evaluationPlaceholder: "Feedback appears after each turn",
   sessionStatus: {
-    active: "进行中",
-    completed: "已完成",
-    failed: "失败",
+    active: "In progress",
+    completed: "Completed",
+    failed: "Failed",
   },
   turnStatus: {
-    idle: "可以开口了",
-    user_speaking: "正在说话",
-    user_processing: "正在处理你的发言",
-    assistant_speaking: "AI 正在说话",
-    assistant_processing: "AI 思考中",
+    idle: "Your turn",
+    user_speaking: "Speaking",
+    user_processing: "Processing your speech",
+    assistant_speaking: "AI speaking",
+    assistant_processing: "AI thinking",
   },
 };
 
@@ -101,15 +105,14 @@ export const voiceVisualizerCopy = {
   listening: "正在听你说话…",
   aiResponding: "AI 正在回应…",
   processing: "处理中…",
-  ready: "准备好了就自然开口说吧",
 };
 
 export const transcriptCopy = {
   title: "对话记录",
   empty: "会话开始后将在此显示对话记录。",
   roleAssistant: "AI",
-  roleUser: "你",
-  analyzing: "正在分析发音…",
+  roleUser: "You",
+  analyzing: "Analyzing pronunciation…",
   evaluationFailed: "本轮发音评估暂不可用。",
   scoreNote: "评分基于本轮识别出的文本。",
 };
@@ -144,12 +147,12 @@ export const shadowingCopy = {
 };
 
 export const pronunciationCopy = {
-  analyzing: "正在分析发音…",
-  unavailable: "发音评估暂不可用",
-  ready: "发音反馈已就绪",
-  overall: (score: number) => `综合 ${Math.round(score)}`,
-  accuracy: (score: number) => `准确度 ${Math.round(score)}`,
-  fluency: (score: number) => `流利度 ${Math.round(score)}`,
+  analyzing: "Analyzing pronunciation…",
+  unavailable: "Pronunciation feedback unavailable",
+  ready: "Pronunciation feedback ready",
+  overall: (score: number) => `Overall ${Math.round(score)}`,
+  accuracy: (score: number) => `Accuracy ${Math.round(score)}`,
+  fluency: (score: number) => `Fluency ${Math.round(score)}`,
 };
 
 export const taskCompletionCopy = {

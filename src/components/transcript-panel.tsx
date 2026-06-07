@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
 import type { TranscriptEntry } from "@/features/conversation";
 import { formatPronunciationFeedbackSummary } from "@/features/conversation/format-pronunciation-feedback";
 import { transcriptCopy } from "@/lib/ui-copy";
@@ -64,6 +68,22 @@ function renderUserPronunciationFeedback(entry: TranscriptEntry) {
 }
 
 export function TranscriptPanel({ entries }: TranscriptPanelProps) {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) {
+      return;
+    }
+
+    if (typeof list.scrollTo === "function") {
+      list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
+      return;
+    }
+
+    list.scrollTop = list.scrollHeight;
+  }, [entries]);
+
   if (entries.length === 0) {
     return (
       <div className="conversation-panel" data-testid="transcript-panel">
@@ -78,7 +98,7 @@ export function TranscriptPanel({ entries }: TranscriptPanelProps) {
   return (
     <div className="conversation-panel" data-testid="transcript-panel">
       <h2 className="conversation-panel__title">{transcriptCopy.title}</h2>
-      <div className="transcript-list">
+      <div className="transcript-list" ref={listRef}>
         {entries.map((entry) => (
           <article
             key={entry.id}
