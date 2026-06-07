@@ -3,9 +3,10 @@ import type { Report } from "@/domain/report";
 type SessionReportPanelProps = {
   report: Report | null;
   status: "idle" | "loading" | "ready" | "unavailable";
+  onRetry?: () => void;
 };
 
-export function SessionReportPanel({ report, status }: SessionReportPanelProps) {
+export function SessionReportPanel({ report, status, onRetry }: SessionReportPanelProps) {
   if (status === "idle") {
     return null;
   }
@@ -24,9 +25,19 @@ export function SessionReportPanel({ report, status }: SessionReportPanelProps) 
       <section className="session-report session-report--muted" data-testid="session-report-unavailable">
         <h2 className="session-report__title">Session report</h2>
         <p className="session-report__summary">
-          Report is not available yet. If you are running locally, confirm the database is seeded
-          and background jobs completed.
+          Report is not available yet. Confirm the worker is running and provider configuration is
+          valid, then retry generation.
         </p>
+        {onRetry ? (
+          <button
+            type="button"
+            className="button button--primary"
+            data-testid="retry-report-button"
+            onClick={onRetry}
+          >
+            Retry report generation
+          </button>
+        ) : null}
       </section>
     );
   }
