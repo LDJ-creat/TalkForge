@@ -20,6 +20,22 @@ export function ScenarioPicker({ scenarios }: ScenarioPickerProps) {
 
   return (
     <div className="scenario-grid" data-testid="scenario-grid">
+      <button
+        type="button"
+        className="scenario-card scenario-card--create"
+        data-testid="scenario-card-create"
+        onClick={() => router.push("/scenarios/new")}
+      >
+        <div className="scenario-card__meta">
+          <span className="scenario-card__level">New</span>
+          <span className="scenario-card__role">Custom scenario</span>
+        </div>
+        <h2 className="scenario-card__title">Create your own scenario</h2>
+        <p className="scenario-card__description">
+          Describe what you want to practice and let TalkForge generate a role-play for you.
+        </p>
+        <span className="scenario-card__cta">Create scenario →</span>
+      </button>
       {scenarios.map((scenario) => (
         <button
           key={scenario.id}
