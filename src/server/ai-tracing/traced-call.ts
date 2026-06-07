@@ -59,6 +59,12 @@ export async function executeTracedProviderCall<T>(
       ...executeOptions,
       provider,
       operation,
+      observability: {
+        sessionId,
+        turnId,
+        jobId,
+        costEstimate: presetUsage?.costEstimate,
+      },
       onComplete: (completedMetadata) => {
         if (completedMetadata.status === "error") {
           failureMetadata = completedMetadata;
@@ -67,6 +73,7 @@ export async function executeTracedProviderCall<T>(
     });
 
     const usage = presetUsage ?? extractUsage?.(result);
+
     const trace = await traceWriter.record({
       provider,
       model,
