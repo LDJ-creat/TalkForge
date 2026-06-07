@@ -9,6 +9,8 @@ import {
   createScenarioOnServer,
   generateScenarioFromDescription,
 } from "@/features/scenario-create/api";
+import { formatScenarioRoleLine } from "@/lib/format-scenario-display";
+import { navCopy, scenarioCreateCopy } from "@/lib/ui-copy";
 
 type ScenarioCreateFormProps = {
   backHref?: string;
@@ -33,7 +35,9 @@ export function ScenarioCreateForm({ backHref = "/" }: ScenarioCreateFormProps) 
       setShowDetails(false);
     } catch (error) {
       setDraft(null);
-      setErrorMessage(error instanceof Error ? error.message : "Failed to generate scenario.");
+      setErrorMessage(
+        error instanceof Error ? error.message : scenarioCreateCopy.generateFailed,
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -52,7 +56,7 @@ export function ScenarioCreateForm({ backHref = "/" }: ScenarioCreateFormProps) 
       router.push(backHref);
       router.refresh();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to save scenario.");
+      setErrorMessage(error instanceof Error ? error.message : scenarioCreateCopy.saveFailed);
     } finally {
       setIsSaving(false);
     }
@@ -61,20 +65,17 @@ export function ScenarioCreateForm({ backHref = "/" }: ScenarioCreateFormProps) 
   return (
     <div className="scenario-create">
       <Link href={backHref} className="scenario-entry__back">
-        ← Back to scenarios
+        {navCopy.backToScenarios}
       </Link>
 
       <header className="scenario-create__header">
-        <h1 className="scenario-entry__title">Create a custom scenario</h1>
-        <p className="scenario-entry__subtitle">
-          Describe what you want to practice in everyday language. TalkForge will generate a
-          structured role-play scenario for you to review before saving.
-        </p>
+        <h1 className="scenario-entry__title">{scenarioCreateCopy.title}</h1>
+        <p className="scenario-entry__subtitle">{scenarioCreateCopy.subtitle}</p>
       </header>
 
       <section className="scenario-create__panel">
         <label className="scenario-create__label" htmlFor="scenario-description">
-          Scenario request
+          {scenarioCreateCopy.requestLabel}
         </label>
         <textarea
           id="scenario-description"
@@ -82,7 +83,7 @@ export function ScenarioCreateForm({ backHref = "/" }: ScenarioCreateFormProps) 
           rows={5}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
-          placeholder="Example: I want to practice ordering food at a restaurant, around A2 level."
+          placeholder={scenarioCreateCopy.placeholder}
           disabled={isGenerating || isSaving}
         />
         <div className="scenario-create__actions">
@@ -92,7 +93,11 @@ export function ScenarioCreateForm({ backHref = "/" }: ScenarioCreateFormProps) 
             onClick={() => void handleGenerate()}
             disabled={isGenerating || isSaving || description.trim().length === 0}
           >
-            {isGenerating ? "Generating..." : draft ? "Regenerate scenario" : "Generate scenario"}
+            {isGenerating
+              ? scenarioCreateCopy.generating
+              : draft
+                ? scenarioCreateCopy.regenerate
+                : scenarioCreateCopy.generate}
           </button>
         </div>
       </section>
@@ -104,9 +109,7 @@ export function ScenarioCreateForm({ backHref = "/" }: ScenarioCreateFormProps) 
           <article className="scenario-card scenario-card--preview">
             <div className="scenario-card__meta">
               <span className="scenario-card__level">{draft.level}</span>
-              <span className="scenario-card__role">
-                You: {draft.userRole} · AI: {draft.aiRole}
-              </span>
+              <span className="scenario-card__role">{formatScenarioRoleLine(draft)}</span>
             </div>
             <h2 className="scenario-card__title">{draft.title}</h2>
             <p className="scenario-card__description">{draft.description}</p>
@@ -118,24 +121,24 @@ export function ScenarioCreateForm({ backHref = "/" }: ScenarioCreateFormProps) 
             className="scenario-create__details-toggle"
             onClick={() => setShowDetails((current) => !current)}
           >
-            {showDetails ? "Hide details" : "Show goals and stages"}
+            {showDetails ? scenarioCreateCopy.hideDetails : scenarioCreateCopy.showDetails}
           </button>
 
           {showDetails ? (
             <div className="scenario-create__details">
               <div className="scenario-create__details-section">
-                <h3>Goals</h3>
+                <h3>{scenarioCreateCopy.goals}</h3>
                 <ul>
                   {draft.goals.map((goal) => (
                     <li key={goal.id}>
                       {goal.description}
-                      {goal.required ? " (required)" : ""}
+                      {goal.required ? scenarioCreateCopy.required : ""}
                     </li>
                   ))}
                 </ul>
               </div>
               <div className="scenario-create__details-section">
-                <h3>Stages</h3>
+                <h3>{scenarioCreateCopy.stages}</h3>
                 <ul>
                   {draft.stages.map((stage) => (
                     <li key={stage.id}>
@@ -145,7 +148,7 @@ export function ScenarioCreateForm({ backHref = "/" }: ScenarioCreateFormProps) 
                 </ul>
               </div>
               <div className="scenario-create__details-section">
-                <h3>Target expressions</h3>
+                <h3>{scenarioCreateCopy.targetExpressions}</h3>
                 <ul>
                   {draft.targetExpressions.map((expression) => (
                     <li key={expression}>{expression}</li>
@@ -163,7 +166,7 @@ export function ScenarioCreateForm({ backHref = "/" }: ScenarioCreateFormProps) 
               disabled={isSaving || isGenerating}
               data-testid="scenario-create-confirm"
             >
-              {isSaving ? "Saving..." : "Confirm and add scenario"}
+              {isSaving ? scenarioCreateCopy.saving : scenarioCreateCopy.confirm}
             </button>
           </div>
         </section>

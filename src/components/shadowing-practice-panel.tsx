@@ -1,4 +1,5 @@
 import type { ShadowingItem } from "@/domain/shadowing";
+import { shadowingCopy } from "@/lib/ui-copy";
 
 type ShadowingPracticePanelProps = {
   items: ShadowingItem[];
@@ -11,15 +12,15 @@ function formatAudioStatus(item: ShadowingItem): string {
       ? Math.round(item.standardAudio.durationMs / 1000)
       : null;
     return durationSeconds
-      ? `Standard audio ready (${durationSeconds}s)`
-      : "Standard audio ready";
+      ? shadowingCopy.audioReadyDuration(durationSeconds)
+      : shadowingCopy.audioReady;
   }
 
   if (item.standardAudioStatus === "failed") {
-    return "Standard audio unavailable";
+    return shadowingCopy.audioUnavailable;
   }
 
-  return "Generating standard audio…";
+  return shadowingCopy.generatingAudio;
 }
 
 export function ShadowingPracticePanel({
@@ -33,8 +34,8 @@ export function ShadowingPracticePanel({
   if (status === "loading") {
     return (
       <section className="shadowing-practice" data-testid="shadowing-practice-loading">
-        <h2 className="shadowing-practice__title">Shadowing practice</h2>
-        <p>Preparing recommended sentences and standard audio…</p>
+        <h2 className="shadowing-practice__title">{shadowingCopy.title}</h2>
+        <p>{shadowingCopy.loading}</p>
       </section>
     );
   }
@@ -45,30 +46,23 @@ export function ShadowingPracticePanel({
         className="shadowing-practice shadowing-practice--muted"
         data-testid="shadowing-practice-unavailable"
       >
-        <h2 className="shadowing-practice__title">Shadowing practice</h2>
-        <p>
-          Shadowing items are not available yet. Finish your session report processing and
-          try again shortly.
-        </p>
+        <h2 className="shadowing-practice__title">{shadowingCopy.title}</h2>
+        <p>{shadowingCopy.unavailable}</p>
       </section>
     );
   }
 
   return (
     <section className="shadowing-practice" data-testid="shadowing-practice-panel">
-      <h2 className="shadowing-practice__title">Shadowing practice</h2>
-      <p className="shadowing-practice__summary">
-        Practice these sentences with standard audio. Server-side pronunciation scoring is available
-        via the shadowing evaluate API; in-app recording and score display will ship in a follow-up
-        task.
-      </p>
+      <h2 className="shadowing-practice__title">{shadowingCopy.title}</h2>
+      <p className="shadowing-practice__summary">{shadowingCopy.summary}</p>
       <ol className="shadowing-practice__list">
         {items.map((item) => (
           <li key={item.id} className="shadowing-practice__item">
             <p className="shadowing-practice__standard">{item.standardText}</p>
             {item.originalText ? (
               <p className="shadowing-practice__original">
-                Your phrase: {item.originalText}
+                {shadowingCopy.yourPhrase}：{item.originalText}
               </p>
             ) : null}
             {item.reason ? (

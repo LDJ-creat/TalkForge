@@ -45,7 +45,7 @@ describe("ConversationShell realtime lifecycle", () => {
 
     expect(screen.getByTestId("retry-realtime-button")).toBeInTheDocument();
     expect(screen.getByTestId("fallback-practice-button")).toBeInTheDocument();
-    expect(screen.getByText("Connection failed")).toBeInTheDocument();
+    expect(screen.getByText("连接失败")).toBeInTheDocument();
     expect(screen.getByTestId("end-practice-button")).not.toBeDisabled();
 
     vi.useRealTimers();
@@ -64,7 +64,7 @@ describe("ConversationShell realtime lifecycle", () => {
     fireEvent.click(screen.getByTestId("fallback-practice-button"));
 
     expect(useConversationStore.getState().realtimeLifecycleStatus).toBe("fallback");
-    expect(screen.getByText("Text practice mode")).toBeInTheDocument();
+    expect(screen.getByText("文字练习模式")).toBeInTheDocument();
 
     vi.useRealTimers();
   });

@@ -1,5 +1,6 @@
 import type { TranscriptEntry } from "@/features/conversation";
 import { formatPronunciationFeedbackSummary } from "@/features/conversation/format-pronunciation-feedback";
+import { transcriptCopy } from "@/lib/ui-copy";
 
 type TranscriptPanelProps = {
   entries: TranscriptEntry[];
@@ -14,7 +15,7 @@ function renderUserPronunciationFeedback(entry: TranscriptEntry) {
   if (feedback.evaluationStatus === "pending" || feedback.evaluationStatus === "processing") {
     return (
       <p className="transcript-entry__pronunciation transcript-entry__pronunciation--pending">
-        Analyzing pronunciation…
+        {transcriptCopy.analyzing}
       </p>
     );
   }
@@ -22,7 +23,7 @@ function renderUserPronunciationFeedback(entry: TranscriptEntry) {
   if (feedback.evaluationStatus === "failed") {
     return (
       <p className="transcript-entry__pronunciation transcript-entry__pronunciation--failed">
-        Pronunciation evaluation unavailable for this turn.
+        {transcriptCopy.evaluationFailed}
       </p>
     );
   }
@@ -57,9 +58,7 @@ function renderUserPronunciationFeedback(entry: TranscriptEntry) {
           ))}
         </div>
       ) : null}
-      <p className="transcript-entry__pronunciation-note">
-        Scores are based on the recognized transcript for this turn.
-      </p>
+      <p className="transcript-entry__pronunciation-note">{transcriptCopy.scoreNote}</p>
     </div>
   );
 }
@@ -68,9 +67,9 @@ export function TranscriptPanel({ entries }: TranscriptPanelProps) {
   if (entries.length === 0) {
     return (
       <div className="conversation-panel" data-testid="transcript-panel">
-        <h2 className="conversation-panel__title">Transcript</h2>
+        <h2 className="conversation-panel__title">{transcriptCopy.title}</h2>
         <p className="transcript-entry__text transcript-entry__text--pending">
-          Transcript will appear here once the session starts.
+          {transcriptCopy.empty}
         </p>
       </div>
     );
@@ -78,7 +77,7 @@ export function TranscriptPanel({ entries }: TranscriptPanelProps) {
 
   return (
     <div className="conversation-panel" data-testid="transcript-panel">
-      <h2 className="conversation-panel__title">Transcript</h2>
+      <h2 className="conversation-panel__title">{transcriptCopy.title}</h2>
       <div className="transcript-list">
         {entries.map((entry) => (
           <article
@@ -87,7 +86,9 @@ export function TranscriptPanel({ entries }: TranscriptPanelProps) {
             data-testid={`transcript-entry-${entry.role}`}
           >
             <div className="transcript-entry__meta">
-              <span>{entry.role === "assistant" ? "AI" : "You"}</span>
+              <span>
+                {entry.role === "assistant" ? transcriptCopy.roleAssistant : transcriptCopy.roleUser}
+              </span>
               <span>{entry.status}</span>
             </div>
             <p

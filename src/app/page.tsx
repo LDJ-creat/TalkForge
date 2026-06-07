@@ -1,4 +1,5 @@
 import { APP_NAME, APP_TAGLINE } from "@/lib/app-info";
+import { homeCopy } from "@/lib/ui-copy";
 import { getDb } from "@/server/db/client";
 import { listAllScenarios } from "@/server/scenario/catalog";
 
@@ -12,9 +13,9 @@ export default async function HomePage() {
     <main className="scenario-page">
       <header className="scenario-page__header">
         <p className="scenario-page__eyebrow">{APP_NAME}</p>
-        <h1 className="scenario-page__title">Choose a practice scenario</h1>
+        <h1 className="scenario-page__title">{homeCopy.title}</h1>
         <p className="scenario-page__subtitle">
-          {APP_TAGLINE}. Pick a role-play to review past reports and start a new conversation.
+          {APP_TAGLINE}。{homeCopy.subtitle}
         </p>
       </header>
       <ScenarioPicker scenarios={scenarios} />

@@ -38,6 +38,7 @@ import { startSessionOnServer } from "./start-session-api";
 import { pollTurnPronunciationFeedback } from "./poll-turn-pronunciation-feedback";
 import { applyServerTurnUpdate, mergeTranscriptsWithServerTurns } from "./sync-transcripts";
 import { resolveUsageLimitBannerMessage } from "@/shared/usage-limit-messages";
+import { errorCopy } from "@/lib/ui-copy";
 
 import type {
   ConnectionStatus,
@@ -492,7 +493,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         errorMessage:
           error instanceof Error
             ? error.message
-            : "Could not start the practice session. Please try again.",
+            : errorCopy.startSessionFailed,
       });
     }
   },
@@ -520,8 +521,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         applyRealtimeLifecycle(set, event.status);
         if (event.status === "failed") {
           set({
-            errorMessage:
-              "Realtime voice connection failed. Retry or continue in text practice mode.",
+            errorMessage: errorCopy.realtimeFailed,
           });
         } else if (
           event.status === "connected" ||
@@ -665,7 +665,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         errorMessage:
           error instanceof Error
             ? error.message
-            : "Could not submit practice turn. Please try again.",
+            : errorCopy.submitTurnFailed,
       });
     }
   },
@@ -783,7 +783,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
     } catch {
       set({
         connectionStatus: "error",
-        errorMessage: "Could not end the session cleanly. Please refresh and try again.",
+        errorMessage: errorCopy.endSessionFailed,
       });
     }
   },

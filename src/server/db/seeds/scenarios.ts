@@ -2,11 +2,13 @@ import type { Scenario } from "@/domain/scenario";
 
 export const coffeeOrderingScenario: Scenario = {
   id: "coffee_ordering_a2",
-  title: "Order Coffee at a Cafe",
-  description: "Practice ordering a drink at a cafe.",
+  title: "在咖啡馆点咖啡",
+  description: "练习在咖啡馆点一杯饮料。",
   level: "A2",
   userRole: "customer",
   aiRole: "barista",
+  userRoleLabel: "顾客",
+  aiRoleLabel: "咖啡师",
   situation: "The learner is ordering a drink at a busy cafe.",
   mission: "Help the learner complete a natural coffee order in English.",
   goals: [
@@ -105,11 +107,13 @@ export const coffeeOrderingScenario: Scenario = {
 
 export const englishInterviewScenario: Scenario = {
   id: "english_interview_b1",
-  title: "English Job Interview",
-  description: "Practice answering common interview questions in English.",
+  title: "英文求职面试",
+  description: "练习用英文回答常见面试问题。",
   level: "B1",
   userRole: "job candidate",
   aiRole: "interviewer",
+  userRoleLabel: "求职者",
+  aiRoleLabel: "面试官",
   situation:
     "The learner is in a first-round interview for a junior office role.",
   mission:
@@ -221,11 +225,13 @@ export const englishInterviewScenario: Scenario = {
 
 export const selfIntroductionScenario: Scenario = {
   id: "self_introduction_a2",
-  title: "Self Introduction",
-  description: "Practice introducing yourself in everyday English.",
+  title: "自我介绍",
+  description: "练习用日常英语介绍自己。",
   level: "A2",
   userRole: "new acquaintance",
   aiRole: "friendly host at a social meetup",
+  userRoleLabel: "新认识的人",
+  aiRoleLabel: "社交聚会上的热情主人",
   situation:
     "The learner has just arrived at a casual English conversation meetup.",
   mission: "Help the learner introduce themselves naturally to someone new.",
@@ -316,11 +322,13 @@ export const selfIntroductionScenario: Scenario = {
 
 export const meetingUpdateScenario: Scenario = {
   id: "meeting_update_b1",
-  title: "Team Meeting Update",
-  description: "Practice giving a short progress update in a team meeting.",
+  title: "团队会议进度汇报",
+  description: "练习在团队会议上做简短的进度更新。",
   level: "B1",
   userRole: "team member",
   aiRole: "project lead",
+  userRoleLabel: "团队成员",
+  aiRoleLabel: "项目负责人",
   situation:
     "The learner is joining a weekly team stand-up and needs to share a project update.",
   mission:
@@ -432,11 +440,13 @@ export const meetingUpdateScenario: Scenario = {
 
 export const travelDirectionsScenario: Scenario = {
   id: "travel_directions_a2",
-  title: "Ask for Travel Directions",
-  description: "Practice asking for and understanding directions while traveling.",
+  title: "问路",
+  description: "练习旅行时询问和理解路线指引。",
   level: "A2",
   userRole: "traveler",
   aiRole: "local passerby",
+  userRoleLabel: "旅行者",
+  aiRoleLabel: "当地路人",
   situation:
     "The learner is visiting a new city and needs help finding a nearby place.",
   mission:

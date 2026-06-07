@@ -1,4 +1,6 @@
+import type { Report } from "@/domain/report";
 import type { ScenarioHistoricalReport } from "@/domain/scenario-report-history";
+import { errorCopy, taskCompletionCopy } from "@/lib/ui-copy";
 import { REQUEST_USER_ID_HEADER, resolveClientRequestUserId } from "@/shared/request-user";
 
 export async function fetchScenarioReportsFromServer(
@@ -32,7 +34,7 @@ export async function fetchScenarioReportsFromServer(
       error?: { message?: string };
     } | null;
     throw new Error(
-      body?.error?.message ?? `Failed to fetch scenario reports (${response.status}).`,
+      body?.error?.message ?? errorCopy.fetchReportsFailed(response.status),
     );
   }
 
@@ -41,7 +43,7 @@ export async function fetchScenarioReportsFromServer(
 }
 
 export function formatReportEvaluatedAt(evaluatedAt: string): string {
-  return new Date(evaluatedAt).toLocaleString(undefined, {
+  return new Date(evaluatedAt).toLocaleString("zh-CN", {
     dateStyle: "medium",
     timeStyle: "short",
   });
@@ -53,12 +55,12 @@ export function formatTaskCompletionSummary(report: Report): string {
   const total = completed + missing;
 
   if (typeof report.taskCompletion.score === "number") {
-    return `${report.taskCompletion.score}% goals completed (${completed}/${total})`;
+    return taskCompletionCopy.scoreCompleted(report.taskCompletion.score, completed, total);
   }
 
   if (total === 0) {
-    return "Task completion unavailable";
+    return taskCompletionCopy.unavailable;
   }
 
-  return `${completed}/${total} goals completed`;
+  return taskCompletionCopy.countCompleted(completed, total);
 }

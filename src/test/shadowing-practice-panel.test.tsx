@@ -34,7 +34,7 @@ describe("ShadowingPracticePanel", () => {
 
     expect(screen.getByTestId("shadowing-practice-panel")).toBeInTheDocument();
     expect(screen.getByText("Could I get a medium latte?")).toBeInTheDocument();
-    expect(screen.getByText(/Your phrase: I want coffee/)).toBeInTheDocument();
-    expect(screen.getByText(/Standard audio ready/)).toBeInTheDocument();
+    expect(screen.getByText(/你的表达：I want coffee/)).toBeInTheDocument();
+    expect(screen.getByText(/标准音频已就绪/)).toBeInTheDocument();
   });
 });
