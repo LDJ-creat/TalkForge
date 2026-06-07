@@ -8,6 +8,8 @@ import type { Scenario } from "@/domain/scenario";
 import { useConversationStore } from "@/features/conversation";
 import { formatLatestEvaluationPlaceholder } from "@/features/conversation/format-pronunciation-feedback";
 import { isSessionUsageBlocked } from "@/shared/usage-limit-messages";
+import { formatScenarioEntrySubtitle } from "@/lib/format-scenario-display";
+import { conversationCopy, navCopy } from "@/lib/ui-copy";
 import {
   canEnterFallback,
   canRetryRealtime,
@@ -165,25 +167,23 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
 
   const endingSuggestionMessage =
     endingSuggestionReason === "required_goals_complete"
-      ? "You have completed the main scenario goals. End practice when you are ready."
+      ? conversationCopy.endingSuggestions.goalsComplete
       : endingSuggestionReason === "max_turns_reached"
-        ? "This session reached the turn limit. You can end practice now."
+        ? conversationCopy.endingSuggestions.maxTurns
         : endingSuggestionReason === "max_duration_reached"
-          ? "This session reached the time limit. You can end practice now."
-          : "You can end practice when you are ready.";
+          ? conversationCopy.endingSuggestions.maxDuration
+          : conversationCopy.endingSuggestions.default;
 
   return (
     <div className="conversation-page" data-testid="conversation-shell">
       <header className="conversation-header">
         <div className="conversation-header__info">
           <h1 className="conversation-header__title">{scenario.title}</h1>
-          <p className="conversation-header__subtitle">
-            {scenario.userRole} · {scenario.level} · {scenario.situation}
-          </p>
+          <p className="conversation-header__subtitle">{formatScenarioEntrySubtitle(scenario)}</p>
         </div>
         <div className="conversation-header__actions">
           <Link href="/" className="button button--ghost">
-            Change scenario
+            {navCopy.changeScenario}
           </Link>
           <button
             type="button"
@@ -192,28 +192,24 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
             onClick={() => void requestEndSession()}
             disabled={!isSessionActive || isCompleted}
           >
-            End practice
+            {conversationCopy.endPractice}
           </button>
         </div>
       </header>
 
       <div className="conversation-main">
         <section className="conversation-panel">
-          <h2 className="conversation-panel__title">Voice practice</h2>
+          <h2 className="conversation-panel__title">{conversationCopy.voicePractice}</h2>
           <VoiceVisualizer turnStatus={turnStatus} />
           {micSignalTooLow ? (
             <p className="conversation-panel__hint conversation-panel__hint--warning">
-              Microphone level is very low (peak &lt; 0.01). Check Windows input
-              volume, pick the correct input device, use headphones, or raise gain via{" "}
-              <code>NEXT_PUBLIC_REALTIME_MIC_GAIN=8</code> in <code>.env</code>.
+              {conversationCopy.micLowHint}
             </p>
           ) : null}
           {isSessionActive &&
           realtimeLifecycleStatus === "assistant_speaking" &&
           process.env.NEXT_PUBLIC_REALTIME_BARGE_IN === "true" ? (
-            <p className="conversation-panel__hint">
-              Speak clearly to interrupt the AI, or use the Interrupt AI button.
-            </p>
+            <p className="conversation-panel__hint">{conversationCopy.bargeInHint}</p>
           ) : null}
           {showInterruptButton ? (
             <button
@@ -222,7 +218,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
               data-testid="interrupt-assistant-button"
               onClick={() => interruptRealtimeAssistant()}
             >
-              Interrupt AI
+              {conversationCopy.interruptAi}
             </button>
           ) : null}
           {showMockPracticeButton ? (
@@ -237,7 +233,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
                 turnStatus === "assistant_processing"
               }
             >
-              Send practice response
+              {conversationCopy.sendPracticeResponse}
             </button>
           ) : null}
           {showRetryRealtime ? (
@@ -248,7 +244,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
                 data-testid="retry-realtime-button"
                 onClick={() => void retryRealtimeConnection()}
               >
-                Retry voice connection
+                {conversationCopy.retryVoiceConnection}
               </button>
               {showFallbackOption ? (
                 <button
@@ -257,7 +253,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
                   data-testid="fallback-practice-button"
                   onClick={() => enterRealtimeFallback()}
                 >
-                  Continue with text practice
+                  {conversationCopy.continueTextPractice}
                 </button>
               ) : null}
             </div>
@@ -279,7 +275,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
           ) : null}
           {isCompleted ? (
             <p className="ending-banner" data-testid="session-ended-banner">
-              Practice ended. Review your session report below when processing finishes.
+              {conversationCopy.sessionEnded}
             </p>
           ) : null}
           {isCompleted ? (

@@ -4,14 +4,7 @@ import {
   type RealtimeLifecycleStatus,
 } from "@/features/conversation/realtime/lifecycle";
 import type { ConnectionStatus, TurnStatus } from "@/features/conversation";
-
-const TURN_LABELS: Record<TurnStatus, string> = {
-  idle: "Ready to speak",
-  user_speaking: "You are speaking",
-  user_processing: "Processing your turn",
-  assistant_speaking: "AI is speaking",
-  assistant_processing: "AI is thinking",
-};
+import { statusCopy } from "@/lib/ui-copy";
 
 type SessionStatusBarProps = {
   realtimeLifecycleStatus: RealtimeLifecycleStatus;
@@ -63,35 +56,35 @@ export function SessionStatusBar({
   sessionStatus = "active",
   diagnostics,
   showDebugDetails = false,
-  evaluationPlaceholder = "Feedback will appear after each turn",
+  evaluationPlaceholder = statusCopy.evaluationPlaceholder,
 }: SessionStatusBarProps) {
   return (
     <div className="status-list" data-testid="session-status-bar">
       <div className="status-row">
-        <span className="status-row__label">Realtime</span>
+        <span className="status-row__label">{statusCopy.realtime}</span>
         <span
           className={`status-row__value ${connectionPillClass(realtimeLifecycleStatus, connectionStatus)}`}
         >
           {connectionStatus === "disconnecting"
-            ? "Ending session…"
+            ? statusCopy.endingSession
             : REALTIME_LIFECYCLE_LABELS[realtimeLifecycleStatus]}
         </span>
       </div>
       <div className="status-row">
-        <span className="status-row__label">Turn</span>
-        <span className="status-row__value">{TURN_LABELS[turnStatus]}</span>
+        <span className="status-row__label">{statusCopy.turnLabel}</span>
+        <span className="status-row__value">{statusCopy.turnStatus[turnStatus]}</span>
       </div>
       <div className="status-row">
-        <span className="status-row__label">Session</span>
-        <span className="status-row__value">{sessionStatus}</span>
+        <span className="status-row__label">{statusCopy.session}</span>
+        <span className="status-row__value">{statusCopy.sessionStatus[sessionStatus]}</span>
       </div>
       <div className="status-row">
-        <span className="status-row__label">Evaluation</span>
+        <span className="status-row__label">{statusCopy.evaluation}</span>
         <span className="status-row__value">{evaluationPlaceholder}</span>
       </div>
       {showDebugDetails ? (
         <div className="status-row status-row--debug" data-testid="realtime-debug-details">
-          <span className="status-row__label">Debug</span>
+          <span className="status-row__label">{statusCopy.debug}</span>
           <span className="status-row__value">
             {diagnostics?.provider ? `provider=${diagnostics.provider}` : "provider=unknown"}
             {typeof diagnostics?.connectLatencyMs === "number"

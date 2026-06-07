@@ -1,4 +1,5 @@
 import type { TurnPronunciationFeedback } from "@/domain/pronunciation-feedback";
+import { pronunciationCopy, statusCopy } from "@/lib/ui-copy";
 
 import type { TranscriptEntry } from "./types";
 
@@ -10,11 +11,11 @@ export function formatPronunciationFeedbackSummary(
   }
 
   if (feedback.evaluationStatus === "pending" || feedback.evaluationStatus === "processing") {
-    return "Analyzing pronunciation…";
+    return pronunciationCopy.analyzing;
   }
 
   if (feedback.evaluationStatus === "failed") {
-    return "Pronunciation evaluation unavailable";
+    return pronunciationCopy.unavailable;
   }
 
   if (feedback.evaluationStatus !== "done") {
@@ -23,16 +24,16 @@ export function formatPronunciationFeedbackSummary(
 
   const parts: string[] = [];
   if (typeof feedback.overallScore === "number") {
-    parts.push(`Overall ${Math.round(feedback.overallScore)}`);
+    parts.push(pronunciationCopy.overall(feedback.overallScore));
   }
   if (typeof feedback.accuracyScore === "number") {
-    parts.push(`Accuracy ${Math.round(feedback.accuracyScore)}`);
+    parts.push(pronunciationCopy.accuracy(feedback.accuracyScore));
   }
   if (typeof feedback.fluencyScore === "number") {
-    parts.push(`Fluency ${Math.round(feedback.fluencyScore)}`);
+    parts.push(pronunciationCopy.fluency(feedback.fluencyScore));
   }
 
-  return parts.length > 0 ? parts.join(" · ") : "Pronunciation feedback ready";
+  return parts.length > 0 ? parts.join(" · ") : pronunciationCopy.ready;
 }
 
 export function findLatestUserPronunciationFeedback(
@@ -50,7 +51,7 @@ export function findLatestUserPronunciationFeedback(
 
 export function formatLatestEvaluationPlaceholder(
   transcripts: TranscriptEntry[],
-  fallback = "Feedback will appear after each turn",
+  fallback = statusCopy.evaluationPlaceholder,
 ): string {
   const summary = formatPronunciationFeedbackSummary(
     findLatestUserPronunciationFeedback(transcripts),

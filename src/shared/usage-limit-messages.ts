@@ -1,15 +1,16 @@
 import type { SessionLimitViolation } from "@/domain/session-usage-limits";
+import { usageLimitCopy } from "@/lib/ui-copy";
 
 export function sessionLimitViolationMessage(violation: SessionLimitViolation): string {
   switch (violation) {
     case "turn_limit":
-      return "This practice session reached the turn limit. End practice to review your report.";
+      return usageLimitCopy.turnLimit;
     case "duration_limit":
-      return "This practice session reached the time limit. End practice to review your report.";
+      return usageLimitCopy.durationLimit;
     case "asr_limit":
-      return "This session reached the transcription limit. End practice and review available feedback.";
+      return usageLimitCopy.asrLimit;
     case "report_limit":
-      return "Report generation is temporarily unavailable for this session. Please try again later.";
+      return usageLimitCopy.reportLimit;
   }
 }
 

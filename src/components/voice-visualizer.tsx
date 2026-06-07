@@ -1,4 +1,5 @@
 import type { TurnStatus } from "@/features/conversation";
+import { voiceVisualizerCopy } from "@/lib/ui-copy";
 
 type VoiceVisualizerProps = {
   turnStatus: TurnStatus;
@@ -8,14 +9,14 @@ type VoiceVisualizerProps = {
 function getVisualizerLabel(turnStatus: TurnStatus): string {
   switch (turnStatus) {
     case "user_speaking":
-      return "Listening to you…";
+      return voiceVisualizerCopy.listening;
     case "assistant_speaking":
-      return "AI is responding…";
+      return voiceVisualizerCopy.aiResponding;
     case "user_processing":
     case "assistant_processing":
-      return "Processing…";
+      return voiceVisualizerCopy.processing;
     default:
-      return "Speak naturally when you are ready";
+      return voiceVisualizerCopy.ready;
   }
 }
 

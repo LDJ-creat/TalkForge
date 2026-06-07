@@ -1,4 +1,5 @@
 import type { Report } from "@/domain/report";
+import { reportCopy } from "@/lib/ui-copy";
 
 type SessionReportDetailsProps = {
   report: Report;
@@ -8,16 +9,20 @@ export function SessionReportDetails({ report }: SessionReportDetailsProps) {
   return (
     <>
       <div className="session-report__section">
-        <h3>Task completion</h3>
-        <p>Completed: {report.taskCompletion.completedGoalIds.join(", ") || "none"}</p>
+        <h3>{reportCopy.taskCompletion}</h3>
+        <p>
+          {reportCopy.completed}：{report.taskCompletion.completedGoalIds.join(", ") || reportCopy.none}
+        </p>
         {report.taskCompletion.missingGoalIds.length > 0 ? (
-          <p>Still to practice: {report.taskCompletion.missingGoalIds.join(", ")}</p>
+          <p>
+            {reportCopy.stillToPractice}：{report.taskCompletion.missingGoalIds.join(", ")}
+          </p>
         ) : null}
       </div>
 
       {report.keyCorrections.length > 0 ? (
         <div className="session-report__section">
-          <h3>Key corrections</h3>
+          <h3>{reportCopy.keyCorrections}</h3>
           <ul className="session-report__list">
             {report.keyCorrections.map((correction) => (
               <li key={`${correction.turnId}-${correction.originalText}`}>
@@ -32,7 +37,7 @@ export function SessionReportDetails({ report }: SessionReportDetailsProps) {
 
       {report.alternativeExpressions.length > 0 ? (
         <div className="session-report__section">
-          <h3>Alternative expressions</h3>
+          <h3>{reportCopy.alternativeExpressions}</h3>
           <ul className="session-report__list">
             {report.alternativeExpressions.map((item) => (
               <li key={`${item.original}-${item.suggestion}`}>
@@ -45,7 +50,7 @@ export function SessionReportDetails({ report }: SessionReportDetailsProps) {
 
       {report.shadowingRecommendations.length > 0 ? (
         <div className="session-report__section">
-          <h3>Shadowing recommendations</h3>
+          <h3>{reportCopy.shadowingRecommendations}</h3>
           <ul className="session-report__list">
             {report.shadowingRecommendations.map((item) => (
               <li key={item.text}>
@@ -60,7 +65,7 @@ export function SessionReportDetails({ report }: SessionReportDetailsProps) {
       ) : null}
 
       <div className="session-report__section">
-        <h3>Next practice</h3>
+        <h3>{reportCopy.nextPractice}</h3>
         <p>{report.nextPracticeSuggestion}</p>
       </div>
     </>
@@ -81,8 +86,8 @@ export function SessionReportPanel({ report, status, onRetry }: SessionReportPan
   if (status === "loading") {
     return (
       <section className="session-report" data-testid="session-report-loading">
-        <h2 className="session-report__title">Session report</h2>
-        <p className="session-report__summary">Generating your practice report…</p>
+        <h2 className="session-report__title">{reportCopy.title}</h2>
+        <p className="session-report__summary">{reportCopy.generating}</p>
       </section>
     );
   }
@@ -90,11 +95,8 @@ export function SessionReportPanel({ report, status, onRetry }: SessionReportPan
   if (status === "unavailable" || !report) {
     return (
       <section className="session-report session-report--muted" data-testid="session-report-unavailable">
-        <h2 className="session-report__title">Session report</h2>
-        <p className="session-report__summary">
-          Report is not available yet. Confirm the worker is running and provider configuration is
-          valid, then retry generation.
-        </p>
+        <h2 className="session-report__title">{reportCopy.title}</h2>
+        <p className="session-report__summary">{reportCopy.unavailable}</p>
         {onRetry ? (
           <button
             type="button"
@@ -102,7 +104,7 @@ export function SessionReportPanel({ report, status, onRetry }: SessionReportPan
             data-testid="retry-report-button"
             onClick={onRetry}
           >
-            Retry report generation
+            {reportCopy.retry}
           </button>
         ) : null}
       </section>
@@ -111,7 +113,7 @@ export function SessionReportPanel({ report, status, onRetry }: SessionReportPan
 
   return (
     <section className="session-report" data-testid="session-report-panel">
-      <h2 className="session-report__title">Session report</h2>
+      <h2 className="session-report__title">{reportCopy.title}</h2>
       <p className="session-report__summary">{report.summary}</p>
       <SessionReportDetails report={report} />
     </section>
