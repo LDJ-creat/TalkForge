@@ -47,6 +47,7 @@ export class MockStorageProvider implements StorageProvider {
   private readonly createUploadUrl?: MockStorageProviderOptions["createUploadUrl"];
   private readonly pendingUploads = new Map<string, PendingUpload>();
   private readonly objects = new Map<string, StoredObject>();
+  private readonly objectBodies = new Map<string, Buffer>();
 
   constructor(options: MockStorageProviderOptions = {}) {
     this.name = options.name ?? "mock-storage";
@@ -110,9 +111,11 @@ export class MockStorageProvider implements StorageProvider {
     }
 
     this.pendingUploads.delete(input.objectKey);
+    const body = Buffer.from(input.body);
+    this.objectBodies.set(input.objectKey, body);
     this.objects.set(input.objectKey, {
       contentType: input.contentType,
-      sizeBytes: input.body.byteLength,
+      sizeBytes: body.byteLength,
       visibility: pending.visibility,
       createdAt: pending.createdAt,
     });
@@ -152,6 +155,7 @@ export class MockStorageProvider implements StorageProvider {
   async deleteObject(input: DeleteObjectInput): Promise<void> {
     const deletedPending = this.pendingUploads.delete(input.objectKey);
     const deletedObject = this.objects.delete(input.objectKey);
+    this.objectBodies.delete(input.objectKey);
     if (!deletedPending && !deletedObject) {
       throw createProviderError({
         provider: this.name,
@@ -167,6 +171,10 @@ export class MockStorageProvider implements StorageProvider {
 
   getStoredObject(objectKey: string): StoredObject | undefined {
     return this.objects.get(objectKey);
+  }
+
+  getStoredObjectBody(objectKey: string): Buffer | undefined {
+    return this.objectBodies.get(objectKey);
   }
 
   getPendingUpload(objectKey: string): PendingUpload | undefined {
