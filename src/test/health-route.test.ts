@@ -8,6 +8,7 @@ vi.mock("@/server/infrastructure", () => ({
     checks: {
       postgres: { ok: true, latencyMs: 1 },
       redis: { ok: true, skipped: true },
+      ffmpeg: { ok: true, skipped: true },
     },
   })),
 }));

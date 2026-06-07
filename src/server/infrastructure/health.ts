@@ -3,6 +3,8 @@ import postgres from "postgres";
 
 import { getRuntimeConfig } from "@/server/config";
 
+import { checkFfmpegHealth, type FfmpegHealthProbe, type FfmpegHealthResult } from "./ffmpeg-health";
+
 export type InfrastructureCheckResult = {
   ok: boolean;
   message?: string;
@@ -18,6 +20,7 @@ export type InfrastructureHealthReport = {
   checks: {
     postgres: InfrastructureCheckResult;
     redis: RedisHealthResult;
+    ffmpeg: FfmpegHealthResult;
   };
 };
 
@@ -181,13 +184,19 @@ export async function checkInfrastructureHealth(options?: {
   databaseUrl?: string;
   redisUrl?: string;
   queueProvider?: "memory" | "redis";
+  asrProvider?: string;
+  asrMode?: "mock" | "real";
   postgresProbe?: PostgresHealthProbe;
   redisProbe?: RedisHealthProbe;
+  ffmpegProbe?: FfmpegHealthProbe;
 }): Promise<InfrastructureHealthReport> {
   const config = getRuntimeConfig();
   const databaseUrl = options?.databaseUrl ?? config.secrets.databaseUrl;
   const redisUrl = options?.redisUrl ?? config.secrets.redisUrl;
   const queueProvider = options?.queueProvider ?? config.providers.queue.name;
+  const asrProvider = options?.asrProvider ?? config.providers.asr.name;
+  const asrMode = options?.asrMode ?? config.providers.asr.mode;
+  const ffmpegRequired = asrMode === "real" && asrProvider === "paraformer";
 
   const postgres = await checkPostgresHealth({
     url: databaseUrl,
@@ -207,11 +216,17 @@ export async function checkInfrastructureHealth(options?: {
           required: true,
         });
 
+  const ffmpeg = await checkFfmpegHealth({
+    required: ffmpegRequired,
+    probe: options?.ffmpegProbe,
+  });
+
   return {
-    ok: postgres.ok && redis.ok,
+    ok: postgres.ok && redis.ok && ffmpeg.ok,
     checks: {
       postgres,
       redis,
+      ffmpeg,
     },
   };
 }

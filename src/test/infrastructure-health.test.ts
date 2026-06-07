@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { resetRuntimeConfigForTests } from "@/server/config";
 import {
+  checkFfmpegHealth,
   checkInfrastructureHealth,
   checkPostgresHealth,
   checkRedisHealth,
@@ -85,6 +86,61 @@ describe("infrastructure health checks", () => {
     expect(report.ok).toBe(true);
     expect(report.checks.postgres.ok).toBe(true);
     expect(report.checks.redis.skipped).toBe(true);
+    expect(report.checks.ffmpeg.skipped).toBe(true);
+  });
+
+  it("skips ffmpeg when ASR is mock", async () => {
+    const result = await checkFfmpegHealth({ required: false });
+
+    expect(result.ok).toBe(true);
+    expect(result.skipped).toBe(true);
+  });
+
+  it("requires ffmpeg when ASR uses real paraformer", async () => {
+    const result = await checkFfmpegHealth({
+      required: true,
+      probe: {
+        version: async () => undefined,
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.skipped).toBeUndefined();
+  });
+
+  it("reports ffmpeg failure from an injected probe", async () => {
+    const result = await checkFfmpegHealth({
+      required: true,
+      probe: {
+        version: async () => {
+          throw new Error("ffmpeg not found");
+        },
+      },
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toBe("ffmpeg not found");
+  });
+
+  it("marks infrastructure unhealthy when real paraformer ASR requires ffmpeg but it fails", async () => {
+    const report = await checkInfrastructureHealth({
+      databaseUrl: "postgresql://example",
+      queueProvider: "memory",
+      asrProvider: "paraformer",
+      asrMode: "real",
+      postgresProbe: {
+        ping: async () => undefined,
+      },
+      ffmpegProbe: {
+        version: async () => {
+          throw new Error("ffmpeg not found");
+        },
+      },
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.checks.ffmpeg.ok).toBe(false);
+    expect(report.checks.ffmpeg.message).toBe("ffmpeg not found");
   });
 
   it("marks infrastructure unhealthy when redis is required but fails", async () => {
