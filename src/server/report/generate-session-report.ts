@@ -130,6 +130,8 @@ export async function generateSessionReport(
 
   let summary = deterministic.summary;
   let nextPracticeSuggestion = deterministic.nextPracticeSuggestion;
+  let alternativeExpressions = deterministic.alternativeExpressions;
+  let shadowingRecommendations = deterministic.shadowingRecommendations;
 
   try {
     const llmResult = await deps.llmProvider.generateReport({
@@ -145,6 +147,14 @@ export async function generateSessionReport(
 
     if (llmResult.nextPracticeSuggestion.trim()) {
       nextPracticeSuggestion = llmResult.nextPracticeSuggestion.trim();
+    }
+
+    if (llmResult.alternativeExpressions.length > 0) {
+      alternativeExpressions = llmResult.alternativeExpressions;
+    }
+
+    if (llmResult.shadowingRecommendations.length > 0) {
+      shadowingRecommendations = llmResult.shadowingRecommendations;
     }
   } catch (error) {
     if (isProviderError(error)) {
@@ -165,8 +175,8 @@ export async function generateSessionReport(
     summary,
     taskCompletion: deterministic.taskCompletion,
     keyCorrections: deterministic.keyCorrections,
-    alternativeExpressions: deterministic.alternativeExpressions,
-    shadowingRecommendations: deterministic.shadowingRecommendations,
+    alternativeExpressions,
+    shadowingRecommendations,
     nextPracticeSuggestion,
   });
 

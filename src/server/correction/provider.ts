@@ -1,22 +1,18 @@
 import type { LlmCorrectionProvider } from "@/providers/llm/contract";
-import { createMockLlmProvider } from "@/providers/mock/llm";
 import { getRuntimeConfig } from "@/server/config";
+import type { AiInvocationTraceWriter } from "@/server/ai-tracing";
 
-let mockLlmCorrectionProvider: ReturnType<typeof createMockLlmProvider> | undefined;
+import { getTextLlmProvider, resetTextLlmProviderForTests } from "@/server/llm/text-llm-provider";
 
-export function getLlmCorrectionProvider(): LlmCorrectionProvider {
+export type GetLlmCorrectionProviderOptions = {
+  traceWriter?: AiInvocationTraceWriter;
+};
+
+export function getLlmCorrectionProvider(
+  options?: GetLlmCorrectionProviderOptions,
+): LlmCorrectionProvider {
   const providerName = getRuntimeConfig().providers.llmCorrection.name;
-
-  if (providerName === "mock") {
-    mockLlmCorrectionProvider ??= createMockLlmProvider();
-    return mockLlmCorrectionProvider;
-  }
-
-  throw new Error(
-    `Unsupported LLM correction provider "${providerName}". P0 supports "mock" only.`,
-  );
+  return getTextLlmProvider(providerName, options);
 }
 
-export function resetLlmCorrectionProviderForTests(): void {
-  mockLlmCorrectionProvider = undefined;
-}
+export { resetTextLlmProviderForTests as resetLlmCorrectionProviderForTests };

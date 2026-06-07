@@ -27,3 +27,4 @@ export {
   type GenerateSessionReportResult,
 } from "./generate-session-report";
 export { getLlmReportProvider, resetLlmReportProviderForTests } from "./provider";
+export { buildReportPrompt, type ReportPrompt } from "./prompt-builder";

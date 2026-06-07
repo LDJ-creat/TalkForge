@@ -26,8 +26,10 @@ export function createP0WorkerRegistry(
     queueAdapter: overrides.queueAdapter ?? getQueueAdapter(),
     asrProvider: overrides.asrProvider ?? getAsrProvider({ traceWriter }),
     llmCorrectionProvider:
-      overrides.llmCorrectionProvider ?? getLlmCorrectionProvider(),
-    llmReportProvider: overrides.llmReportProvider ?? getLlmReportProvider(),
+      overrides.llmCorrectionProvider ??
+      getLlmCorrectionProvider({ traceWriter }),
+    llmReportProvider:
+      overrides.llmReportProvider ?? getLlmReportProvider({ traceWriter }),
     llmGoalJudgeProvider:
       overrides.llmGoalJudgeProvider ?? getGoalJudgeProvider(),
     pronunciationProvider:
