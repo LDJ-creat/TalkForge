@@ -1,7 +1,7 @@
 ﻿import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { addSecondsIso } from "@/providers/mock/utils";
+import { addSecondsIso } from "@/shared/time";
 import { getRuntimeSecret } from "@/server/config";
 import type {
   CreateDownloadUrlInput,
@@ -12,7 +12,7 @@ import type {
   UploadTarget,
 } from "@/providers/storage/types";
 
-import { assertValidTurnAudioObjectKey } from "./object-keys";
+import { assertValidStorageObjectKey } from "./object-keys";
 import {
   createStorageUploadToken,
   createStorageUploadUrl,
@@ -32,7 +32,7 @@ function getDefaultRootDir(): string {
 }
 
 function assertResolvedObjectPath(rootDir: string, objectKey: string): string {
-  assertValidTurnAudioObjectKey(objectKey);
+  assertValidStorageObjectKey(objectKey);
   const resolvedRoot = path.resolve(rootDir);
   const resolvedObjectPath = path.resolve(resolvedRoot, objectKey);
   const relativePath = path.relative(resolvedRoot, resolvedObjectPath);
@@ -53,7 +53,7 @@ export class LocalFilesystemStorageProvider implements UploadCapableStorageProvi
   }
 
   async createUploadTarget(input: CreateUploadTargetInput): Promise<UploadTarget> {
-    assertValidTurnAudioObjectKey(input.objectKey);
+    assertValidStorageObjectKey(input.objectKey);
     const expiresInSec = input.expiresInSec ?? this.defaultExpiresInSec;
     const now = new Date().toISOString();
     const expiresAt = addSecondsIso(now, expiresInSec);

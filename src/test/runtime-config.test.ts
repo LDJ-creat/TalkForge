@@ -89,6 +89,33 @@ describe("runtime config", () => {
     ).not.toThrow();
   });
 
+  it("requires STORAGE_REGION when Aliyun OSS is selected", () => {
+    expect(() =>
+      loadRuntimeConfig(
+        withEnv({
+          STORAGE_PROVIDER: "oss",
+          STORAGE_ENDPOINT: "https://oss-cn-hangzhou.aliyuncs.com",
+          STORAGE_BUCKET: "talkforge-audio",
+          STORAGE_ACCESS_KEY_ID: "access",
+          STORAGE_SECRET_ACCESS_KEY: "secret",
+        }),
+      ),
+    ).toThrow(RuntimeConfigError);
+
+    expect(() =>
+      loadRuntimeConfig(
+        withEnv({
+          STORAGE_PROVIDER: "oss",
+          STORAGE_ENDPOINT: "https://oss-cn-hangzhou.aliyuncs.com",
+          STORAGE_BUCKET: "talkforge-audio",
+          STORAGE_ACCESS_KEY_ID: "access",
+          STORAGE_SECRET_ACCESS_KEY: "secret",
+          STORAGE_REGION: "oss-cn-hangzhou",
+        }),
+      ),
+    ).not.toThrow();
+  });
+
   it("treats local storage as mock-safe infrastructure", () => {
     const config = loadRuntimeConfig(
       withEnv({

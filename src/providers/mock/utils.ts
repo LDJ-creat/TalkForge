@@ -1,6 +1,4 @@
-export function addSecondsIso(isoDate: string, seconds: number): string {
-  return new Date(new Date(isoDate).getTime() + seconds * 1000).toISOString();
-}
+export { addSecondsIso } from "@/shared/time";
 
 export function createMockId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;

@@ -20,7 +20,7 @@ import {
 
 import { AudioUploadServiceError } from "./errors";
 import { buildTurnAudioObjectKey, parseTurnAudioObjectKey } from "./object-keys";
-import { isUploadCapableStorageProvider } from "./upload-capable";
+import { hasUploadedObjectSize } from "./upload-capable";
 
 const DEFAULT_AUDIO_CONTENT_TYPE = "audio/webm";
 
@@ -94,7 +94,7 @@ export async function assertUploadedObjectMatchesMetadata(
     );
   }
 
-  if (isUploadCapableStorageProvider(storageProvider) && storageProvider.getUploadedObjectSize) {
+  if (hasUploadedObjectSize(storageProvider)) {
     const uploadedSize = await storageProvider.getUploadedObjectSize(input.objectKey);
     if (uploadedSize !== input.sizeBytes) {
       throw new AudioUploadServiceError(
