@@ -1,5 +1,8 @@
 export const QWEN_OMNI_PROVIDER_NAME = "qwen-omni-realtime" as const;
 
+/** Browser WebSocket auth strategy for short-lived tokens minted by the server. */
+export const QWEN_OMNI_BROWSER_AUTH_MODE = "sec-websocket-protocol-bearer" as const;
+
 export const DEFAULT_QWEN_OMNI_MODEL = "qwen3-omni-flash-realtime";
 export const DEFAULT_QWEN_OMNI_VOICE = "Cherry";
 export const DEFAULT_QWEN_OMNI_API_BASE_URL = "https://dashscope.aliyuncs.com";
