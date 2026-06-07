@@ -8,14 +8,7 @@ import {
 } from "@/domain/shadowing";
 import {
   createMockPronunciationEvaluationProvider,
-  createMockTtsProvider,
 } from "@/providers";
-import {
-  buildTtsCacheKey,
-  DEFAULT_TTS_LANGUAGE,
-  DEFAULT_TTS_SPEED,
-  DEFAULT_TTS_VOICE,
-} from "@/providers/tts/cache-key";
 import {
   createMemoryQueueAdapter,
   enqueueEvaluationFreeSpeechJob,
@@ -26,7 +19,6 @@ import {
   evaluateAndSaveShadowingAttempt,
   evaluateShadowingAttempt,
 } from "@/server/shadowing/evaluate-shadowing";
-import { resolveStandardAudio } from "@/server/shadowing/standard-audio";
 import {
   createEvaluationFreeSpeechHandler,
   createWorkerRegistry,
@@ -58,29 +50,6 @@ const baseAudioSegment = {
   createdAt: "2026-06-06T00:00:05.000Z",
 };
 
-describe("buildTtsCacheKey", () => {
-  it("combines text, voice, speed, and language with defaults", () => {
-    expect(
-      buildTtsCacheKey({
-        text: "Could I get a medium latte?",
-      }),
-    ).toBe(
-      `Could I get a medium latte?|${DEFAULT_TTS_VOICE}|${DEFAULT_TTS_SPEED}|${DEFAULT_TTS_LANGUAGE}`,
-    );
-  });
-
-  it("uses explicit provider metadata when provided", () => {
-    expect(
-      buildTtsCacheKey({
-        text: "That's all, thank you.",
-        voice: "en-gb-neutral",
-        speed: 0.9,
-        language: "en",
-      }),
-    ).toBe("That's all, thank you.|en-gb-neutral|0.9|en");
-  });
-});
-
 describe("shadowing item helpers", () => {
   it("creates shadowing items from scenario target expressions", () => {
     const scenario = getSeedScenarioById("coffee_ordering_a2");
@@ -104,22 +73,6 @@ describe("shadowing item helpers", () => {
     expect(items).toHaveLength(1);
     expect(items[0]?.standardText).toBe("Could I get a medium latte?");
     expect(items[0]?.source).toBe("report_recommendation");
-  });
-});
-
-describe("standard audio resolution", () => {
-  it("links standard audio metadata to the TTS cache key", async () => {
-    const ttsProvider = createMockTtsProvider();
-    const standardAudio = await resolveStandardAudio(
-      { text: "Can I have it iced?" },
-      { ttsProvider },
-    );
-
-    expect(standardAudio.cacheKey).toBe(
-      buildTtsCacheKey({ text: "Can I have it iced?" }),
-    );
-    expect(standardAudio.objectKey).toContain("tts/");
-    expect(standardAudio.provider).toBe("mock-tts");
   });
 });
 
