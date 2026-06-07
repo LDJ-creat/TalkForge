@@ -83,8 +83,23 @@ function resolveShadowingPronunciationProvider(): PronunciationEvaluationProvide
 }
 
 function resolveFreeSpeechPronunciationProvider(): PronunciationEvaluationProvider {
-  mockPronunciationProvider ??= createMockPronunciationEvaluationProvider();
-  return mockPronunciationProvider;
+  const providerName = getRuntimeConfig().providers.pronunciation.name;
+
+  if (providerName === "mock") {
+    mockPronunciationProvider ??= createMockPronunciationEvaluationProvider();
+    return mockPronunciationProvider;
+  }
+
+  if (isSupportedIflytekIseProviderName(providerName)) {
+    return createConfiguredIflytekIseProvider();
+  }
+
+  throw createProviderError({
+    provider: providerName,
+    code: "configuration",
+    message: `Unsupported pronunciation provider "${providerName}". Supported values: "mock", "${IFLYTEK_ISE_PROVIDER_ID}".`,
+    retryable: false,
+  });
 }
 
 export function getShadowingPronunciationProvider(

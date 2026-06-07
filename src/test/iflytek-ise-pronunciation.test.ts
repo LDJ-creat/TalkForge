@@ -82,6 +82,7 @@ describe("iFlytek ISE pronunciation adapter", () => {
       },
       {
         referenceText: "Could I get a medium latte?",
+        mode: "shadowing",
       },
     );
 
@@ -143,7 +144,41 @@ describe("iFlytek ISE pronunciation adapter", () => {
     );
   });
 
-  it("rejects free_speech mode to keep lightweight scoring separate", async () => {
+  it("evaluates free_speech audio when ASR reference text is provided", async () => {
+    const evaluateAudio = vi.fn().mockResolvedValue({
+      code: 0,
+      message: "success",
+      sid: "ise-session-456",
+      data: {
+        status: 2,
+        data: Buffer.from(RECORDED_XML, "utf8").toString("base64"),
+      },
+    });
+
+    const provider = createIflytekIsePronunciationProvider({
+      appId: "app-test",
+      apiKey: "key-test",
+      apiSecret: "secret-test",
+      loadAudio: async () => ({
+        objectKey: "audio/session/turn.webm",
+        body: Buffer.from("fake-audio"),
+      }),
+      prepareAudio: async () => Buffer.alloc(3200),
+      evaluateAudio,
+    });
+
+    const result = await provider.evaluate({
+      audioObjectKey: "audio/session/turn.webm",
+      mode: "free_speech",
+      referenceText: "Could I get a medium latte?",
+    });
+
+    expect(result.mode).toBe("free_speech");
+    expect(result.overallScore).toBeCloseTo(84.3);
+    expect(evaluateAudio).toHaveBeenCalled();
+  });
+
+  it("rejects free_speech mode without reference text", async () => {
     const provider = createIflytekIsePronunciationProvider({
       appId: "app-test",
       apiKey: "key-test",

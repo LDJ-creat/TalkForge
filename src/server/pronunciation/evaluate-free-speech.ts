@@ -3,6 +3,7 @@ import type {
   CreatePronunciationEvaluationInput,
   PronunciationEvaluation,
 } from "@/domain/pronunciation-evaluation";
+import type { Transcript } from "@/domain/transcript";
 import type { Turn } from "@/domain/turn";
 import { isProviderError } from "@/providers/errors";
 import type { PronunciationEvaluationProvider } from "@/providers/pronunciation/contract";
@@ -13,6 +14,12 @@ import type {
 import { JobProcessingError } from "@/queue/errors";
 import type { EvaluationFreeSpeechPayload } from "@/queue/payloads";
 
+import {
+  isValidFreeSpeechReferenceText,
+  MIN_FREE_SPEECH_REFERENCE_WORD_COUNT,
+  resolveReferenceTextForTurn,
+} from "./resolve-reference-text";
+
 export type EvaluateFreeSpeechResult = {
   evaluation: PronunciationEvaluation;
   created: boolean;
@@ -21,6 +28,7 @@ export type EvaluateFreeSpeechResult = {
 export type EvaluateFreeSpeechDeps = {
   pronunciationProvider: PronunciationEvaluationProvider;
   getTurnById: (turnId: string) => Promise<Turn | null>;
+  getTranscriptByTurnId: (turnId: string) => Promise<Transcript | null>;
   getAudioSegmentById: (audioSegmentId: string) => Promise<AudioSegment | null>;
   prepareFreeSpeechEvaluation: (
     turnId: string,
@@ -64,11 +72,33 @@ export async function evaluateFreeSpeechTurn(
     };
   }
 
+  const reference = await resolveReferenceTextForTurn(payload.turnId, {
+    getTranscriptByTurnId: deps.getTranscriptByTurnId,
+    getTurnById: deps.getTurnById,
+  });
+
+  if (!isValidFreeSpeechReferenceText(reference)) {
+    await deps.markTurnEvaluationFailed(payload.turnId);
+    throw new JobProcessingError({
+      code: "validation",
+      message: `Pronunciation evaluation requires at least ${MIN_FREE_SPEECH_REFERENCE_WORD_COUNT} reference words from ASR transcript.`,
+      attempts: context.attempts,
+      retryable: false,
+      metadata: {
+        wordCount: reference.wordCount,
+        source: reference.source,
+      },
+    });
+  }
+
   try {
     const providerResult = await deps.pronunciationProvider.evaluate({
       audioObjectKey: audioSegment.objectKey,
       mode: "free_speech",
+      referenceText: reference.text,
       language: "en",
+      sessionId: payload.sessionId,
+      turnId: payload.turnId,
     });
 
     if (providerResult.mode !== "free_speech") {
@@ -89,6 +119,9 @@ export async function evaluateFreeSpeechTurn(
       mode: "free_speech",
       overallScore: providerResult.overallScore,
       fluencyScore: providerResult.fluencyScore,
+      accuracyScore: providerResult.accuracyScore,
+      completenessScore: providerResult.completenessScore,
+      prosodyScore: providerResult.prosodyScore,
       details: providerResult.details,
     });
 
