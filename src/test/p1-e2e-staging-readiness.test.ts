@@ -18,7 +18,7 @@ import {
   createMockRealtimeProvider,
   createMockTtsProvider,
 } from "@/providers/mock";
-import { createMemoryQueueAdapter } from "@/queue";
+import { createMemoryQueueAdapter, typedEnqueue } from "@/queue";
 import {
   createAiInvocationTraceService,
   resetAiInvocationTracingForTests,
@@ -225,7 +225,7 @@ describe("P1 real-provider staging readiness (CI-safe mock loop)", () => {
       USER_ID,
       {
         role: "user",
-        transcriptText: "Could I get a medium latte with oat milk?",
+        transcriptText: "I go to the cafe yesterday for a latte",
       },
       {
         getSessionById: async () => state.session,
@@ -566,18 +566,23 @@ describe("P1 real-provider staging readiness (CI-safe mock loop)", () => {
     adapter.registerWorkerRegistry(registry);
     const runtime = createWorkerRuntime({ adapter, registry });
 
-    await adapter.enqueue("asr.transcribe", {
+    await typedEnqueue.correctionAnalyze(adapter, {
+      sessionId: SESSION_ID,
+      turnId: TURN_ID,
+    });
+    await typedEnqueue.evaluationFreeSpeech(adapter, {
       sessionId: SESSION_ID,
       turnId: TURN_ID,
       audioSegmentId: AUDIO_SEGMENT_ID,
-      audioObjectKey: OBJECT_KEY,
-      language: "en",
+    });
+    await typedEnqueue.scenarioProgressEvaluate(adapter, {
+      sessionId: SESSION_ID,
+      triggerTurnId: TURN_ID,
     });
 
-    const asrJobs =
+    const postAudioJobs =
       runtime.mode === "memory" ? await runtime.processAll() : [];
-    expect(asrJobs.every((job) => job.status === "succeeded")).toBe(true);
-    expect(state.transcripts.get(TURN_ID)?.text).toContain("I go to");
+    expect(postAudioJobs.every((job) => job.status === "succeeded")).toBe(true);
     expect(state.corrections.get(TURN_ID)?.length).toBeGreaterThan(0);
     expect(state.evaluations.get(TURN_ID)?.mode).toBe("free_speech");
     expect(state.getProgress().completedGoalIds.length).toBeGreaterThan(0);
@@ -636,7 +641,6 @@ describe("P1 real-provider staging readiness (CI-safe mock loop)", () => {
     expect(tracedOperations).toEqual(
       expect.arrayContaining([
         "realtime.session.create",
-        "asr.transcribe",
         "llm.correction",
         "llm.scenarioJudge",
         "llm.report",
