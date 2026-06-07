@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 
 import type { CreateReportInput, Report } from "@/domain/report";
+import type { ScenarioHistoricalReport } from "@/domain/scenario-report-history";
 import {
   REPORT_GENERATING_MARKER,
   REPORT_IN_PROGRESS_WINDOW_MS,
@@ -9,6 +10,8 @@ import {
 import type { TalkForgeDatabase } from "../client";
 import { toReport } from "../mappers";
 import { reports, sessions } from "../schema";
+
+const DEFAULT_SCENARIO_REPORT_HISTORY_LIMIT = 20;
 
 export function isReportGenerationComplete(report: Report): boolean {
   return report.summary !== REPORT_GENERATING_MARKER;
@@ -32,6 +35,41 @@ export async function getReportBySessionId(db: TalkForgeDatabase, sessionId: str
   }
 
   return report;
+}
+
+export async function listCompletedReportsByScenarioForUser(
+  db: TalkForgeDatabase,
+  userId: string,
+  scenarioId: string,
+  limit = DEFAULT_SCENARIO_REPORT_HISTORY_LIMIT,
+): Promise<ScenarioHistoricalReport[]> {
+  const rows = await db
+    .select({
+      sessionId: sessions.id,
+      sessionStartedAt: sessions.startedAt,
+      sessionEndedAt: sessions.endedAt,
+      report: reports,
+    })
+    .from(reports)
+    .innerJoin(sessions, eq(reports.sessionId, sessions.id))
+    .where(
+      and(
+        eq(sessions.userId, userId),
+        eq(sessions.scenarioId, scenarioId),
+        eq(sessions.status, "completed"),
+        ne(reports.summary, REPORT_GENERATING_MARKER),
+      ),
+    )
+    .orderBy(desc(reports.createdAt))
+    .limit(limit);
+
+  return rows.map((row) => ({
+    sessionId: row.sessionId,
+    sessionStartedAt: row.sessionStartedAt,
+    sessionEndedAt: row.sessionEndedAt ?? undefined,
+    evaluatedAt: row.report.createdAt,
+    report: toReport(row.report),
+  }));
 }
 
 export type PrepareReportGenerationResult =
