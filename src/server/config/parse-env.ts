@@ -25,6 +25,14 @@ function readEnv(
   return value ? value : undefined;
 }
 
+function parseOptionalPositiveInt(value: string | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 function readProviderName(
   env: NodeJS.ProcessEnv,
   envKey: string,
@@ -72,6 +80,9 @@ function parseSecrets(env: NodeJS.ProcessEnv): RuntimeSecrets {
     realtimeApiKey: readEnv(env, "REALTIME_API_KEY"),
     realtimeApiSecret: readEnv(env, "REALTIME_API_SECRET"),
     realtimeBaseUrl: readEnv(env, "REALTIME_BASE_URL"),
+    realtimeModel: readEnv(env, "REALTIME_MODEL"),
+    realtimeVoice: readEnv(env, "REALTIME_VOICE"),
+    realtimeTokenTtlSec: parseOptionalPositiveInt(readEnv(env, "REALTIME_TOKEN_TTL_SEC")),
     asrApiKey: readEnv(env, "ASR_API_KEY"),
     llmApiKey: readEnv(env, "LLM_API_KEY"),
     ttsApiKey: readEnv(env, "TTS_API_KEY"),
