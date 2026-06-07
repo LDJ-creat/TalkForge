@@ -11,7 +11,12 @@ import {
   getLlmReportProvider,
   resetLlmReportProviderForTests,
 } from "@/server/report/provider";
+import {
+  getGoalJudgeProvider,
+  resetGoalJudgeProviderForTests,
+} from "@/server/scenario-progress/provider";
 import { createTracedLlmCorrectionProvider } from "@/server/llm/tracing-wrapper";
+import { createTracedLlmGoalJudgeProvider } from "@/server/llm/tracing-wrapper";
 import {
   collectRuntimeConfigIssues,
   parseRuntimeConfigFromEnv,
@@ -22,6 +27,7 @@ describe("text LLM provider configuration", () => {
   afterEach(() => {
     resetLlmCorrectionProviderForTests();
     resetLlmReportProviderForTests();
+    resetGoalJudgeProviderForTests();
     resetRuntimeConfigForTests();
   });
 
@@ -69,6 +75,30 @@ describe("text LLM provider configuration", () => {
     expect(getLlmCorrectionProvider().name).toBe("custom-vendor-openai-compatible-text-llm");
   });
 
+  it("defaults to the mock goal judge provider", () => {
+    process.env.LLM_GOAL_JUDGE_PROVIDER = "mock";
+
+    expect(getGoalJudgeProvider().name).toBe("mock-goal-judge");
+  });
+
+  it("creates an OpenAI-compatible goal judge provider when configured", () => {
+    process.env.LLM_GOAL_JUDGE_PROVIDER = "openai";
+    process.env.LLM_API_KEY = "test-key";
+
+    expect(getGoalJudgeProvider().name).toBe("openai-openai-compatible-text-llm");
+  });
+
+  it("reuses the same OpenAI-compatible provider instance across text LLM roles", () => {
+    process.env.LLM_CORRECTION_PROVIDER = "openai";
+    process.env.LLM_GOAL_JUDGE_PROVIDER = "openai";
+    process.env.LLM_API_KEY = "test-key";
+
+    const correctionProvider = getLlmCorrectionProvider();
+    const goalJudgeProvider = getGoalJudgeProvider();
+
+    expect(correctionProvider).toBe(goalJudgeProvider);
+  });
+
   it("requires LLM_BASE_URL for custom real providers during config validation", () => {
     const config = parseRuntimeConfigFromEnv({
       NODE_ENV: "test",
@@ -93,6 +123,7 @@ describe("traced text LLM providers", () => {
 
   afterEach(() => {
     resetLlmCorrectionProviderForTests();
+    resetGoalJudgeProviderForTests();
     resetRuntimeConfigForTests();
     global.fetch = originalFetch;
     vi.restoreAllMocks();
@@ -160,6 +191,127 @@ describe("traced text LLM providers", () => {
       system: expect.stringContaining("Return JSON only"),
       user: expect.stringContaining("Cafe Order"),
     });
+  });
+
+  it("records goal judge rawRequest prompts when tracing is enabled", async () => {
+    process.env.LLM_GOAL_JUDGE_PROVIDER = "openai";
+    process.env.LLM_API_KEY = "test-key";
+
+    const record = vi.fn(async (input: { rawRequest?: unknown }) => ({
+      id: "trace-goal-judge",
+      provider: "openai-openai-compatible-text-llm",
+      model: "gpt-4o-mini",
+      operation: "llm.scenarioJudge",
+      status: "success" as const,
+      latencyMs: 1,
+      retryCount: 0,
+      createdAt: new Date().toISOString(),
+      rawRequest: input.rawRequest,
+    }));
+
+    global.fetch = vi.fn(async () =>
+      Response.json({
+        model: "gpt-4o-mini",
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                completedGoalIds: ["choose_drink"],
+                offTopic: false,
+                shouldSuggestEnding: false,
+              }),
+            },
+          },
+        ],
+      }),
+    ) as typeof fetch;
+
+    const provider = getGoalJudgeProvider({
+      traceWriter: { record },
+    });
+
+    await provider.evaluateGoals({
+      sessionId: "session-1",
+      scenario: {
+        id: "coffee_ordering_a2",
+        title: "Order Coffee at a Cafe",
+        goals: [
+          {
+            id: "choose_drink",
+            description: "Choose a drink",
+            required: true,
+            completedWhen: "states a drink",
+          },
+        ],
+        stages: [{ id: "greeting", name: "Greeting", purpose: "Start", aiBehavior: "Greet", expectedUserActions: [] }],
+        vocabulary: ["latte"],
+        targetExpressions: [],
+        exitPolicy: {
+          minTurns: 1,
+          maxTurns: 12,
+          maxDurationSec: 600,
+          requiredGoals: ["choose_drink"],
+          endWhenGoalsCompleted: true,
+          allowUserManualEnd: true,
+          aiCanSuggestEnd: true,
+        },
+      },
+      turns: [{ turnId: "turn-1", role: "user", text: "Could I get a latte?" }],
+      previousProgress: null,
+    });
+
+    expect(record).toHaveBeenCalledOnce();
+    expect(record.mock.calls[0]?.[0]?.rawRequest).toMatchObject({
+      system: expect.stringContaining("Return JSON only"),
+      user: expect.stringContaining("choose_drink"),
+    });
+  });
+
+  it("tracing wrapper calls invokeGoalEvaluation instead of evaluateGoals", async () => {
+    const baseProvider = createOpenAiCompatibleTextLlmProvider({
+      providerName: "openai",
+      apiKey: "test-key",
+    });
+
+    const invokeSpy = vi.spyOn(baseProvider, "invokeGoalEvaluation").mockResolvedValue({
+      provider: baseProvider.name,
+      completedGoalIds: ["choose_drink"],
+      offTopic: false,
+      metadata: { parseFallback: false },
+    });
+    const evaluateSpy = vi.spyOn(baseProvider, "evaluateGoals");
+
+    const tracedProvider = createTracedLlmGoalJudgeProvider(
+      baseProvider,
+      { record: vi.fn(async () => null) },
+      { model: "gpt-4o-mini" },
+    );
+
+    await tracedProvider.evaluateGoals({
+      sessionId: "session-1",
+      scenario: {
+        id: "coffee_ordering_a2",
+        title: "Order Coffee at a Cafe",
+        goals: [],
+        stages: [],
+        vocabulary: [],
+        targetExpressions: [],
+        exitPolicy: {
+          minTurns: 1,
+          maxTurns: 12,
+          maxDurationSec: 600,
+          requiredGoals: [],
+          endWhenGoalsCompleted: true,
+          allowUserManualEnd: true,
+          aiCanSuggestEnd: true,
+        },
+      },
+      turns: [],
+      previousProgress: null,
+    });
+
+    expect(invokeSpy).toHaveBeenCalledOnce();
+    expect(evaluateSpy).not.toHaveBeenCalled();
   });
 
   it("tracing wrapper calls invokeCorrectionAnalysis instead of analyzeCorrections", async () => {

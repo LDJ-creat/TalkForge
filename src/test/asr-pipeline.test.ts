@@ -9,7 +9,7 @@ import {
   typedEnqueue,
 } from "@/queue";
 import { JobProcessingError } from "@/queue/errors";
-import { resetRuntimeConfigForTests } from "@/server/config";
+import { loadRuntimeConfig, resetRuntimeConfigForTests } from "@/server/config";
 import { getAsrProvider, resetAsrProviderForTests } from "@/server/asr/provider";
 import { transcribeTurnAudio } from "@/server/asr/transcribe-turn";
 import {
@@ -116,6 +116,10 @@ function createInMemoryAsrDeps(options?: {
 
         return { transcript, created: true };
       },
+      countUserTurnsBySessionId: async (sessionId: string) =>
+        [...turns.values()].filter(
+          (turn) => turn.sessionId === sessionId && turn.role === "user",
+        ).length,
     },
     transcripts,
     turns,
@@ -274,6 +278,31 @@ describe("ASR transcription pipeline", () => {
       `evaluation:${AUDIO_SEGMENT_ID}`,
       `progress:${SESSION_ID}`,
     ]);
+  });
+
+  it("skips scenario progress enqueue between configured user-turn intervals", async () => {
+    resetRuntimeConfigForTests();
+    loadRuntimeConfig({
+      NODE_ENV: "test",
+      STORAGE_PROVIDER: "mock",
+      SCENARIO_PROGRESS_JUDGE_USER_TURN_INTERVAL: "2",
+    });
+
+    const registry = createWorkerRegistry();
+    const downstream: string[] = [];
+
+    registry.handlers.scenarioProgressEvaluate(async (payload) => {
+      downstream.push(`progress:${payload.sessionId}`);
+    });
+
+    const adapter = createMemoryQueueAdapter({ registry });
+    const { deps } = createInMemoryAsrDeps({ queueAdapter: adapter });
+    deps.countUserTurnsBySessionId = async () => 1;
+
+    await transcribeTurnAudio(asrPayload, deps, { attempts: 1 });
+
+    expect(downstream).toEqual([]);
+    resetRuntimeConfigForTests();
   });
 
   it("does not enqueue scenario progress for assistant turns", async () => {

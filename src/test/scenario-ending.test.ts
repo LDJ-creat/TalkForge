@@ -124,6 +124,20 @@ describe("scenario exit policy rules", () => {
     expect(countUserTurns(turns)).toBe(4);
     expect(getSessionDurationSec({ startedAt: "2026-06-06T00:00:00.000Z" }, new Date("2026-06-06T00:02:00.000Z"))).toBe(120);
   });
+  it("prefers judge current stage id when it is valid for the scenario", () => {
+    const progress = buildScenarioProgressUpdate({
+      sessionId: SESSION_ID,
+      scenario: coffeeOrderingScenario,
+      session: { startedAt: "2026-06-06T00:00:00.000Z" },
+      turns: [createUserTurn(0)],
+      completedGoalIds: ["choose_drink"],
+      judgeCurrentStageId: "confirmation",
+      offTopic: false,
+    });
+
+    expect(progress.currentStageId).toBe("confirmation");
+  });
+
   it("merges previous completed goals into progress updates", () => {
     const progress = buildScenarioProgressUpdate({
       sessionId: SESSION_ID,

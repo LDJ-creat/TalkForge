@@ -6,6 +6,7 @@ import {
   buildCorrectionAnalyzeInput,
   buildCorrectionPromptFromAnalyzeInput,
 } from "@/server/correction/prompt-builder";
+import { coffeeOrderingScenario } from "@/server/db/seeds/scenarios";
 
 const originalFetch = global.fetch;
 
@@ -211,6 +212,105 @@ describe("OpenAiCompatibleTextLlmProvider", () => {
     expect(fallbackResult.summary).toBe("");
     expect(fallbackResult.alternativeExpressions).toEqual([]);
     expect(fallbackResult.metadata).toMatchObject({ parseFallback: true });
+  });
+
+  it("parses structured goal judge output from chat completions", async () => {
+    global.fetch = vi.fn(async () =>
+      Response.json({
+        model: "gpt-4o-mini",
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                completedGoalIds: ["choose_drink", "choose_size"],
+                missingGoalIds: ["confirm_payment"],
+                currentStageId: "customization",
+                offTopic: false,
+                shouldSuggestEnding: false,
+              }),
+            },
+            finish_reason: "stop",
+          },
+        ],
+        usage: { prompt_tokens: 90, completion_tokens: 30 },
+      }),
+    ) as typeof fetch;
+
+    const provider = createOpenAiCompatibleTextLlmProvider({
+      providerName: "openai",
+      apiKey: "test-key",
+    });
+
+    const result = await provider.evaluateGoals({
+      sessionId: "session-1",
+      scenario: {
+        id: coffeeOrderingScenario.id,
+        title: coffeeOrderingScenario.title,
+        goals: coffeeOrderingScenario.goals,
+        stages: coffeeOrderingScenario.stages,
+        vocabulary: coffeeOrderingScenario.vocabulary,
+        targetExpressions: coffeeOrderingScenario.targetExpressions,
+        exitPolicy: coffeeOrderingScenario.exitPolicy,
+      },
+      turns: [
+        {
+          turnId: "turn-1",
+          role: "user",
+          text: "Could I get a medium latte?",
+        },
+      ],
+      previousProgress: null,
+    });
+
+    expect(result.provider).toBe("openai-openai-compatible-text-llm");
+    expect(result.completedGoalIds).toEqual(
+      expect.arrayContaining(["choose_drink", "choose_size"]),
+    );
+    expect(result.offTopic).toBe(false);
+    expect(result.metadata).toMatchObject({
+      parseFallback: false,
+      promptVersion: "goal-judge-v1",
+      inputTokens: 90,
+      outputTokens: 30,
+    });
+  });
+
+  it("falls back to heuristic goal progress when provider JSON is malformed", async () => {
+    global.fetch = vi.fn(async () =>
+      Response.json({
+        model: "gpt-4o-mini",
+        choices: [{ message: { content: "{broken" } }],
+      }),
+    ) as typeof fetch;
+
+    const provider = createOpenAiCompatibleTextLlmProvider({
+      providerName: "openai",
+      apiKey: "test-key",
+    });
+
+    const result = await provider.evaluateGoals({
+      sessionId: "session-1",
+      scenario: {
+        id: coffeeOrderingScenario.id,
+        title: coffeeOrderingScenario.title,
+        goals: coffeeOrderingScenario.goals,
+        stages: coffeeOrderingScenario.stages,
+        vocabulary: coffeeOrderingScenario.vocabulary,
+        targetExpressions: coffeeOrderingScenario.targetExpressions,
+        exitPolicy: coffeeOrderingScenario.exitPolicy,
+      },
+      turns: [
+        {
+          turnId: "turn-1",
+          role: "user",
+          text: "Could I get a medium latte with oat milk? Yes, that's correct.",
+        },
+      ],
+      previousProgress: null,
+    });
+
+    expect(result.completedGoalIds.length).toBeGreaterThan(0);
+    expect(result.metadata).toMatchObject({ parseFallback: true });
   });
 
   it("maps HTTP failures to provider errors", async () => {

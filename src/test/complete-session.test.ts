@@ -63,6 +63,7 @@ describe("complete session service", () => {
 
     expect(result.session.status).toBe("completed");
     expect(result.reportJobEnqueued).toBe(true);
+    expect(result.scenarioProgressJobEnqueued).toBe(true);
 
     const job = await adapter.getJob(buildReportJobId(SESSION_ID));
     expect(job?.name).toBe("report.generate");
@@ -91,6 +92,7 @@ describe("complete session service", () => {
 
     expect(result.session.status).toBe("completed");
     expect(result.reportJobEnqueued).toBe(true);
+    expect(result.scenarioProgressJobEnqueued).toBe(false);
     expect(enqueue).toHaveBeenCalledWith(SESSION_ID);
   });
 });
@@ -136,6 +138,7 @@ describe("complete session API", () => {
     const body = await response.json();
     expect(body.session.status).toBe("completed");
     expect(body.reportJobEnqueued).toBe(true);
+    expect(body.scenarioProgressJobEnqueued).toBe(true);
 
     const job = await adapter.getJob(buildReportJobId(SESSION_ID));
     expect(job?.name).toBe("report.generate");

@@ -1,10 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { JobProcessingError } from "@/queue/errors";
+
 import { coffeeOrderingScenario } from "@/server/db/seeds/scenarios";
 import type { ScenarioProgress } from "@/domain/scenario-progress";
 import type { Session } from "@/domain/session";
 import type { Transcript } from "@/domain/transcript";
 import type { Turn } from "@/domain/turn";
+import { createProviderError } from "@/providers/errors";
+import type { LlmGoalJudgeProvider } from "@/providers/llm/contract";
 import { createMockGoalJudgeProvider } from "@/providers/mock/goal-judge";
 import { evaluateSessionProgress } from "@/server/scenario-progress/evaluate-session-progress";
 
@@ -144,5 +148,123 @@ describe("scenario progress evaluate worker logic", () => {
         "confirm_payment",
       ]),
     );
+  });
+
+  it("falls back to deterministic rules when the judge provider fails retryably", async () => {
+    const failingJudge: LlmGoalJudgeProvider = {
+      name: "failing-judge",
+      evaluateGoals: async () => {
+        throw createProviderError({
+          provider: "failing-judge",
+          code: "provider_unavailable",
+          message: "Judge unavailable.",
+          retryable: true,
+        });
+      },
+    };
+
+    const deps = createEvaluateDeps({ goalJudgeProvider: failingJudge });
+
+    const result = await evaluateSessionProgress(
+      { sessionId: SESSION_ID, triggerTurnId: TURN_ID },
+      deps,
+      { attempts: 1 },
+    );
+
+    expect(result.progress.completedGoalIds).toEqual(
+      expect.arrayContaining(["choose_drink", "confirm_payment"]),
+    );
+    expect(result.progress.shouldSuggestEnding).toBe(true);
+  });
+
+  it("fails the job when the judge provider returns a non-retryable error", async () => {
+    const failingJudge: LlmGoalJudgeProvider = {
+      name: "failing-judge",
+      evaluateGoals: async () => {
+        throw createProviderError({
+          provider: "failing-judge",
+          code: "authentication",
+          message: "Invalid API key.",
+          retryable: false,
+        });
+      },
+    };
+
+    const deps = createEvaluateDeps({ goalJudgeProvider: failingJudge });
+
+    await expect(
+      evaluateSessionProgress(
+        { sessionId: SESSION_ID, triggerTurnId: TURN_ID },
+        deps,
+        { attempts: 1 },
+      ),
+    ).rejects.toBeInstanceOf(JobProcessingError);
+  });
+
+  it("uses judge current stage id when it matches the scenario", async () => {
+    const goalJudgeProvider = createMockGoalJudgeProvider();
+    vi.spyOn(goalJudgeProvider, "evaluateGoals").mockResolvedValueOnce({
+      provider: goalJudgeProvider.name,
+      completedGoalIds: ["choose_drink"],
+      offTopic: false,
+      currentStageId: "confirmation",
+    });
+
+    const deps = createEvaluateDeps({ goalJudgeProvider });
+    const result = await evaluateSessionProgress(
+      { sessionId: SESSION_ID, triggerTurnId: TURN_ID },
+      deps,
+      { attempts: 1 },
+    );
+
+    expect(result.progress.currentStageId).toBe("confirmation");
+  });
+
+  it("updates progress from real-shaped judge output without forcing session end", async () => {
+    const goalJudgeProvider = createMockGoalJudgeProvider();
+    vi.spyOn(goalJudgeProvider, "evaluateGoals").mockResolvedValueOnce({
+      provider: "openai-openai-compatible-text-llm",
+      completedGoalIds: [
+        "choose_drink",
+        "choose_size",
+        "customize_order",
+        "confirm_payment",
+      ],
+      offTopic: false,
+      metadata: {
+        parseFallback: false,
+        promptVersion: "goal-judge-v1",
+      },
+    });
+
+    const deps = createEvaluateDeps({ goalJudgeProvider });
+    const result = await evaluateSessionProgress(
+      { sessionId: SESSION_ID, triggerTurnId: TURN_ID },
+      deps,
+      { attempts: 1 },
+    );
+
+    expect(result.progress.shouldSuggestEnding).toBe(true);
+    expect(result.progress.offTopic).toBe(false);
+    expect(activeSession.status).toBe("active");
+  });
+
+  it("records off-topic from judge output without breaking progress updates", async () => {
+    const goalJudgeProvider = createMockGoalJudgeProvider();
+    vi.spyOn(goalJudgeProvider, "evaluateGoals").mockResolvedValueOnce({
+      provider: "openai-openai-compatible-text-llm",
+      completedGoalIds: ["choose_drink"],
+      offTopic: true,
+    });
+
+    const deps = createEvaluateDeps({ goalJudgeProvider });
+    const result = await evaluateSessionProgress(
+      { sessionId: SESSION_ID, triggerTurnId: TURN_ID },
+      deps,
+      { attempts: 1 },
+    );
+
+    expect(result.progress.offTopic).toBe(true);
+    expect(result.progress.completedGoalIds).toContain("choose_drink");
   });
 });
