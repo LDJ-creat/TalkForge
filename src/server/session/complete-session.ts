@@ -1,17 +1,22 @@
 import type { Session } from "@/domain/session";
 import type { QueueAdapter } from "@/queue/adapter";
+import { enqueueScenarioProgressEvaluateJob } from "@/queue/enqueue";
 import { ReportServiceError } from "@/server/report/errors";
 import { enqueueSessionReportGeneration } from "@/server/report/enqueue-session-report";
 
 export type CompleteSessionResult = {
   session: Session;
   reportJobEnqueued: boolean;
+  scenarioProgressJobEnqueued: boolean;
 };
 
 export type CompleteSessionDeps = {
   getSessionById: (sessionId: string) => Promise<Session | null>;
   completeSession: (sessionId: string, endedAt?: string) => Promise<Session | null>;
   enqueueReportGeneration?: (
+    sessionId: string,
+  ) => Promise<unknown>;
+  enqueueScenarioProgressEvaluate?: (
     sessionId: string,
   ) => Promise<unknown>;
 };
@@ -50,9 +55,16 @@ export async function completeSessionForUser(
     reportJobEnqueued = true;
   }
 
+  let scenarioProgressJobEnqueued = false;
+  if (deps.enqueueScenarioProgressEvaluate) {
+    await deps.enqueueScenarioProgressEvaluate(sessionId);
+    scenarioProgressJobEnqueued = true;
+  }
+
   return {
     session: completed,
     reportJobEnqueued,
+    scenarioProgressJobEnqueued,
   };
 }
 
@@ -71,6 +83,12 @@ export function createCompleteSessionDeps(
     completeSession,
     enqueueReportGeneration: queueAdapter
       ? (sessionId) => enqueueSessionReportGeneration(queueAdapter, sessionId)
+      : undefined,
+    enqueueScenarioProgressEvaluate: queueAdapter
+      ? (sessionId) =>
+          enqueueScenarioProgressEvaluateJob(queueAdapter, {
+            sessionId,
+          })
       : undefined,
   };
 }

@@ -12,6 +12,8 @@ import {
 } from "@/queue/enqueue";
 import { JobProcessingError } from "@/queue/errors";
 import type { AsrTranscribePayload } from "@/queue/payloads";
+import { getRuntimeConfig } from "@/server/config";
+import { shouldEnqueueScenarioProgressJudge } from "@/server/scenario-progress/enqueue-policy";
 
 export type AsrTranscribeTurnResult = {
   transcript: Transcript;
@@ -28,6 +30,7 @@ export type AsrTranscribeTurnDeps = {
   persistTranscriptForTurn: (
     input: CreateTranscriptInput,
   ) => Promise<{ transcript: Transcript; created: boolean }>;
+  countUserTurnsBySessionId?: (sessionId: string) => Promise<number>;
 };
 
 export async function transcribeTurnAudio(
@@ -144,13 +147,37 @@ async function enqueueDownstreamJobs(
   });
 
   if (turn.role === "user") {
-    await enqueueScenarioProgressEvaluateJob(deps.queueAdapter, {
-      sessionId: payload.sessionId,
-      triggerTurnId: payload.turnId,
-    });
+    const shouldEnqueue = await shouldEnqueueScenarioProgressJudgeForTurn(
+      deps,
+      payload.sessionId,
+    );
+
+    if (shouldEnqueue) {
+      await enqueueScenarioProgressEvaluateJob(deps.queueAdapter, {
+        sessionId: payload.sessionId,
+        triggerTurnId: payload.turnId,
+      });
+    }
   }
 
   return true;
+}
+
+async function shouldEnqueueScenarioProgressJudgeForTurn(
+  deps: AsrTranscribeTurnDeps,
+  sessionId: string,
+): Promise<boolean> {
+  const interval = getRuntimeConfig().scenarioProgress.judgeUserTurnInterval;
+  if (interval <= 1) {
+    return true;
+  }
+
+  if (!deps.countUserTurnsBySessionId) {
+    return true;
+  }
+
+  const userTurnCount = await deps.countUserTurnsBySessionId(sessionId);
+  return shouldEnqueueScenarioProgressJudge(userTurnCount, interval);
 }
 
 function mapProviderErrorToJobError(
