@@ -5,6 +5,7 @@ import {
   validateAsrTranscribePayload,
   validateCorrectionAnalyzePayload,
   validateEvaluationFreeSpeechPayload,
+  validateEvaluationShadowingPayload,
   validateJobPayload,
   validateReportGeneratePayload,
   validateScenarioProgressEvaluatePayload,
@@ -73,6 +74,29 @@ describe("job payload validation", () => {
 
     expect(withoutTranscript.valid).toBe(true);
     expect(withTranscript.valid).toBe(true);
+  });
+
+  it("validates shadowing evaluation payloads", () => {
+    const valid = validateEvaluationShadowingPayload({
+      turnId: TURN_ID,
+      sessionId: SESSION_ID,
+      audioSegmentId: AUDIO_SEGMENT_ID,
+      standardText: "Could I get a medium latte?",
+    });
+    const invalid = validateEvaluationShadowingPayload({
+      turnId: TURN_ID,
+      sessionId: SESSION_ID,
+      audioSegmentId: AUDIO_SEGMENT_ID,
+      standardText: "   ",
+    });
+
+    expect(valid.valid).toBe(true);
+    expect(invalid.valid).toBe(false);
+    if (!invalid.valid) {
+      expect(invalid.errors.some((error) => error.field === "standardText")).toBe(
+        true,
+      );
+    }
   });
 
   it("validates evaluation payloads", () => {
