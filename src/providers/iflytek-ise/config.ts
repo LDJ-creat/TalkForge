@@ -2,7 +2,8 @@ export const IFLYTEK_ISE_PROVIDER_NAME = "iflytek-ise-pronunciation" as const;
 
 export const IFLYTEK_ISE_PROVIDER_ID = "iflytek-ise" as const;
 
-export const DEFAULT_IFLYTEK_ISE_WS_URL = "wss://ise-api.xfyun.cn/v2/ise";
+/** 流式版开放评测地址，见 https://www.xfyun.cn/doc/Ise/IseAPI.html */
+export const DEFAULT_IFLYTEK_ISE_WS_URL = "wss://ise-api.xfyun.cn/v2/open-ise";
 
 /** Mono PCM s16le sample rate required by iFlytek ISE. */
 export const IFLYTEK_ISE_SAMPLE_RATE = 16000;

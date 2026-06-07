@@ -5,7 +5,11 @@ import {
   type ServerTurnWithFeedback,
 } from "./create-turn-api";
 
-const TERMINAL_EVALUATION_STATUSES = new Set<EvaluationStatus>(["done", "failed"]);
+const TERMINAL_EVALUATION_STATUSES = new Set<EvaluationStatus>([
+  "done",
+  "failed",
+  "skipped",
+]);
 
 export async function pollTurnPronunciationFeedback(
   sessionId: string,

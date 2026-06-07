@@ -181,7 +181,7 @@ describe("correction analysis pipeline", () => {
 
     expect(analyzeSpy).toHaveBeenCalledOnce();
     const input = analyzeSpy.mock.calls[0]?.[0];
-    expect(input?.prompt?.system).toContain("Do not treat obvious ASR misrecognitions");
+    expect(input?.prompt?.system).toContain("Do not treat obvious transcription misrecognitions");
     expect(input?.prompt?.user).toContain("I go to the cafe yesterday.");
   });
 
@@ -237,6 +237,25 @@ describe("correction analysis pipeline", () => {
       code: "validation",
       retryable: false,
     });
+  });
+
+  it("analyzes corrections from realtime turn text without a persisted ASR transcript", async () => {
+    const { deps, corrections } = createInMemoryCorrectionDeps({
+      turn: {
+        ...baseTurn,
+        transcriptText: "I go to the cafe yesterday.",
+      },
+      transcript: null,
+    });
+
+    const result = await analyzeTurnCorrections(
+      { turnId: TURN_ID, sessionId: SESSION_ID },
+      deps,
+      { attempts: 1 },
+    );
+
+    expect(result.created).toBe(true);
+    expect(corrections.get(TURN_ID)).toHaveLength(1);
   });
 
   it("persists grammar corrections for high-confidence transcripts", async () => {

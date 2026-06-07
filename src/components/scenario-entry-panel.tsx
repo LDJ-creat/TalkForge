@@ -90,7 +90,7 @@ export function ScenarioEntryPanel({ scenario, onStartPractice }: ScenarioEntryP
         {status === "ready" && reports.length > 0 ? (
           <div className="scenario-entry__history-list" data-testid="scenario-history-list">
             {reports.map((item) => (
-              <HistoricalReportCard key={item.sessionId} item={item} />
+              <HistoricalReportCard key={item.sessionId} item={item} scenarioId={scenario.id} />
             ))}
           </div>
         ) : null}

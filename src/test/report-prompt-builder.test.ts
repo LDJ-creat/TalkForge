@@ -41,6 +41,8 @@ describe("buildReportPrompt", () => {
     });
 
     expect(prompt.system).toMatch(/Return JSON only/i);
+    expect(prompt.system).toMatch(/Simplified Chinese/i);
+    expect(prompt.system).toMatch(/must stay in English/i);
     expect(prompt.user).toContain("Cafe Order");
     expect(prompt.user).toContain("order-drink");
     expect(prompt.user).toContain("Could I get a coffee, please?");

@@ -9,7 +9,7 @@ import {
 const TURN_ID = "22222222-2222-4222-8222-222222222222";
 
 describe("resolveReferenceTextForTurn", () => {
-  it("prefers official transcript text over turn fallback", async () => {
+  it("prefers realtime turn transcript over legacy ASR transcript records", async () => {
     const resolved = await resolveReferenceTextForTurn(TURN_ID, {
       getTranscriptByTurnId: async () => ({
         id: "transcript-1",
@@ -25,34 +25,43 @@ describe("resolveReferenceTextForTurn", () => {
         role: "user",
         startedAt: "2026-06-06T00:00:00.000Z",
         endedAt: "2026-06-06T00:00:05.000Z",
-        transcriptText: "Realtime fallback text here",
+        transcriptText: "Realtime transcript text here",
         evaluationStatus: "pending",
       }),
     });
 
     expect(resolved).toEqual({
-      text: "Could I get a medium latte?",
-      wordCount: 6,
-      source: "transcript",
+      text: "Realtime transcript text here",
+      wordCount: 4,
+      source: "realtime",
     });
   });
 
-  it("falls back to turn transcript text when official transcript is missing", async () => {
+  it("falls back to legacy transcript when realtime turn text is missing", async () => {
     const resolved = await resolveReferenceTextForTurn(TURN_ID, {
-      getTranscriptByTurnId: async () => null,
+      getTranscriptByTurnId: async () => ({
+        id: "transcript-1",
+        turnId: TURN_ID,
+        provider: "dashscope-paraformer-asr",
+        text: "I want coffee please",
+        confidence: 0.9,
+        segments: [],
+      }),
       getTurnById: async () => ({
         id: TURN_ID,
         sessionId: "session-1",
         role: "user",
         startedAt: "2026-06-06T00:00:00.000Z",
         endedAt: "2026-06-06T00:00:05.000Z",
-        transcriptText: "I want coffee please",
         evaluationStatus: "pending",
       }),
     });
 
-    expect(resolved.source).toBe("turn_fallback");
-    expect(resolved.wordCount).toBe(4);
+    expect(resolved).toEqual({
+      text: "I want coffee please",
+      wordCount: 4,
+      source: "transcript",
+    });
   });
 
   it("validates minimum word count for free speech evaluation", () => {
@@ -61,7 +70,7 @@ describe("resolveReferenceTextForTurn", () => {
       isValidFreeSpeechReferenceText({
         text: "Hi",
         wordCount: 1,
-        source: "turn_fallback",
+        source: "realtime",
       }),
     ).toBe(false);
     expect(

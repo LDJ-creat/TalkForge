@@ -5,7 +5,9 @@ import type { Scenario } from "@/domain/scenario";
 import { SCENARIO_GENERATE_PROMPT_VERSION } from "@/providers/openai-compatible-text-llm/prompt-versions";
 import { listSeedScenarios } from "@/server/scenario/catalog";
 import { getScenarioGenerateProvider } from "@/server/scenario-generation/provider";
+import { logScenarioGenerate } from "@/server/scenario-generation/log";
 import { ScenarioServiceError } from "@/server/scenario/errors";
+import { getRuntimeConfig } from "@/server/config";
 import type { AiInvocationTraceWriter } from "@/server/ai-tracing";
 import type { ScenarioGenerateInput } from "@/providers/llm/scenario-generate-types";
 
@@ -95,9 +97,22 @@ export async function generateScenarioFromDescription(
     aiRole: scenario.aiRole,
   }));
 
+  const { providers, secrets } = getRuntimeConfig();
+  logScenarioGenerate("request_started", {
+    provider: providers.llmScenarioGenerate.name,
+    model: secrets.llmModel ?? "(provider default)",
+    descriptionLength: description.length,
+    referenceScenarioCount: referenceScenarios.length,
+  });
+
   const generation = await deps.generateScenario({
     description,
     referenceScenarios,
+  });
+
+  logScenarioGenerate("request_succeeded", {
+    provider: generation.provider,
+    title: generation.scenario.title,
   });
 
   const scenario = validateGeneratedScenario(generation.scenario);

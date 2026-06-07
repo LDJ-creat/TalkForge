@@ -14,6 +14,10 @@ export function formatPronunciationFeedbackSummary(
     return pronunciationCopy.analyzing;
   }
 
+  if (feedback.evaluationStatus === "skipped") {
+    return pronunciationCopy.skipped;
+  }
+
   if (feedback.evaluationStatus === "failed") {
     return pronunciationCopy.unavailable;
   }

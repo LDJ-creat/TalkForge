@@ -59,6 +59,7 @@ export {
   getFreeSpeechEvaluationsByTurnIds,
   getPronunciationEvaluationByTurnIdAndMode,
   markTurnEvaluationFailed,
+  markTurnEvaluationSkipped,
   prepareFreeSpeechEvaluation,
   prepareShadowingEvaluation,
   saveFreeSpeechEvaluationForTurnIfAbsent,

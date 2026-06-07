@@ -5,8 +5,6 @@ import type { CreateTranscriptInput } from "@/domain/transcript";
 import type { TalkForgeDatabase } from "../client";
 import { toTranscript } from "../mappers";
 import { transcripts } from "../schema";
-import { updateTurnTranscriptText } from "./turn-repository";
-
 export async function createTranscript(
   db: TalkForgeDatabase,
   input: CreateTranscriptInput,
@@ -87,7 +85,6 @@ export async function saveTranscriptForTurn(
 
     try {
       const transcript = await createTranscript(tx, input);
-      await updateTurnTranscriptText(tx, input.turnId, input.text);
       return { transcript, created: true };
     } catch (error) {
       if (isUniqueViolation(error)) {

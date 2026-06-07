@@ -9,6 +9,7 @@ import {
   completeSessionForUser,
   createCompleteSessionDeps,
 } from "@/server/session";
+import { skipPendingEvaluationsWithoutAudio } from "@/server/session/skip-turn-evaluation";
 
 export async function POST(
   request: Request,
@@ -18,6 +19,8 @@ export async function POST(
     const userId = requireRequestUserId(request);
     const { sessionId } = await context.params;
     const db = getDb();
+
+    await skipPendingEvaluationsWithoutAudio(sessionId, db);
 
     const result = await completeSessionForUser(
       sessionId,

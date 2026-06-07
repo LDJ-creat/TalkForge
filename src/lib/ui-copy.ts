@@ -113,6 +113,7 @@ export const transcriptCopy = {
   roleAssistant: "AI",
   roleUser: "You",
   analyzing: "Analyzing pronunciation…",
+  evaluationSkipped: "未上传音频，已跳过发音评估",
   evaluationFailed: "本轮发音评估暂不可用。",
   scoreNote: "评分基于本轮识别出的文本。",
 };
@@ -148,6 +149,7 @@ export const shadowingCopy = {
 
 export const pronunciationCopy = {
   analyzing: "Analyzing pronunciation…",
+  skipped: "Skipped — no audio uploaded",
   unavailable: "Pronunciation feedback unavailable",
   ready: "Pronunciation feedback ready",
   overall: (score: number) => `Overall ${Math.round(score)}`,

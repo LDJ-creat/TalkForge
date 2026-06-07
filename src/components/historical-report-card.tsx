@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import type { ScenarioHistoricalReport } from "@/domain/scenario-report-history";
 import {
   formatReportEvaluatedAt,
@@ -10,11 +12,13 @@ import { SessionReportDetails } from "./session-report-panel";
 
 type HistoricalReportCardProps = {
   item: ScenarioHistoricalReport;
+  scenarioId: string;
 };
 
-export function HistoricalReportCard({ item }: HistoricalReportCardProps) {
+export function HistoricalReportCard({ item, scenarioId }: HistoricalReportCardProps) {
   const summaryId = `historical-report-summary-${item.sessionId}`;
   const detailsId = `historical-report-details-${item.sessionId}`;
+  const detailHref = `/practice/${scenarioId}/sessions/${item.sessionId}`;
 
   return (
     <article className="historical-report-card" data-testid={`historical-report-${item.sessionId}`}>
@@ -30,9 +34,19 @@ export function HistoricalReportCard({ item }: HistoricalReportCardProps) {
             </time>
             <p className="historical-report-card__headline">{item.report.summary}</p>
           </div>
-          <span className="historical-report-card__meta">
-            {formatTaskCompletionSummary(item.report)}
-          </span>
+          <div className="historical-report-card__actions">
+            <span className="historical-report-card__meta">
+              {formatTaskCompletionSummary(item.report)}
+            </span>
+            <Link
+              href={detailHref}
+              className="button button--secondary historical-report-card__detail-link"
+              data-testid={`historical-report-detail-link-${item.sessionId}`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              查看详情
+            </Link>
+          </div>
         </summary>
         <div
           className="historical-report-card__body"

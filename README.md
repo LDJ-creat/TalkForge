@@ -3,7 +3,7 @@
 **TalkForge** 是一款 Web 端 AI 英语口语陪练工具，帮助用户在指定场景下进行真实、低延迟的语音对话训练，并在课后获得语法纠错、发音评测与结构化学习报告。
 
 > 设计哲学：**前台沉浸对话，后台静默教研。**  
-> 实时语音模型负责自然对话体验；异步教研链路负责 ASR、纠错、评测与报告，不打断用户说话。
+> 实时语音模型负责自然对话体验与 turn 级转写；异步教研链路负责纠错、评测与报告，不打断用户说话。
 
 ---
 
@@ -78,10 +78,10 @@ TalkForge 针对上述矛盾做了明确取舍：对话阶段优先体验，教�
 
 | 步骤           | 说明                                                               |
 | ------------ | ---------------------------------------------------------------- |
-| 音频上传         | 前端录制 turn 级 webm/wav，经签名 URL 上传至对象存储                             |
-| ASR 转写       | DashScope Paraformer 实时 ASR（worker 内 ffmpeg 转 8 kHz mono PCM）    |
-| 语法 / 表达纠错    | OpenAI 兼容 LLM 分析 ASR 文本，输出 grammar / expression / vocabulary 等纠错 |
-| 发音评测（自由对话）   | iFlytek ISE `read_sentence`，以 ASR 文本为参考，UI 展示词级弱项高亮              |
+| 实时转写         | Qwen Omni 实时会话输出英文转写，落盘至 `turns.transcript_text`（对话中即可展示）      |
+| 音频上传         | 前端录制 turn 级 webm/wav，经签名 URL 上传至对象存储（供发音评测与存档）                 |
+| 语法 / 表达纠错    | OpenAI 兼容 LLM 分析实时转写文本，输出 grammar / expression / vocabulary 等纠错 |
+| 发音评测（自由对话）   | iFlytek ISE `read_sentence`，以实时转写为参考，UI 展示词级弱项高亮                 |
 | 场景进度判断       | LLM Judge 更新 `scenario_progress.completed_goal_ids`              |
 | 课后报告         | LLM 生成总结、任务完成度、典型错误、下次练习建议                                       |
 | Shadowing 跟读 | TTS（CosyVoice）生成标准音频 → 用户跟读 → iFlytek ISE 严格评测                   |
@@ -91,7 +91,7 @@ TalkForge 针对上述矛盾做了明确取舍：对话阶段优先体验，教�
 
 - **AI 调用追踪**：每次 Provider 调用写入 `ai_invocation_logs`，可选落盘原始 request/response
 - **Provider 健康检查**：`/api/health` 聚合 PostgreSQL、Redis、各 Provider 状态
-- **会话用量限额**：可配置最大时长、轮数、ASR 任务数、报告重试次数，超限后 UI 禁用练习操作
+- **会话用量限额**：可配置最大时长、轮数、报告重试次数，超限后 UI 禁用练习操作
 
 ---
 
@@ -115,7 +115,6 @@ TalkForge 采用 **主从双轨协同** 架构：
                 ▼                              ▼
         DashScope Qwen Omni            BullMQ Worker 进程
                                        ├─ Realtime WS 代理（同进程启动）
-                                       ├─ ASR (Paraformer)
                                        ├─ Correction (LLM)
                                        ├─ Pronunciation (iFlytek)
                                        ├─ Scenario Judge (LLM)
@@ -128,7 +127,7 @@ TalkForge 采用 **主从双轨协同** 架构：
 
 **Real-time Track（主干道）**：用户选场景 → 后端创建 Session 并签发短期 token → 浏览器经代理连接实时模型 → 双向语音对话。
 
-**Background Track（辅路）**：user turn 结束 → 音频上传 → 入队异步 job → worker 消费 → 前端轮询 / 刷新转写与报告。
+**Background Track（辅路）**：user turn 结束 → 实时转写落盘 + 音频上传 → 入队纠错 / 评测 job → worker 消费 → 前端轮询报告与反馈。
 
 ---
 
@@ -143,8 +142,7 @@ TalkForge 采用 **主从双轨协同** 架构：
 | 数据库    | PostgreSQL 16 + Drizzle ORM        | Session、Turn、Report 等结构化持久化                   |
 | 队列     | BullMQ + Redis 7                   | 异步教研 job 调度                                   |
 | 对象存储   | 本地 / S3 / R2 / OSS / MinIO         | turn 音频与 TTS 标准音私有存储                          |
-| 实时语音   | Qwen Omni（DashScope）               | WebSocket + 短期 token；本地 WS 代理转发 Authorization |
-| ASR    | DashScope Paraformer               | WebSocket 实时转写                                |
+| 实时语音   | Qwen Omni（DashScope）               | WebSocket + 短期 token；本地 WS 代理；同步输出 turn 级英文转写   |
 | 文本 LLM | DashScope / OpenAI 兼容 API          | 纠错、报告、场景 Judge、场景生成                           |
 | TTS    | DashScope CosyVoice                | Shadowing 标准音频                                |
 | 发音评测   | iFlytek ISE                        | 自由对话 + Shadowing 跟读                           |
@@ -179,7 +177,7 @@ TalkForge 采用 **主从双轨协同** 架构：
 - **Node.js** 20+
 - **PostgreSQL**（本地安装或 Docker Compose）
 - **Redis**
-- **ffmpeg**（ASR / 发音评测 worker 需要，需在 PATH 中）
+- **ffmpeg**（发音评测 worker 需要，需在 PATH 中）
 - **各 Provider API Key**（DashScope、讯飞开放平台、对象存储等，见 [环境变量配置](#环境变量配置)）
 
 ### 1. 克隆与安装
@@ -266,16 +264,16 @@ cp .env.example .env
 
 ### 获取 API 凭证
 
-TalkForge 的实时语音、ASR、文本 LLM、TTS 均使用 **阿里云百炼（DashScope）** 同一套 API Key；发音评测使用 **讯飞开放平台 ISE**。两家均提供 **免费额度**，适合开发与轻度试用。
+TalkForge 的实时语音（含 turn 级转写）、文本 LLM、TTS 均使用 **阿里云百炼（DashScope）** 同一套 API Key；发音评测使用 **讯飞开放平台 ISE**。两家均提供 **免费额度**，适合开发与轻度试用。
 
 | 服务 | 用途 | 获取入口 |
 |------|------|----------|
-| 阿里云百炼 | Qwen Omni 实时语音、Paraformer ASR、文本 LLM、CosyVoice TTS | [百炼控制台 · 模型免费额度](https://bailian.console.aliyun.com/cn-beijing?tab=model#/model-usage/free-quota?modelType=Text) |
+| 阿里云百炼 | Qwen Omni 实时语音与转写、文本 LLM、CosyVoice TTS | [百炼控制台 · 模型免费额度](https://bailian.console.aliyun.com/cn-beijing?tab=model#/model-usage/free-quota?modelType=Text) |
 | 讯飞 ISE | 自由对话发音评测、Shadowing 跟读评测 | [讯飞开放平台 · 语音评测（流式版）](https://console.xfyun.cn/services/ise) |
 
 配置步骤概要：
 
-1. 在百炼控制台创建 API Key，填入 `REALTIME_API_KEY`、`ASR_API_KEY`、`LLM_API_KEY`、`TTS_API_KEY`（可为同一 Key）。
+1. 在百炼控制台创建 API Key，填入 `REALTIME_API_KEY`、`LLM_API_KEY`、`TTS_API_KEY`（可为同一 Key）。
 2. 在讯飞控制台创建应用并开通 ISE 服务，填入 `PRONUNCIATION_APP_ID`、`PRONUNCIATION_API_KEY`、`PRONUNCIATION_API_SECRET`。
 3. 运行 `npm run staging:smoke` 检查各 Provider 是否就绪。
 
@@ -313,9 +311,10 @@ TalkForge 的实时语音、ASR、文本 LLM、TTS 均使用 **阿里云百炼�
 
 部署到 staging / 生产时，将 `STORAGE_PROVIDER` 改为 `oss` / `s3` 等并填写 `STORAGE_ENDPOINT`、`STORAGE_BUCKET`、访问密钥。
 
-### 实时语音（Qwen Omni）
+### 实时语音与转写（Qwen Omni）
 
-模型与端点可直接使用 `.env.example` 默认值；**`REALTIME_API_KEY` 需填入百炼 API Key**（见 [获取 API 凭证](#获取-api-凭证)）。
+模型与端点可直接使用 `.env.example` 默认值；**`REALTIME_API_KEY` 需填入百炼 API Key**（见 [获取 API 凭证](#获取-api-凭证)）。  
+当前主链路**不再依赖外部 ASR**：user turn 的英文转写由 Omni 实时会话输出，写入 `turns.transcript_text`，供纠错、发音评测与报告使用。
 
 | 变量 | 说明 | `.env.example` 参考值 |
 |------|------|----------------------|
@@ -339,17 +338,6 @@ TalkForge 的实时语音、ASR、文本 LLM、TTS 均使用 **阿里云百炼�
 | `NEXT_PUBLIC_REALTIME_NOISE_GATE`     | 上行静音门限                                          |
 | `NEXT_PUBLIC_REALTIME_BARGE_IN`       | 是否允许语音打断 AI，默认 `false`（见 [麦克风与音频设备](#麦克风与音频设备)） |
 
-
-### ASR
-
-模型配置可直接使用 `.env.example` 默认值；**`ASR_API_KEY` 可与百炼 Key 相同**。
-
-| 变量 | 说明 | `.env.example` 参考值 |
-|------|------|----------------------|
-| `ASR_PROVIDER` | ASR Provider | `paraformer` |
-| `ASR_API_KEY` | DashScope API Key（**必填**） | （留空，自行填写） |
-| `ASR_BASE_URL` | DashScope 端点 | `https://dashscope.aliyuncs.com` |
-| `ASR_MODEL` | ASR 模型（需 8 kHz mono PCM） | `paraformer-realtime-8k-v2` |
 
 ### 文本 LLM
 
@@ -377,7 +365,7 @@ TalkForge 的实时语音、ASR、文本 LLM、TTS 均使用 **阿里云百炼�
 | `PRONUNCIATION_APP_ID` | 讯飞应用 ID（**必填**） | （留空，自行填写） |
 | `PRONUNCIATION_API_KEY` | 讯飞 API Key（**必填**） | （留空，自行填写） |
 | `PRONUNCIATION_API_SECRET` | 讯飞 API Secret（**必填**） | （留空，自行填写） |
-| `PRONUNCIATION_WS_BASE_URL` | 讯飞 ISE WebSocket 端点 | `wss://ise-api.xfyun.cn/v2/ise` |
+| `PRONUNCIATION_WS_BASE_URL` | 讯飞 ISE WebSocket 端点 | `wss://ise-api.xfyun.cn/v2/open-ise` |
 
 
 ### AI 追踪与会话限额
@@ -391,7 +379,6 @@ TalkForge 的实时语音、ASR、文本 LLM、TTS 均使用 **阿里云百炼�
 | `AI_TRACING_LOCAL_ROOT` | 追踪文件目录 | `.storage/ai-traces` |
 | `SESSION_MAX_REALTIME_DURATION_SEC` | 最大实时时长（0 = 不限制） | `0` |
 | `SESSION_MAX_TURNS` | 最大轮数（0 = 不限制） | `0` |
-| `SESSION_MAX_ASR_JOBS` | 最大 ASR 任务数 | `50` |
 | `OPS_HEALTH_DETAIL_TOKEN` | 生产环境 `/api/health?detail=1` Bearer Token | （留空） |
 
 完整注释版见 [`.env.example`](.env.example)。
@@ -458,7 +445,7 @@ NEXT_PUBLIC_REALTIME_MIC_PROCESSING=standard
 2. 打开 [http://localhost:3000](http://localhost:3000)，选择场景（如「在咖啡馆点咖啡」）。
 3. 在场景入口页可查看该场景的历史报告，点击 **开始练习** 进入对话页。
 4. 授权麦克风后，AI 会先开口；对着麦克风用英语回应，观察状态栏（Listening / AI is speaking）与转写面板。
-5. 每个 user turn 结束后，后台 worker 自动完成 ASR、纠错、发音评测与场景进度更新；转写面板会刷新。
+5. 每个 user turn 结束后，实时转写会写入面板；后台 worker 自动完成纠错、发音评测与场景进度更新。
 6. 点击 **结束练习**，等待报告生成。
 7. 在报告面板查看总结、典型错误与下次建议；进入 **Shadowing 跟读** 练习推荐句。
 
@@ -486,7 +473,7 @@ npm run staging:smoke -- --session-id <your-session-id>
   → POST /api/sessions（创建 Session + 实时凭证）
   → 实时语音对话（Qwen Omni，经本地 WS 代理）
   → POST /api/sessions/:id/turns + 音频 finalize
-  → Worker：ASR → 纠错 → 发音评测 → 场景进度
+  → Worker：纠错 → 发音评测 → 场景进度（转写来自 Omni 实时输出）
   → 结束练习 → 报告生成 → Shadowing TTS → 跟读评测
 ```
 
@@ -557,8 +544,8 @@ TalkForge/
 
 - **认证**：当前使用开发头 `x-talkforge-user-id`，任意客户端可冒充用户 ID，**不可用于生产**。
 - **Worker 必须运行**：`QUEUE_PROVIDER=redis` 时必须单独运行 `npm run worker`，否则后台 job 不会执行、报告无法生成；Realtime 代理也随 worker 一同启动。
-- **ffmpeg 依赖**：Paraformer ASR 与 iFlytek ISE 需要 worker 主机安装 ffmpeg。
-- **音频格式**：Paraformer 要求 8 kHz mono PCM；iFlytek 要求 16 kHz mono PCM；均由 worker 从 webm/wav 转换。
+- **ffmpeg 依赖**：iFlytek ISE 发音评测需要 worker 主机安装 ffmpeg。
+- **音频格式**：iFlytek 要求 16 kHz mono PCM；worker 会从 webm/wav 转换。
 - **成本**：各 Provider 会产生 API 费用；staging 建议设置 `SESSION_MAX_`* 限额。
 
 ### 常见问题

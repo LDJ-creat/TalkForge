@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import type { ScenarioHistoricalReport } from "@/domain/scenario-report-history";
 import { coffeeOrderingScenario } from "@/server/db/seeds/scenarios";
@@ -30,10 +30,29 @@ const historicalReport: ScenarioHistoricalReport = {
 };
 
 describe("HistoricalReportCard", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("links to the session analysis detail page", () => {
+    render(
+      <HistoricalReportCard item={historicalReport} scenarioId={coffeeOrderingScenario.id} />,
+    );
+
+    const link = screen.getByTestId("historical-report-detail-link-session-1");
+    expect(link).toHaveAttribute(
+      "href",
+      `/practice/${coffeeOrderingScenario.id}/sessions/session-1`,
+    );
+    expect(link).toHaveTextContent("查看详情");
+  });
+
   it("shows collapsed summary by default and expands to reveal details", async () => {
     const user = userEvent.setup();
 
-    render(<HistoricalReportCard item={historicalReport} />);
+    render(
+      <HistoricalReportCard item={historicalReport} scenarioId={coffeeOrderingScenario.id} />,
+    );
 
     expect(screen.getByTestId("historical-report-session-1")).toBeInTheDocument();
     expect(screen.getByText(/Nice work practicing coffee ordering/i)).toBeInTheDocument();

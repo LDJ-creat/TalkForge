@@ -176,7 +176,7 @@ export function buildShadowingRecommendations(
   };
 
   for (const expression of alternativeExpressions) {
-    addRecommendation(expression.suggestion, "Stronger alternative from your session.");
+    addRecommendation(expression.suggestion, "本次对话中更自然的替代表达。");
   }
 
   for (const correction of [...correctionsByTurnId.values()].flat()) {
@@ -185,15 +185,12 @@ export function buildShadowingRecommendations(
       correction.type !== "asr_uncertain" &&
       correction.correctedText.trim().length > 0
     ) {
-      addRecommendation(
-        correction.correctedText,
-        "Practice this corrected phrase for smoother delivery.",
-      );
+      addRecommendation(correction.correctedText, "练习这句纠正后的表达，让表达更流畅。");
     }
   }
 
   for (const targetExpression of scenario.targetExpressions) {
-    addRecommendation(targetExpression, `Target expression from ${scenario.title}.`);
+    addRecommendation(targetExpression, `场景「${scenario.title}」的目标表达。`);
   }
 
   return recommendations.slice(0, SHADOWING_RECOMMENDATION_LIMIT);
@@ -209,11 +206,11 @@ export function buildDeterministicNextPracticeSuggestion(
       .map((goal) => goal.description);
 
     if (missingGoals.length > 0) {
-      return `Retry ${scenario.title} and focus on: ${missingGoals.join("; ")}.`;
+      return `建议再次练习「${scenario.title}」，重点完成：${missingGoals.join("；")}。`;
     }
   }
 
-  return `Review ${scenario.level} phrases from ${scenario.title} and practice the recommended shadowing sentences.`;
+  return `复习「${scenario.title}」中 ${scenario.level} 级别的常用表达，并完成推荐的跟读句子。`;
 }
 
 export function buildDeterministicSummary(
@@ -226,10 +223,10 @@ export function buildDeterministicSummary(
   const missingCount = taskCompletion.missingGoalIds.length;
 
   if (missingCount === 0) {
-    return `You completed ${scenario.title} with ${userTurnCount} learner turns and finished all tracked goals.`;
+    return `你完成了「${scenario.title}」练习，共 ${userTurnCount} 轮发言，并达成了所有目标。`;
   }
 
-  return `You practiced ${scenario.title} with ${userTurnCount} learner turns, completing ${completedCount} goal(s) with ${missingCount} still open.`;
+  return `你完成了「${scenario.title}」练习，共 ${userTurnCount} 轮发言，已完成 ${completedCount} 个目标，仍有 ${missingCount} 个待完成。`;
 }
 
 export function buildReportTurnContexts(
@@ -239,7 +236,7 @@ export function buildReportTurnContexts(
 ): ReportTurnContext[] {
   return turns.map((turn) => {
     const transcript = transcriptsByTurnId.get(turn.id);
-    const text = transcript?.text ?? turn.transcriptText ?? "";
+    const text = turn.transcriptText?.trim() || transcript?.text || "";
 
     return {
       turnId: turn.id,

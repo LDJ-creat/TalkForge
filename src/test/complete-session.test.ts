@@ -24,6 +24,7 @@ const activeSession: Session = {
 
 const getSessionById = vi.fn();
 const completeSession = vi.fn();
+const listTurnsBySessionId = vi.fn();
 const getQueueAdapter = vi.fn();
 
 vi.mock("@/server/db/client", () => ({
@@ -36,6 +37,7 @@ vi.mock("@/server/db/repositories", async (importOriginal) => {
     ...actual,
     getSessionById: (...args: unknown[]) => getSessionById(...args),
     completeSession: (...args: unknown[]) => completeSession(...args),
+    listTurnsBySessionId: (...args: unknown[]) => listTurnsBySessionId(...args),
   };
 });
 
@@ -114,6 +116,7 @@ describe("complete session API", () => {
   });
 
   it("completes a session and enqueues report generation", async () => {
+    listTurnsBySessionId.mockResolvedValue([]);
     getSessionById.mockResolvedValue(activeSession);
     completeSession.mockResolvedValue({
       ...activeSession,

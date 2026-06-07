@@ -19,6 +19,7 @@ import {
 } from "@/server/db/repositories/report-repository";
 import {
   buildDeterministicReportSections,
+  buildReportTurnContexts,
   computeTaskCompletion,
   enqueueSessionReportGeneration,
   fetchSessionReportForUser,
@@ -397,6 +398,18 @@ describe("report generation worker", () => {
     const first = await adapter.getJob(`report-${SESSION_ID}`);
     expect(first?.name).toBe("report.generate");
     expect(first?.payload).toEqual({ sessionId: SESSION_ID });
+  });
+});
+
+describe("buildReportTurnContexts", () => {
+  it("prefers realtime turn transcript text over ASR transcript records", () => {
+    const contexts = buildReportTurnContexts(
+      [userTurn],
+      new Map([[TURN_ID, transcript]]),
+      new Map(),
+    );
+
+    expect(contexts[0]?.text).toBe("I want a medium latte.");
   });
 });
 

@@ -70,6 +70,8 @@ export function buildReportPrompt(input: ReportGenerateInput): ReportPrompt {
     "Focus on actionable feedback the learner can practice next.",
     "Suggest alternative expressions only when they improve naturalness or clarity.",
     "Do not invent transcript content or corrections that are not grounded in the input.",
+    "Write all narrative feedback in Simplified Chinese (summary, nextPracticeSuggestion, alternativeExpressions[].context, shadowingRecommendations[].reason).",
+    "Keep learner quotes in English: turn transcripts, originalText, correctedText, alternativeExpressions[].original, alternativeExpressions[].suggestion, and shadowingRecommendations[].text must stay in English.",
     "Return JSON only. Do not wrap the JSON in markdown fences.",
   ].join("\n");
 

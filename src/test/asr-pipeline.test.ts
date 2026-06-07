@@ -41,6 +41,7 @@ const baseTurn: Turn = {
   id: TURN_ID,
   sessionId: SESSION_ID,
   role: "user",
+  transcriptText: "Could I get a medium latte?",
   startedAt: "2026-06-06T00:00:00.000Z",
   endedAt: "2026-06-06T00:00:05.000Z",
   audioSegmentId: AUDIO_SEGMENT_ID,
@@ -109,11 +110,6 @@ function createInMemoryAsrDeps(options?: {
         transcriptCounter += 1;
         transcripts.set(input.turnId, transcript);
 
-        const turn = turns.get(input.turnId);
-        if (turn) {
-          turns.set(input.turnId, { ...turn, transcriptText: input.text });
-        }
-
         return { transcript, created: true };
       },
       countUserTurnsBySessionId: async (sessionId: string) =>
@@ -159,7 +155,7 @@ describe("ASR transcription pipeline", () => {
     expect(result.transcript.provider).toBe("mock-asr");
     expect(result.transcript.segments[0]?.words).toHaveLength(1);
     expect(transcripts.get(TURN_ID)).toEqual(result.transcript);
-    expect(turns.get(TURN_ID)?.transcriptText).toBe("Could I get a medium latte, please?");
+    expect(turns.get(TURN_ID)?.transcriptText).toBe("Could I get a medium latte?");
   });
 
   it("returns the existing transcript without creating duplicates on retry", async () => {

@@ -240,3 +240,10 @@ export async function markTurnEvaluationFailed(
 ) {
   await updateTurnEvaluationStatus(db, turnId, "failed");
 }
+
+export async function markTurnEvaluationSkipped(
+  db: TalkForgeDatabase,
+  turnId: string,
+) {
+  await updateTurnEvaluationStatus(db, turnId, "skipped");
+}

@@ -25,6 +25,11 @@ import {
   SCENARIO_GENERATE_PROMPT_VERSION,
 } from "@/providers/openai-compatible-text-llm";
 import { buildScenarioGeneratePrompt } from "@/server/scenario-generation/prompt-builder";
+import { logScenarioGenerate } from "@/server/scenario-generation/log";
+import {
+  SCENARIO_GENERATE_TIMEOUT_MS,
+  TEXT_LLM_REPORT_TIMEOUT_MS,
+} from "@/providers/openai-compatible-text-llm/timeouts";
 
 import type { AiInvocationTraceWriter } from "@/server/ai-tracing";
 import { executeTracedProviderCall } from "@/server/ai-tracing";
@@ -158,6 +163,7 @@ export function createTracedLlmReportProvider(
         provider: provider.name,
         model: options.model,
         operation: "llm.report",
+        timeoutMs: TEXT_LLM_REPORT_TIMEOUT_MS,
         sessionId: input.sessionId,
         promptVersion: REPORT_PROMPT_VERSION,
         requestSummary: {
@@ -204,11 +210,20 @@ export function createTracedLlmScenarioGenerateProvider(
     ): Promise<ScenarioGenerationResult> {
       const scenarioPrompt = buildScenarioGeneratePrompt(input);
 
+      logScenarioGenerate("provider_call_started", {
+        provider: provider.name,
+        model: options.model,
+        descriptionLength: input.description.trim().length,
+        timeoutMs: SCENARIO_GENERATE_TIMEOUT_MS,
+      });
+
       const { result } = await executeTracedProviderCall({
         traceWriter,
         provider: provider.name,
         model: options.model,
         operation: "llm.scenarioGenerate",
+        timeoutMs: SCENARIO_GENERATE_TIMEOUT_MS,
+        retry: false,
         promptVersion: SCENARIO_GENERATE_PROMPT_VERSION,
         requestSummary: {
           descriptionLength: input.description.trim().length,
@@ -234,6 +249,13 @@ export function createTracedLlmScenarioGenerateProvider(
             true,
         }),
         extractRawResponse: (generation) => generation,
+      });
+
+      logScenarioGenerate("provider_call_succeeded", {
+        provider: provider.name,
+        model: options.model,
+        title: result.scenario.title,
+        goalCount: result.scenario.goals.length,
       });
 
       return result;

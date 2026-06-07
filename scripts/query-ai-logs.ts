@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 
 import { loadEnvFile } from "./load-env";
-import { getDb } from "@/server/db/client";
+import { closeDb, getDb } from "@/server/db/client";
 import { aiInvocationLogs } from "@/server/db/schema";
 
 loadEnvFile();
@@ -31,7 +31,12 @@ async function main() {
   console.log(JSON.stringify(rows, null, 2));
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await closeDb();
+    process.exit(process.exitCode ?? 0);
+  });

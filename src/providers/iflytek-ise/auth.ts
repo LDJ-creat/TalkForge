@@ -7,7 +7,7 @@ export function buildIflytekIseAuthUrl(options: {
 }): string {
   const url = new URL(options.wsBaseUrl);
   const host = url.host;
-  const path = url.pathname || "/v2/ise";
+  const path = url.pathname || "/v2/open-ise";
   const date = new Date().toUTCString();
 
   const signatureOrigin = `host: ${host}\ndate: ${date}\nGET ${path} HTTP/1.1`;
