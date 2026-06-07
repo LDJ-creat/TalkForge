@@ -1,13 +1,9 @@
+import {
+  REALTIME_LIFECYCLE_LABELS,
+  type RealtimeConnectionDiagnostics,
+  type RealtimeLifecycleStatus,
+} from "@/features/conversation/realtime/lifecycle";
 import type { ConnectionStatus, TurnStatus } from "@/features/conversation";
-
-const CONNECTION_LABELS: Record<ConnectionStatus, string> = {
-  idle: "Not connected",
-  connecting: "Connecting…",
-  connected: "Connected",
-  disconnecting: "Ending session…",
-  disconnected: "Disconnected",
-  error: "Connection error",
-};
 
 const TURN_LABELS: Record<TurnStatus, string> = {
   idle: "Ready to speak",
@@ -18,40 +14,66 @@ const TURN_LABELS: Record<TurnStatus, string> = {
 };
 
 type SessionStatusBarProps = {
+  realtimeLifecycleStatus: RealtimeLifecycleStatus;
   connectionStatus: ConnectionStatus;
   turnStatus: TurnStatus;
   sessionStatus?: "active" | "completed" | "failed";
+  diagnostics?: RealtimeConnectionDiagnostics;
+  showDebugDetails?: boolean;
   evaluationPlaceholder?: string;
 };
 
-function connectionPillClass(status: ConnectionStatus): string {
-  if (status === "connected") {
+function connectionPillClass(
+  lifecycle: RealtimeLifecycleStatus,
+  connectionStatus: ConnectionStatus,
+): string {
+  if (
+    lifecycle === "connected" ||
+    lifecycle === "listening" ||
+    lifecycle === "assistant_speaking" ||
+    lifecycle === "fallback"
+  ) {
     return "status-pill status-pill--connected";
   }
 
-  if (status === "connecting" || status === "disconnecting") {
+  if (
+    lifecycle === "connecting" ||
+    lifecycle === "reconnecting" ||
+    connectionStatus === "disconnecting"
+  ) {
     return "status-pill status-pill--connecting";
   }
 
-  if (status === "error") {
-    return "status-pill status-pill--error";
+  if (lifecycle === "failed" || connectionStatus === "error" || connectionStatus === "failed") {
+    return "status-pill status-pill--failed";
+  }
+
+  if (lifecycle === "interrupted") {
+    return "status-pill status-pill--connecting";
   }
 
   return "status-pill";
 }
 
 export function SessionStatusBar({
+  realtimeLifecycleStatus,
   connectionStatus,
   turnStatus,
   sessionStatus = "active",
+  diagnostics,
+  showDebugDetails = false,
   evaluationPlaceholder = "Feedback will appear after each turn",
 }: SessionStatusBarProps) {
   return (
     <div className="status-list" data-testid="session-status-bar">
       <div className="status-row">
-        <span className="status-row__label">Connection</span>
-        <span className={`status-row__value ${connectionPillClass(connectionStatus)}`}>
-          {CONNECTION_LABELS[connectionStatus]}
+        <span className="status-row__label">Realtime</span>
+        <span
+          className={`status-row__value ${connectionPillClass(realtimeLifecycleStatus, connectionStatus)}`}
+        >
+          {connectionStatus === "disconnecting"
+            ? "Ending session…"
+            : REALTIME_LIFECYCLE_LABELS[realtimeLifecycleStatus]}
         </span>
       </div>
       <div className="status-row">
@@ -66,6 +88,20 @@ export function SessionStatusBar({
         <span className="status-row__label">Evaluation</span>
         <span className="status-row__value">{evaluationPlaceholder}</span>
       </div>
+      {showDebugDetails ? (
+        <div className="status-row status-row--debug" data-testid="realtime-debug-details">
+          <span className="status-row__label">Debug</span>
+          <span className="status-row__value">
+            {diagnostics?.provider ? `provider=${diagnostics.provider}` : "provider=unknown"}
+            {typeof diagnostics?.connectLatencyMs === "number"
+              ? ` · connect=${diagnostics.connectLatencyMs}ms`
+              : ""}
+            {typeof diagnostics?.reconnectAttempt === "number" && diagnostics.reconnectAttempt > 0
+              ? ` · retry=${diagnostics.reconnectAttempt}`
+              : ""}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
