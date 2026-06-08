@@ -137,4 +137,61 @@ describe("ConversationShell", () => {
 
     vi.useRealTimers();
   });
+
+  it("shows a toast when returning to overview during an active session", async () => {
+    vi.useFakeTimers();
+
+    const onBackToOverview = vi.fn();
+
+    render(
+      <ConversationShell
+        scenario={coffeeOrderingScenario}
+        onBackToOverview={onBackToOverview}
+      />,
+    );
+
+    await Promise.all([
+      vi.advanceTimersByTimeAsync(1_300),
+      vi.runOnlyPendingTimersAsync(),
+    ]);
+
+    fireEvent.click(screen.getByTestId("conversation-scenario-title"));
+
+    expect(screen.getByTestId("practice-toast")).toHaveTextContent("请先结束当前会话");
+    expect(onBackToOverview).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
+
+  it("returns to overview when the session is completed", async () => {
+    vi.useFakeTimers();
+
+    const onBackToOverview = vi.fn();
+
+    render(
+      <ConversationShell
+        scenario={coffeeOrderingScenario}
+        onBackToOverview={onBackToOverview}
+      />,
+    );
+
+    await Promise.all([
+      vi.advanceTimersByTimeAsync(1_300),
+      vi.runOnlyPendingTimersAsync(),
+    ]);
+
+    fireEvent.click(screen.getAllByTestId("end-practice-button")[0]!);
+
+    await Promise.all([
+      vi.advanceTimersByTimeAsync(300),
+      vi.runOnlyPendingTimersAsync(),
+    ]);
+
+    fireEvent.click(screen.getByTestId("conversation-scenario-title"));
+
+    expect(onBackToOverview).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("practice-toast")).not.toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
 });
