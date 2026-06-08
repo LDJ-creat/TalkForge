@@ -8,6 +8,8 @@ type PracticePageProps = {
   params: Promise<{ scenarioId: string }>;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function PracticePage({ params }: PracticePageProps) {
   const { scenarioId } = await params;
   const db = getDb();
@@ -18,11 +20,4 @@ export default async function PracticePage({ params }: PracticePageProps) {
   }
 
   return <ScenarioPracticeShell scenario={scenario} />;
-}
-
-export async function generateStaticParams() {
-  const { listSeedScenarios } = await import("@/server/scenario/catalog");
-  return listSeedScenarios().map((scenario) => ({
-    scenarioId: scenario.id,
-  }));
 }

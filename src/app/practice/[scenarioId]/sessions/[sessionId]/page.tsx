@@ -8,6 +8,8 @@ type SessionAnalysisPageProps = {
   params: Promise<{ scenarioId: string; sessionId: string }>;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function SessionAnalysisPage({ params }: SessionAnalysisPageProps) {
   const { scenarioId, sessionId } = await params;
   const db = getDb();

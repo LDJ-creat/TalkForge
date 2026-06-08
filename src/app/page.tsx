@@ -6,6 +6,8 @@ import { listAllScenarios } from "@/server/scenario/catalog";
 import { ScenarioPicker } from "@/components/scenario-picker";
 import { CefrLevelGuide } from "@/components/cefr-level-guide";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const db = getDb();
   const scenarios = await listAllScenarios(db);

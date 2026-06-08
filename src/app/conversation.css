@@ -364,6 +364,57 @@
   text-overflow: ellipsis;
 }
 
+.conversation-header__title--link {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.conversation-header__title--link:hover,
+.conversation-header__title--link:focus-visible {
+  color: var(--accent);
+  outline: none;
+}
+
+.practice-toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  z-index: 100;
+  transform: translateX(-50%);
+  max-width: min(24rem, calc(100vw - 2rem));
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(44, 40, 37, 0.92);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 0.925rem;
+  line-height: 1.45;
+  text-align: center;
+  box-shadow: 0 12px 32px rgba(44, 40, 37, 0.18);
+  pointer-events: none;
+  animation: practice-toast-in 0.2s ease;
+}
+
+@keyframes practice-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-0.35rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 .conversation-header__subtitle {
   color: var(--muted);
   font-size: 0.875rem;
@@ -818,6 +869,48 @@
 .shadowing-practice__play-button:disabled {
   opacity: 0.65;
   cursor: wait;
+}
+
+.shadowing-practice__recorder {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.shadowing-practice__mic-button {
+  align-self: flex-start;
+  border: 1px solid var(--accent);
+  background: var(--accent-muted);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.35rem 0.95rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.shadowing-practice__mic-button--active {
+  background: #fee2e2;
+  border-color: #ef4444;
+}
+
+.shadowing-practice__mic-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.shadowing-practice__recorder-hint,
+.shadowing-practice__recorder-error {
+  color: var(--muted);
+  font-size: 0.925rem;
+  margin: 0;
+}
+
+.shadowing-practice__recorder-error {
+  color: #b45309;
+}
+
+.shadowing-practice__pronunciation {
+  margin-top: 0.35rem;
 }
 
 .error-banner {

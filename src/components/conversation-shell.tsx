@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useShallow } from "zustand/react/shallow";
 
@@ -22,9 +22,11 @@ import { ShadowingPracticePanel } from "./shadowing-practice-panel";
 import { SessionStatusBar } from "./session-status-bar";
 import { TranscriptPanel } from "./transcript-panel";
 import { VoiceVisualizer } from "./voice-visualizer";
+import { PracticeToast } from "./practice-toast";
 
 type ConversationShellProps = {
   scenario: Scenario;
+  onBackToOverview?: () => void;
 };
 
 const SHOW_REALTIME_DEBUG =
@@ -32,7 +34,7 @@ const SHOW_REALTIME_DEBUG =
 
 let conversationShellMountSeq = 0;
 
-export function ConversationShell({ scenario }: ConversationShellProps) {
+export function ConversationShell({ scenario, onBackToOverview }: ConversationShellProps) {
   const {
     session,
     realtimeCredentials,
@@ -81,6 +83,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
     (state) => state.interruptRealtimeAssistant,
   );
   const retrySessionReport = useConversationStore((state) => state.retrySessionReport);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const mountId = ++conversationShellMountSeq;
@@ -175,11 +178,39 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
           ? conversationCopy.endingSuggestions.maxDuration
           : conversationCopy.endingSuggestions.default;
 
+  const isConversationInProgress = !isCompleted && (isSessionActive || isEnding);
+
+  function handleScenarioTitleClick() {
+    if (!onBackToOverview) {
+      return;
+    }
+
+    if (isConversationInProgress) {
+      setToastMessage(conversationCopy.endSessionBeforeLeave);
+      return;
+    }
+
+    onBackToOverview();
+  }
+
   return (
     <div className="conversation-page" data-testid="conversation-shell">
+      <PracticeToast message={toastMessage} onDismiss={() => setToastMessage(null)} />
       <header className="conversation-header">
         <div className="conversation-header__info">
-          <h1 className="conversation-header__title">{scenario.title}</h1>
+          {onBackToOverview ? (
+            <button
+              type="button"
+              className="conversation-header__title conversation-header__title--link"
+              data-testid="conversation-scenario-title"
+              aria-label={conversationCopy.backToOverviewLabel(scenario.title)}
+              onClick={handleScenarioTitleClick}
+            >
+              {scenario.title}
+            </button>
+          ) : (
+            <h1 className="conversation-header__title">{scenario.title}</h1>
+          )}
           <p className="conversation-header__subtitle">{formatScenarioEntrySubtitle(scenario)}</p>
         </div>
         <div className="conversation-header__actions">

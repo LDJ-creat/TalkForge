@@ -23,9 +23,15 @@ export function ScenarioPracticeShell({ scenario }: ScenarioPracticeShellProps) 
     setPhase("active");
   }
 
+  function handleBackToOverview() {
+    setPhase("landing");
+  }
+
   if (phase === "landing") {
     return <ScenarioEntryPanel scenario={scenario} onStartPractice={handleStartPractice} />;
   }
 
-  return <ConversationShell scenario={scenario} />;
+  return (
+    <ConversationShell scenario={scenario} onBackToOverview={handleBackToOverview} />
+  );
 }
