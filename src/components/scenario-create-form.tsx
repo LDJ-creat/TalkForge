@@ -12,6 +12,7 @@ import { formatScenarioRoleLine } from "@/lib/format-scenario-display";
 import { navCopy, scenarioCreateCopy } from "@/lib/ui-copy";
 
 import { BackLink } from "./back-link";
+import { CefrLevelGuide } from "./cefr-level-guide";
 
 type ScenarioCreateFormProps = {
   backHref?: string;
@@ -71,6 +72,8 @@ export function ScenarioCreateForm({ backHref = "/" }: ScenarioCreateFormProps) 
         <h1 className="scenario-entry__title">{scenarioCreateCopy.title}</h1>
         <p className="scenario-entry__subtitle">{scenarioCreateCopy.subtitle}</p>
       </header>
+
+      <CefrLevelGuide variant="full" showCreateHint />
 
       <section className="scenario-create__panel">
         <label className="scenario-create__label" htmlFor="scenario-description">

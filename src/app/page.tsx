@@ -4,6 +4,7 @@ import { getDb } from "@/server/db/client";
 import { listAllScenarios } from "@/server/scenario/catalog";
 
 import { ScenarioPicker } from "@/components/scenario-picker";
+import { CefrLevelGuide } from "@/components/cefr-level-guide";
 
 export default async function HomePage() {
   const db = getDb();
@@ -18,6 +19,7 @@ export default async function HomePage() {
           {APP_TAGLINE}。{homeCopy.subtitle}
         </p>
       </header>
+      <CefrLevelGuide variant="compact" />
       <ScenarioPicker scenarios={scenarios} />
     </main>
   );

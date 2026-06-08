@@ -5,6 +5,7 @@
   --accent-muted: #f3d4cc;
   --surface: #ffffff;
   --muted: #6b6560;
+  --font-ui: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
 }
 
 * {
@@ -17,12 +18,15 @@ html,
 body {
   max-width: 100vw;
   min-height: 100%;
+  font-variant-numeric: lining-nums;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Georgia, "Times New Roman", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-variant-numeric: lining-nums;
+  font-feature-settings: "lnum" 1;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
