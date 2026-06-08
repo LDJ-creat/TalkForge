@@ -17,6 +17,10 @@ vi.mock("@/features/conversation/fetch-shadowing-api", () => ({
   pollSessionShadowingFromServer: (...args: unknown[]) => pollSessionShadowingFromServer(...args),
 }));
 
+vi.mock("@/components/shadowing-practice-recorder", () => ({
+  ShadowingPracticeRecorder: () => <div data-testid="shadowing-practice-recorder" />,
+}));
+
 describe("SessionAnalysisDetail", () => {
   beforeEach(() => {
     fetchSessionAnalysisFromServer.mockReset();
