@@ -10,6 +10,7 @@ import {
 } from "@/providers";
 import {
   createDashScopeCosyVoiceTtsProvider,
+  DEFAULT_DASHSCOPE_COSYVOICE_MODEL,
   synthesizeDashScopeCosyVoiceAudio,
 } from "@/providers/dashscope-cosyvoice";
 import { createMockStorageProvider } from "@/providers/mock/storage";
@@ -157,7 +158,7 @@ describe("DashScopeCosyVoiceTtsProvider", () => {
         {
           apiKey: "bad",
           apiBaseUrl: "https://dashscope.aliyuncs.com",
-          model: "cosyvoice-v3-flash",
+          model: DEFAULT_DASHSCOPE_COSYVOICE_MODEL,
           defaultVoice: DEFAULT_TTS_VOICE,
           sampleRate: 24000,
         },

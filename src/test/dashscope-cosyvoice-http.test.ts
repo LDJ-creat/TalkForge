@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_TTS_VOICE } from "@/providers/tts/cache-key";
 import {
   buildDashScopeCosyVoiceSynthesisUrl,
+  DEFAULT_DASHSCOPE_COSYVOICE_MODEL,
   synthesizeDashScopeCosyVoiceAudio,
 } from "@/providers/dashscope-cosyvoice";
 import { parseWavMetadata } from "@/shared/wav-metadata";
@@ -58,7 +59,7 @@ describe("synthesizeDashScopeCosyVoiceAudio", () => {
 
       const body = JSON.parse(String(init?.body));
       expect(body).toEqual({
-        model: "cosyvoice-v3-flash",
+        model: DEFAULT_DASHSCOPE_COSYVOICE_MODEL,
         input: {
           text: "Could I get a medium latte?",
           voice: "longanyang",
@@ -86,7 +87,7 @@ describe("synthesizeDashScopeCosyVoiceAudio", () => {
       {
         apiKey: "test-key",
         apiBaseUrl: "https://dashscope.aliyuncs.com",
-        model: "cosyvoice-v3-flash",
+        model: DEFAULT_DASHSCOPE_COSYVOICE_MODEL,
         defaultVoice: DEFAULT_TTS_VOICE,
         sampleRate: 24000,
       },
@@ -118,7 +119,7 @@ describe("synthesizeDashScopeCosyVoiceAudio", () => {
         {
           apiKey: "bad",
           apiBaseUrl: "https://dashscope.aliyuncs.com",
-          model: "cosyvoice-v3-flash",
+          model: DEFAULT_DASHSCOPE_COSYVOICE_MODEL,
           defaultVoice: DEFAULT_TTS_VOICE,
           sampleRate: 24000,
         },
