@@ -145,7 +145,7 @@ describe("DashScopeCosyVoiceTtsProvider", () => {
     expect(stored?.speed).toBe(DEFAULT_TTS_SPEED);
   });
 
-  it("maps DashScope HTTP failures to provider errors", async () => {
+  it("maps CosyVoice HTTP auth failures to provider errors", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ code: "InvalidApiKey", message: "bad key" }), {
         status: 401,
