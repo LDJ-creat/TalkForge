@@ -32,8 +32,8 @@ function buildMockScenario(description: string): ScenarioGenerationResult["scena
   const topic = description.trim().slice(0, 120) || "a daily English conversation";
 
   return {
-    title: "Custom Practice Scenario",
-    description: `Practice speaking about ${topic}.`,
+    title: "自定义练习场景",
+    description: `练习用英语进行口语对话：${topic.slice(0, 80)}。`,
     level,
     userRole: "learner",
     aiRole: "conversation partner",

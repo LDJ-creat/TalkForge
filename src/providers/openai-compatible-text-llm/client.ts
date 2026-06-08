@@ -139,7 +139,8 @@ export async function createChatCompletion(
     });
   }
 
-  const content = payload?.choices?.[0]?.message?.content?.trim();
+  const completion = payload as ChatCompletionResponse | undefined;
+  const content = completion?.choices?.[0]?.message?.content?.trim();
   if (!content) {
     throw createProviderError({
       provider: config.providerName,
@@ -151,8 +152,8 @@ export async function createChatCompletion(
 
   return {
     content,
-    model: payload?.model ?? request.model,
-    usage: payload?.usage,
-    finishReason: payload?.choices?.[0]?.finish_reason ?? null,
+    model: completion?.model ?? request.model,
+    usage: completion?.usage,
+    finishReason: completion?.choices?.[0]?.finish_reason ?? null,
   };
 }

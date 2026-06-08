@@ -28,9 +28,9 @@ describe("scenario generation service", () => {
     );
 
     expect(result.provider).toBe("mock-scenario-generate");
-    expect(result.scenario.title).toBeTruthy();
+    expect(result.scenario.title).toBe("自定义练习场景");
     expect(result.scenario.goals.length).toBeGreaterThan(0);
-    expect(result.promptVersion).toBe("scenario-generate-v1");
+    expect(result.promptVersion).toBe("scenario-generate-v2");
   });
 
   it("persists a custom scenario with an assigned id", async () => {
