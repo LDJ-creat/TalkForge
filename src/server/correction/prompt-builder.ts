@@ -147,7 +147,7 @@ export function buildCorrectionPrompt(input: CorrectionPromptInput): CorrectionP
     "Identify grammar, expression, vocabulary, and clarity issues in the learner's latest turn.",
     "Do not treat obvious transcription misrecognitions as learner grammar errors.",
     "When transcript confidence is low or wording looks like a recognition artifact, prefer type asr_uncertain.",
-    "Write each correction explanation in Simplified Chinese.",
+    "Write each correction explanation in Simplified Chinese only. Do not write explanations in English.",
     "Keep originalText and correctedText in English exactly as spoken or improved.",
     "Return JSON only. Do not wrap the JSON in markdown fences.",
     `Learner level: ${input.scenarioLevel}. ${LEVEL_GUIDANCE[input.scenarioLevel]}`,

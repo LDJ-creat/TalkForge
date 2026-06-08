@@ -51,6 +51,10 @@ export function mapWordScoreToFeedbackStatus(
   return score < threshold ? "weak" : "ok";
 }
 
+export function isPronunciationSilWord(word: string): boolean {
+  return word.trim().toLowerCase() === "sil";
+}
+
 export function buildPronunciationWordFeedback(
   details: unknown,
   threshold = PRONUNCIATION_WEAK_WORD_SCORE_THRESHOLD,
@@ -62,6 +66,53 @@ export function buildPronunciationWordFeedback(
       score: entry.score,
       status: mapWordScoreToFeedbackStatus(entry.score, threshold),
     }));
+}
+
+export function filterPronunciationDisplayWords(
+  words: PronunciationWordFeedback[],
+): PronunciationWordFeedback[] {
+  return words.filter((word) => !isPronunciationSilWord(word.word));
+}
+
+export function deriveScoresFromWordFeedback(
+  words?: PronunciationWordFeedback[],
+): Pick<TurnPronunciationFeedback, "overallScore" | "accuracyScore"> {
+  if (!words?.length) {
+    return {};
+  }
+
+  const scored = words.filter(
+    (word) =>
+      !isPronunciationSilWord(word.word) &&
+      typeof word.score === "number" &&
+      Number.isFinite(word.score),
+  );
+
+  if (scored.length === 0) {
+    return {};
+  }
+
+  const average =
+    scored.reduce((sum, word) => sum + word.score!, 0) / scored.length;
+
+  return {
+    overallScore: average,
+    accuracyScore: average,
+  };
+}
+
+export function enrichTurnPronunciationFeedback(
+  feedback: TurnPronunciationFeedback,
+): TurnPronunciationFeedback {
+  const derived = deriveScoresFromWordFeedback(feedback.words);
+
+  return {
+    ...feedback,
+    overallScore: feedback.overallScore ?? derived.overallScore,
+    accuracyScore: feedback.accuracyScore ?? derived.accuracyScore,
+    fluencyScore: feedback.fluencyScore,
+    completenessScore: feedback.completenessScore,
+  };
 }
 
 export function buildTurnPronunciationFeedback(input: {
@@ -80,11 +131,11 @@ export function buildTurnPronunciationFeedback(input: {
     return feedback;
   }
 
-  feedback.overallScore = input.evaluation.overallScore;
-  feedback.accuracyScore = input.evaluation.accuracyScore;
-  feedback.fluencyScore = input.evaluation.fluencyScore;
-  feedback.completenessScore = input.evaluation.completenessScore;
+  feedback.overallScore = input.evaluation.overallScore ?? undefined;
+  feedback.accuracyScore = input.evaluation.accuracyScore ?? undefined;
+  feedback.fluencyScore = input.evaluation.fluencyScore ?? undefined;
+  feedback.completenessScore = input.evaluation.completenessScore ?? undefined;
   feedback.words = buildPronunciationWordFeedback(input.evaluation.details);
 
-  return feedback;
+  return enrichTurnPronunciationFeedback(feedback);
 }

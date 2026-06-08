@@ -1,4 +1,5 @@
 import type { TurnPronunciationFeedback } from "@/domain/pronunciation-feedback";
+import { enrichTurnPronunciationFeedback } from "@/domain/pronunciation-feedback";
 import { pronunciationCopy, statusCopy } from "@/lib/ui-copy";
 
 import type { TranscriptEntry } from "./types";
@@ -26,18 +27,22 @@ export function formatPronunciationFeedbackSummary(
     return null;
   }
 
+  const enriched = enrichTurnPronunciationFeedback(feedback);
   const parts: string[] = [];
-  if (typeof feedback.overallScore === "number") {
-    parts.push(pronunciationCopy.overall(feedback.overallScore));
+  if (typeof enriched.overallScore === "number") {
+    parts.push(pronunciationCopy.overall(enriched.overallScore));
   }
-  if (typeof feedback.accuracyScore === "number") {
-    parts.push(pronunciationCopy.accuracy(feedback.accuracyScore));
+  if (typeof enriched.accuracyScore === "number") {
+    parts.push(pronunciationCopy.accuracy(enriched.accuracyScore));
   }
-  if (typeof feedback.fluencyScore === "number") {
-    parts.push(pronunciationCopy.fluency(feedback.fluencyScore));
+  if (typeof enriched.fluencyScore === "number") {
+    parts.push(pronunciationCopy.fluency(enriched.fluencyScore));
+  }
+  if (typeof enriched.completenessScore === "number") {
+    parts.push(pronunciationCopy.completeness(enriched.completenessScore));
   }
 
-  return parts.length > 0 ? parts.join(" · ") : pronunciationCopy.ready;
+  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 export function findLatestUserPronunciationFeedback(

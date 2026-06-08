@@ -24,7 +24,7 @@ describe("correction prompt builder", () => {
     });
 
     expect(prompt.system).toContain("Do not treat obvious transcription misrecognitions");
-    expect(prompt.system).toMatch(/Simplified Chinese/i);
+    expect(prompt.system).toMatch(/Simplified Chinese only/i);
     expect(prompt.system).toMatch(/originalText and correctedText in English/i);
     expect(prompt.system).toContain("Learner level: A2");
     expect(prompt.user).toContain("I go to the cafe yesterday.");

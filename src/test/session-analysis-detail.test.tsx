@@ -11,9 +11,24 @@ vi.mock("@/features/conversation/fetch-session-analysis-api", () => ({
   fetchSessionAnalysisFromServer: (...args: unknown[]) => fetchSessionAnalysisFromServer(...args),
 }));
 
+const pollSessionShadowingFromServer = vi.fn();
+
+vi.mock("@/features/conversation/fetch-shadowing-api", () => ({
+  pollSessionShadowingFromServer: (...args: unknown[]) => pollSessionShadowingFromServer(...args),
+}));
+
 describe("SessionAnalysisDetail", () => {
   beforeEach(() => {
     fetchSessionAnalysisFromServer.mockReset();
+    pollSessionShadowingFromServer.mockReset();
+    pollSessionShadowingFromServer.mockResolvedValue([
+      {
+        id: "shadow-1",
+        sessionId: "session-1",
+        standardText: "Could I get a medium latte?",
+        standardAudioStatus: "ready",
+      },
+    ]);
   });
 
   it("renders full analysis sections when data loads", async () => {
@@ -87,7 +102,7 @@ describe("SessionAnalysisDetail", () => {
 
     expect(screen.getByText(/You completed the coffee order goals/i)).toBeInTheDocument();
     expect(screen.getByText(/Could I get a latte, please/i)).toBeInTheDocument();
-    expect(screen.getByTestId("turn-pronunciation-detail")).toHaveTextContent(/Overall 82/i);
+    expect(screen.getByTestId("turn-pronunciation-detail")).toHaveTextContent(/综合 82/);
     expect(screen.getByTestId("shadowing-practice-panel")).toBeInTheDocument();
   });
 });

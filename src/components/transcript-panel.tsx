@@ -3,8 +3,9 @@
 import { useEffect, useRef } from "react";
 
 import type { TranscriptEntry } from "@/features/conversation";
-import { formatPronunciationFeedbackSummary } from "@/features/conversation/format-pronunciation-feedback";
-import { transcriptCopy } from "@/lib/ui-copy";
+import { pronunciationCopy, transcriptCopy } from "@/lib/ui-copy";
+
+import { PronunciationFeedbackView } from "./pronunciation-feedback-view";
 
 type TranscriptPanelProps = {
   entries: TranscriptEntry[];
@@ -44,34 +45,12 @@ function renderUserPronunciationFeedback(entry: TranscriptEntry) {
     return null;
   }
 
-  const summary = formatPronunciationFeedbackSummary(feedback);
-
   return (
-    <div className="transcript-entry__pronunciation" data-testid="transcript-pronunciation-feedback">
-      {summary ? (
-        <p className="transcript-entry__pronunciation-summary">{summary}</p>
-      ) : null}
-      {feedback.words && feedback.words.length > 0 ? (
-        <div className="transcript-entry__word-list">
-          {feedback.words.map((word) => (
-            <span
-              key={`${entry.id}-${word.word}`}
-              className={`transcript-entry__word${
-                word.status === "weak" ? " transcript-entry__word--weak" : ""
-              }`}
-              title={
-                typeof word.score === "number"
-                  ? `${word.word}: ${Math.round(word.score)}`
-                  : word.word
-              }
-            >
-              {word.word}
-            </span>
-          ))}
-        </div>
-      ) : null}
-      <p className="transcript-entry__pronunciation-note">{transcriptCopy.scoreNote}</p>
-    </div>
+    <PronunciationFeedbackView
+      feedback={feedback}
+      idPrefix={entry.id}
+      testId="transcript-pronunciation-feedback"
+    />
   );
 }
 
