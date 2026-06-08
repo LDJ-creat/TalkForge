@@ -67,6 +67,7 @@ export function createShadowingItemId(
   standardText: string,
   index: number,
   source: ShadowingItemSource = "manual",
+  sessionId?: string,
 ): string {
   const slug = standardText
     .toLowerCase()
@@ -74,7 +75,9 @@ export function createShadowingItemId(
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
 
-  return `shadowing-${source}-${index}-${slug || "item"}`;
+  const scope = sessionId ? `${sessionId}-` : "";
+
+  return `shadowing-${scope}${source}-${index}-${slug || "item"}`;
 }
 
 export function createShadowingItemsFromScenario(scenario: Scenario): ShadowingItem[] {

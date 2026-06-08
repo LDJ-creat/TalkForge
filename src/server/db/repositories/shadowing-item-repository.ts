@@ -36,6 +36,19 @@ export async function listShadowingItemsBySessionId(
   return rows.map(toShadowingItem);
 }
 
+export async function getShadowingItemById(
+  db: TalkForgeDatabase,
+  itemId: string,
+): Promise<ShadowingItem | null> {
+  const [row] = await db
+    .select()
+    .from(shadowingItems)
+    .where(eq(shadowingItems.id, itemId))
+    .limit(1);
+
+  return row ? toShadowingItem(row) : null;
+}
+
 export type ReplaceShadowingItemsForSessionInput = {
   sessionId: string;
   items: CreateShadowingItemRecordInput[];
@@ -58,7 +71,12 @@ export async function replaceShadowingItemsForSession(
       .insert(shadowingItems)
       .values(
         input.items.map((item) => ({
-          id: createShadowingItemId(item.standardText, item.sortOrder, item.source),
+          id: createShadowingItemId(
+            item.standardText,
+            item.sortOrder,
+            item.source,
+            item.sessionId,
+          ),
           sessionId: item.sessionId,
           standardText: item.standardText,
           originalText: item.originalText,

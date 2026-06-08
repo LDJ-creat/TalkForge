@@ -1,3 +1,4 @@
+export * from "./ensure-session-shadowing";
 export * from "./constants";
 export * from "./enqueue-session-shadowing";
 export * from "./errors";

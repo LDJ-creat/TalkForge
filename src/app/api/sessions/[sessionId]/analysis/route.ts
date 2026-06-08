@@ -8,8 +8,10 @@ import {
   listShadowingItemsBySessionId,
   listTurnsBySessionId,
 } from "@/server/db/repositories";
+import { getQueueAdapter } from "@/server/queue/provider";
 import { SessionServiceError } from "@/server/session";
 import { fetchSessionAnalysisForUser } from "@/server/session/fetch-session-analysis";
+import { ensureSessionShadowingGeneration } from "@/server/shadowing/ensure-session-shadowing";
 
 export async function GET(
   request: Request,
@@ -28,6 +30,13 @@ export async function GET(
         getFreeSpeechEvaluationsByTurnIds(db, turnIds),
       getCorrectionsByTurnIds: (turnIds) => getCorrectionsByTurnIds(db, turnIds),
       listShadowingItemsBySessionId: (id) => listShadowingItemsBySessionId(db, id),
+    });
+
+    await ensureSessionShadowingGeneration({
+      sessionId,
+      report: analysis.report,
+      shadowingItems: analysis.shadowingItems,
+      queueAdapter: getQueueAdapter(),
     });
 
     return Response.json({ analysis });

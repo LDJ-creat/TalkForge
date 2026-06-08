@@ -16,10 +16,12 @@ export {
 } from "./scenario-progress-repository";
 export {
   finalizeReport,
+  findReportRowBySessionId,
   getReportBySessionId,
   isReportGenerationComplete,
   listCompletedReportsByScenarioForUser,
   listScenarioReportHistoryForUser,
+  markReportGenerationInProgress,
   prepareReportGeneration,
   saveReportForSessionIfAbsent,
 } from "./report-repository";
@@ -94,6 +96,7 @@ export {
   upsertStandardAudioAsset,
 } from "./standard-audio-asset-repository";
 export {
+  getShadowingItemById,
   listShadowingItemsBySessionId,
   prepareShadowingGeneration,
   replaceShadowingItemsForSession,

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   assertShadowingStandardText,
+  createShadowingItemId,
   createShadowingItemsFromRecommendations,
   createShadowingItemsFromScenario,
   ShadowingValidationError,
@@ -85,6 +86,29 @@ describe("shadowing item helpers", () => {
     expect(items).toHaveLength(1);
     expect(items[0]?.standardText).toBe("Could I get a medium latte?");
     expect(items[0]?.source).toBe("report_recommendation");
+  });
+
+  it("scopes persisted shadowing item ids to a session", () => {
+    const sessionA = "11111111-1111-4111-8111-111111111111";
+    const sessionB = "22222222-2222-4222-8222-222222222222";
+    const text = "Could I get a medium latte?";
+
+    const idA = createShadowingItemId(
+      text,
+      3,
+      "scenario_target_expression",
+      sessionA,
+    );
+    const idB = createShadowingItemId(
+      text,
+      3,
+      "scenario_target_expression",
+      sessionB,
+    );
+
+    expect(idA).not.toBe(idB);
+    expect(idA).toContain(sessionA);
+    expect(idB).toContain(sessionB);
   });
 });
 
