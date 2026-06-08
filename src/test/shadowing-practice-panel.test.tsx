@@ -54,7 +54,7 @@ describe("formatShadowingAudioDuration", () => {
 
 describe("ShadowingPracticePanel", () => {
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it("renders shadowing items with original text and a play button", async () => {
