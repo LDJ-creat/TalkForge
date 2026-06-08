@@ -40,13 +40,14 @@ function parseNumericAttribute(
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-export function parseIflytekIseReadSentenceScores(xml: string): IflytekIseReadSentenceScores {
-  const readSentenceMatch = xml.match(/<read_sentence\b[^>]*>/);
-  if (!readSentenceMatch) {
-    return {};
-  }
+const IFLYTEK_ISE_SCORE_CONTAINER_TAGS = [
+  "read_sentence",
+  "read_chapter",
+  "read_word",
+  "rec_paper",
+] as const;
 
-  const tag = readSentenceMatch[0];
+function parseIflytekIseScoresFromTag(tag: string): IflytekIseReadSentenceScores {
   return {
     totalScore: parseNumericAttribute(tag, "total_score"),
     accuracyScore: parseNumericAttribute(tag, "accuracy_score"),
@@ -54,6 +55,41 @@ export function parseIflytekIseReadSentenceScores(xml: string): IflytekIseReadSe
     completenessScore: parseNumericAttribute(tag, "integrity_score"),
     standardScore: parseNumericAttribute(tag, "standard_score"),
   };
+}
+
+export function parseIflytekIseReadSentenceScores(xml: string): IflytekIseReadSentenceScores {
+  for (const tagName of IFLYTEK_ISE_SCORE_CONTAINER_TAGS) {
+    const match = xml.match(new RegExp(`<${tagName}\\b[^>]*>`));
+    if (!match) {
+      continue;
+    }
+
+    const scores = parseIflytekIseScoresFromTag(match[0]);
+    if (
+      scores.totalScore !== undefined ||
+      scores.accuracyScore !== undefined ||
+      scores.fluencyScore !== undefined
+    ) {
+      return scores;
+    }
+  }
+
+  return {};
+}
+
+function averageWordScores(words: IflytekIseWordDetail[]): number | undefined {
+  const scored = words.filter(
+    (word) =>
+      word.word.trim().toLowerCase() !== "sil" &&
+      typeof word.score === "number" &&
+      Number.isFinite(word.score),
+  );
+
+  if (scored.length === 0) {
+    return undefined;
+  }
+
+  return scored.reduce((sum, word) => sum + word.score!, 0) / scored.length;
 }
 
 export function parseIflytekIseWordDetails(xml: string): IflytekIseWordDetail[] {
@@ -120,6 +156,7 @@ export function normalizeIflytekIseEvaluation(
   const xml = Buffer.from(xmlPayload, "base64").toString("utf8");
   const scores = parseIflytekIseReadSentenceScores(xml);
   const words = parseIflytekIseWordDetails(xml);
+  const fallbackOverall = averageWordScores(words);
 
   const details: IflytekIseNormalizedDetails = {
     referenceText: input.referenceText,
@@ -134,9 +171,9 @@ export function normalizeIflytekIseEvaluation(
   return {
     provider: IFLYTEK_ISE_PROVIDER_NAME,
     mode: input.mode ?? "shadowing",
-    overallScore: scores.totalScore,
+    overallScore: scores.totalScore ?? fallbackOverall,
     fluencyScore: scores.fluencyScore,
-    accuracyScore: scores.accuracyScore,
+    accuracyScore: scores.accuracyScore ?? fallbackOverall,
     completenessScore: scores.completenessScore,
     prosodyScore: scores.standardScore,
     details,

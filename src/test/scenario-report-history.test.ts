@@ -12,7 +12,7 @@ import {
 } from "@/server/report";
 
 const getScenarioById = vi.fn();
-const listCompletedReportsByScenarioForUser = vi.fn();
+const listScenarioReportHistoryForUser = vi.fn();
 
 vi.mock("@/server/db/client", () => ({
   getDb: () => ({}),
@@ -23,9 +23,9 @@ vi.mock("@/server/db/repositories", async (importOriginal) => {
   return {
     ...actual,
     getScenarioById: (...args: Parameters<typeof getScenarioById>) => getScenarioById(...args),
-    listCompletedReportsByScenarioForUser: (
-      ...args: Parameters<typeof listCompletedReportsByScenarioForUser>
-    ) => listCompletedReportsByScenarioForUser(...args),
+    listScenarioReportHistoryForUser: (
+      ...args: Parameters<typeof listScenarioReportHistoryForUser>
+    ) => listScenarioReportHistoryForUser(...args),
   };
 });
 
@@ -54,13 +54,16 @@ function buildHistoricalReport(
   sessionId: string,
   createdAt: string,
   summary: string,
+  status: ScenarioHistoricalReport["status"] = "ready",
 ): ScenarioHistoricalReport {
+  const report = status === "ready" ? buildReport(sessionId, createdAt, summary) : undefined;
   return {
     sessionId,
     sessionStartedAt: "2026-06-05T10:00:00.000Z",
     sessionEndedAt: "2026-06-05T10:15:00.000Z",
     evaluatedAt: createdAt,
-    report: buildReport(sessionId, createdAt, summary),
+    status,
+    report,
   };
 }
 
@@ -71,20 +74,36 @@ describe("listScenarioReportsForUser", () => {
 
   it("returns reports sorted by evaluation time from the repository", async () => {
     getScenarioById.mockResolvedValue(coffeeOrderingScenario as Scenario);
-    listCompletedReportsByScenarioForUser.mockResolvedValue([
+    listScenarioReportHistoryForUser.mockResolvedValue([
       buildHistoricalReport("session-2", "2026-06-06T00:11:00.000Z", "Latest report."),
       buildHistoricalReport("session-1", "2026-06-05T00:11:00.000Z", "Earlier report."),
     ]);
 
     const result = await listScenarioReportsForUser(SCENARIO_ID, USER_ID, {
       getScenarioById,
-      listCompletedReportsByScenarioForUser,
+      listScenarioReportHistoryForUser,
     });
 
-    expect(listCompletedReportsByScenarioForUser).toHaveBeenCalledWith(USER_ID, SCENARIO_ID);
+    expect(listScenarioReportHistoryForUser).toHaveBeenCalledWith(USER_ID, SCENARIO_ID);
     expect(result.reports).toHaveLength(2);
     expect(result.reports[0]?.evaluatedAt).toBe("2026-06-06T00:11:00.000Z");
     expect(result.reports[1]?.evaluatedAt).toBe("2026-06-05T00:11:00.000Z");
+  });
+
+  it("includes failed report history entries", async () => {
+    getScenarioById.mockResolvedValue(coffeeOrderingScenario as Scenario);
+    listScenarioReportHistoryForUser.mockResolvedValue([
+      buildHistoricalReport("session-2", "2026-06-06T00:11:00.000Z", "", "failed"),
+      buildHistoricalReport("session-1", "2026-06-05T00:11:00.000Z", "Earlier report."),
+    ]);
+
+    const result = await listScenarioReportsForUser(SCENARIO_ID, USER_ID, {
+      getScenarioById,
+      listScenarioReportHistoryForUser,
+    });
+
+    expect(result.reports[0]?.status).toBe("failed");
+    expect(result.reports[0]?.report).toBeUndefined();
   });
 
   it("throws when the scenario does not exist", async () => {
@@ -93,7 +112,7 @@ describe("listScenarioReportsForUser", () => {
     await expect(
       listScenarioReportsForUser(SCENARIO_ID, USER_ID, {
         getScenarioById,
-        listCompletedReportsByScenarioForUser,
+        listScenarioReportHistoryForUser,
       }),
     ).rejects.toMatchObject({
       code: "scenario_not_found",
@@ -117,7 +136,7 @@ describe("scenario reports API", () => {
 
   it("returns historical reports for an authorized user", async () => {
     getScenarioById.mockResolvedValue(coffeeOrderingScenario as Scenario);
-    listCompletedReportsByScenarioForUser.mockResolvedValue([
+    listScenarioReportHistoryForUser.mockResolvedValue([
       buildHistoricalReport("session-1", "2026-06-06T00:11:00.000Z", "Great practice session."),
     ]);
 
@@ -134,6 +153,7 @@ describe("scenario reports API", () => {
     const body = await response.json();
     expect(body.reports).toHaveLength(1);
     expect(body.reports[0]?.report.summary).toBe("Great practice session.");
+    expect(body.reports[0]?.status).toBe("ready");
   });
 
   it("returns 404 when the scenario does not exist", async () => {

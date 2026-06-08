@@ -11,6 +11,9 @@ const fetchScenarioReportsFromServer = vi.fn();
 vi.mock("@/features/conversation/fetch-scenario-reports-api", () => ({
   fetchScenarioReportsFromServer: (...args: unknown[]) => fetchScenarioReportsFromServer(...args),
   formatReportEvaluatedAt: (value: string) => value,
+  formatHistoricalReportHeadline: (item: { report?: { summary?: string } }) =>
+    item.report?.summary ?? "报告生成失败",
+  formatHistoricalReportMeta: () => "1/2 goals completed",
   formatTaskCompletionSummary: () => "1/2 goals completed",
 }));
 
@@ -27,6 +30,7 @@ describe("ScenarioEntryPanel", () => {
         sessionStartedAt: "2026-06-05T10:00:00.000Z",
         sessionEndedAt: "2026-06-05T10:15:00.000Z",
         evaluatedAt: "2026-06-06T00:11:00.000Z",
+        status: "ready",
         report: {
           id: "report-1",
           sessionId: "session-1",

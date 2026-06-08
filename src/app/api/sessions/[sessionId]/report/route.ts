@@ -1,6 +1,6 @@
 import { jsonError, requireRequestUserId } from "@/server/api/http";
 import { getDb } from "@/server/db/client";
-import { getReportBySessionId, getSessionById } from "@/server/db/repositories";
+import { findReportRowBySessionId, getSessionById } from "@/server/db/repositories";
 import { fetchSessionReportForUser } from "@/server/report/fetch-session-report";
 import { ReportServiceError } from "@/server/report/errors";
 
@@ -14,7 +14,7 @@ export async function GET(
 
     const report = await fetchSessionReportForUser(sessionId, userId, {
       getSessionById: (id) => getSessionById(getDb(), id),
-      getReportBySessionId: (id) => getReportBySessionId(getDb(), id),
+      findReportBySessionId: (id) => findReportRowBySessionId(getDb(), id),
     });
 
     return Response.json({ report });

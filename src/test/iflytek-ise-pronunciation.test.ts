@@ -101,6 +101,34 @@ describe("iFlytek ISE pronunciation adapter", () => {
     });
   });
 
+  it("falls back to word averages when sentence-level scores are missing", () => {
+    const wordOnlyXml = `<?xml version="1.0" encoding="UTF-8"?>
+<xml_result>
+  <word content="i" total_score="40.0" dp_message="0"/>
+  <word content="sil"/>
+  <word content="want" total_score="80.0" dp_message="0"/>
+</xml_result>`;
+
+    const result = normalizeIflytekIseEvaluation(
+      {
+        code: 0,
+        message: "success",
+        sid: "ise-session-word-only",
+        data: {
+          status: 2,
+          data: Buffer.from(wordOnlyXml, "utf8").toString("base64"),
+        },
+      },
+      {
+        referenceText: "I want",
+        mode: "free_speech",
+      },
+    );
+
+    expect(result.overallScore).toBeCloseTo(60);
+    expect(result.accuracyScore).toBeCloseTo(60);
+  });
+
   it("evaluates shadowing audio through the injected WebSocket client", async () => {
     const evaluateAudio = vi.fn().mockResolvedValue({
       code: 0,

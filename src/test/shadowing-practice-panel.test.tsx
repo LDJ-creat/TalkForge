@@ -1,12 +1,74 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ShadowingPracticePanel } from "@/components/shadowing-practice-panel";
+import { formatShadowingAudioDuration } from "@/components/shadowing-standard-audio-player";
+
+const fetchShadowingItemAudioBlob = vi.fn();
+
+vi.mock("@/features/conversation/fetch-shadowing-audio-api", () => ({
+  fetchShadowingItemAudioBlob: (...args: unknown[]) => fetchShadowingItemAudioBlob(...args),
+  buildShadowingItemAudioUrl: (sessionId: string, itemId: string) =>
+    `/api/sessions/${sessionId}/shadowing/${itemId}/audio`,
+}));
+
+describe("formatShadowingAudioDuration", () => {
+  it("formats reasonable durations and hides corrupted metadata", () => {
+    expect(
+      formatShadowingAudioDuration({
+        provider: "cosyvoice",
+        objectKey: "tts/a.wav",
+        format: "wav",
+        sizeBytes: 44739,
+        voice: "longxiaochun_v3",
+        speed: 1,
+        language: "en",
+        cacheKey: "cache",
+        durationMs: 2800,
+      }),
+    ).toBe("2.8 秒");
+
+    expect(
+      formatShadowingAudioDuration({
+        provider: "cosyvoice",
+        objectKey: "tts/a.wav",
+        format: "wav",
+        sizeBytes: 44739,
+        voice: "longxiaochun_v3",
+        speed: 1,
+        language: "en",
+        cacheKey: "cache",
+        durationMs: 44739,
+      }),
+    ).toBeNull();
+  });
+});
 
 describe("ShadowingPracticePanel", () => {
-  it("renders shadowing items with original text and audio status", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders shadowing items with original text and a play button", async () => {
+    const playMock = vi.fn().mockResolvedValue(undefined);
+    vi.spyOn(window, "Audio").mockImplementation(function MockAudio() {
+      return {
+        play: playMock,
+        pause: vi.fn(),
+        addEventListener: vi.fn(),
+      } as unknown as HTMLAudioElement;
+    });
+
+    URL.createObjectURL = vi.fn(() => "blob:shadowing-audio");
+    URL.revokeObjectURL = vi.fn();
+
+    fetchShadowingItemAudioBlob.mockResolvedValue(
+      new Blob(["RIFF"], { type: "audio/wav" }),
+    );
+
     render(
       <ShadowingPracticePanel
+        sessionId="11111111-1111-4111-8111-111111111111"
         status="ready"
         items={[
           {
@@ -35,6 +97,19 @@ describe("ShadowingPracticePanel", () => {
     expect(screen.getByTestId("shadowing-practice-panel")).toBeInTheDocument();
     expect(screen.getByText("Could I get a medium latte?")).toBeInTheDocument();
     expect(screen.getByText(/你的表达：I want coffee/)).toBeInTheDocument();
-    expect(screen.getByText(/标准音频已就绪/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "播放标准音频" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "播放标准音频" }));
+
+    await waitFor(() => {
+      expect(fetchShadowingItemAudioBlob).toHaveBeenCalledWith(
+        "11111111-1111-4111-8111-111111111111",
+        "shadowing-item-0",
+      );
+    });
+
+    await waitFor(() => {
+      expect(playMock).toHaveBeenCalled();
+    });
   });
 });

@@ -58,7 +58,7 @@ type ConversationStore = ConversationViewState & {
   retryRealtimeConnection: () => Promise<void>;
   enterRealtimeFallback: () => void;
   interruptRealtimeAssistant: () => void;
-  requestEndSession: () => Promise<void>;
+  requestEndSession: (options?: { triggeredBy?: "user" | "model" }) => Promise<void>;
   retrySessionReport: () => Promise<void>;
   teardownSession: () => Promise<void>;
   reset: () => void;
@@ -108,6 +108,7 @@ function isSessionEnding(get: StoreGet): boolean {
   const { endingState } = get();
   return (
     endingState === "user_requested" ||
+    endingState === "model_requested" ||
     endingState === "completed"
   );
 }
@@ -510,7 +511,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         if (!session || session.status !== "active") {
           return;
         }
-        if (get().endingState === "user_requested") {
+        if (get().endingState === "user_requested" || get().endingState === "model_requested") {
           if (event.status === "ended") {
             return;
           }
@@ -573,6 +574,12 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
           ),
         }));
         scheduleTurnEvaluationPoll(set, get, event.serverTurnId);
+        break;
+      case "session_end_requested":
+        if (!session || session.status !== "active" || isSessionEnding(get)) {
+          return;
+        }
+        void get().requestEndSession({ triggeredBy: "model" });
         break;
       default:
         break;
@@ -702,14 +709,20 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
     }
   },
 
-  async requestEndSession() {
+  async requestEndSession(options?: { triggeredBy?: "user" | "model" }) {
     const { session, realtimeLifecycleStatus, endingState, selectedScenario } = get();
+    const triggeredBy = options?.triggeredBy ?? "user";
 
     if (!session || session.status !== "active") {
       return;
     }
 
-    if (realtimeLifecycleStatus === "ended" || endingState === "completed") {
+    if (
+      realtimeLifecycleStatus === "ended" ||
+      endingState === "completed" ||
+      endingState === "user_requested" ||
+      endingState === "model_requested"
+    ) {
       return;
     }
 
@@ -719,7 +732,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
 
     bumpSessionEpoch(set, get);
     set({
-      endingState: "user_requested",
+      endingState: triggeredBy === "model" ? "model_requested" : "user_requested",
       endingSuggestionReason: null,
     });
     setConnectionStatus(set, "disconnecting");

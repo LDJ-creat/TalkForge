@@ -216,6 +216,33 @@ describe("conversation store", () => {
     expect(useConversationStore.getState().realtimeLifecycleStatus).toBe("listening");
   });
 
+  it("ends the session when the realtime model requests session_end_requested", async () => {
+    vi.useFakeTimers();
+
+    const startPromise = useConversationStore
+      .getState()
+      .startSession(coffeeOrderingScenario);
+    await Promise.all([startPromise, vi.advanceTimersByTimeAsync(1_300)]);
+
+    useConversationStore.getState().handleRealtimeControllerEvent({
+      sessionEpoch: useConversationStore.getState().sessionEpoch,
+      type: "session_end_requested",
+      reason: "goals_complete",
+    });
+
+    expect(useConversationStore.getState().endingState).toBe("model_requested");
+    expect(useConversationStore.getState().connectionStatus).toBe("disconnecting");
+
+    await vi.advanceTimersByTimeAsync(300);
+
+    const state = useConversationStore.getState();
+    expect(state.session?.status).toBe("completed");
+    expect(state.endingState).toBe("completed");
+    expect(state.realtimeCredentials).toBeNull();
+
+    vi.useRealTimers();
+  });
+
   it("sets error state when mock start fails", async () => {
     vi.useFakeTimers();
     setMockRealtimeSessionOptions({ failOnStart: true });

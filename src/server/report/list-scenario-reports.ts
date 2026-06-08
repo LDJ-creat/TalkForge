@@ -5,7 +5,7 @@ import { ReportServiceError } from "./errors";
 
 export type ListScenarioReportsDeps = {
   getScenarioById: (scenarioId: string) => Promise<Scenario | null>;
-  listCompletedReportsByScenarioForUser: (
+  listScenarioReportHistoryForUser: (
     userId: string,
     scenarioId: string,
   ) => Promise<ScenarioHistoricalReport[]>;
@@ -21,6 +21,6 @@ export async function listScenarioReportsForUser(
     throw new ReportServiceError(404, "scenario_not_found", "Scenario was not found.");
   }
 
-  const reports = await deps.listCompletedReportsByScenarioForUser(userId, scenarioId);
+  const reports = await deps.listScenarioReportHistoryForUser(userId, scenarioId);
   return { reports };
 }

@@ -12,7 +12,11 @@ export type RealtimeClientEvent =
   | { type: "provider_audio_delta"; base64Pcm: string }
   | { type: "provider_audio_done" }
   | { type: "user_speech_started" }
-  | { type: "user_speech_stopped" };
+  | { type: "user_speech_stopped" }
+  | {
+      type: "session_end_requested";
+      reason: "goals_complete" | "user_requested" | "natural_closing";
+    };
 
 export type RealtimeClientConnectOptions = {
   openingTranscript?: TranscriptEntry;

@@ -133,4 +133,41 @@ describe("qwen omni event adapter extended", () => {
       recoverable: false,
     });
   });
+
+  it("defers session end until response.done after end_practice_session tool call", () => {
+    const state = { lifecycle: "assistant_speaking" as const, activeResponseId: "resp-1" };
+
+    const toolCall = mapQwenOmniServerEvent(
+      {
+        type: "response.function_call_arguments.done",
+        name: "end_practice_session",
+        arguments: '{"reason":"user_requested"}',
+      },
+      state,
+    );
+
+    expect(toolCall.events.some((event) => event.type === "session_end_requested")).toBe(false);
+    expect(toolCall.nextState.pendingSessionEndReason).toBe("user_requested");
+
+    const responseDone = mapQwenOmniServerEvent({ type: "response.done" }, toolCall.nextState);
+
+    expect(responseDone.events).toContainEqual({
+      type: "session_end_requested",
+      reason: "user_requested",
+    });
+    expect(responseDone.nextState.pendingSessionEndReason).toBeNull();
+  });
+
+  it("ignores unrelated function calls", () => {
+    const mapped = mapQwenOmniServerEvent(
+      {
+        type: "response.function_call_arguments.done",
+        name: "get_weather",
+        arguments: '{"location":"Beijing"}',
+      },
+      { lifecycle: "assistant_speaking" },
+    );
+
+    expect(mapped.nextState.pendingSessionEndReason).toBeUndefined();
+  });
 });

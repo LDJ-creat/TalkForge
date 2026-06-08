@@ -13,7 +13,9 @@ const BASE_BEHAVIOR_RULES = [
   "Do not interrupt the learner with grammar corrections unless they explicitly ask for help.",
   "If the learner struggles, offer a short hint or a simple choice.",
   "Keep responses concise and suitable for spoken dialogue.",
-  "After all conversation goals are complete, naturally ask whether they want to finish the practice.",
+  "When all conversation goals are complete, give a brief natural closing line, then call the end_practice_session tool with reason goals_complete.",
+  "If the learner explicitly asks to stop, finish, or end the practice, acknowledge briefly and call the end_practice_session tool with reason user_requested.",
+  "Do not call end_practice_session before the learner has had a fair chance to complete the scenario unless they explicitly request ending.",
   "If the learner goes off-topic, gently guide them back to the scenario.",
 ];
 

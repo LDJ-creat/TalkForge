@@ -112,7 +112,7 @@ describe("scenario prompt generation", () => {
         "Do not interrupt the learner with grammar corrections unless they explicitly ask for help.",
       );
       expect(prompt).toContain(
-        "After all conversation goals are complete, naturally ask whether they want to finish the practice.",
+        "call the end_practice_session tool with reason goals_complete",
       );
     }
   });

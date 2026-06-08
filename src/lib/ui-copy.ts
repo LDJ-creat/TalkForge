@@ -57,6 +57,10 @@ export const scenarioEntryCopy = {
   loadingHistory: "正在加载历史报告…",
   loadHistoryError: "无法加载练习历史，你仍可以开始新对话。",
   emptyHistory: "还没有历史报告，点击下方开始你的第一次对话。",
+  historicalReportFailed: "报告生成失败，可重试生成或查看对话详情。",
+  historicalReportGenerating: "报告正在生成中…",
+  historicalReportRetrying: "正在重新生成报告…",
+  viewSessionDetails: "查看详情",
 };
 
 export const conversationCopy = {
@@ -142,19 +146,26 @@ export const shadowingCopy = {
     "跟着标准音频练习这些句子。服务端发音评分可通过跟读评估 API 使用；应用内录音与评分展示将在后续任务中上线。",
   yourPhrase: "你的表达",
   audioReady: "标准音频已就绪",
-  audioReadyDuration: (seconds: number) => `标准音频已就绪（${seconds} 秒）`,
+  audioReadyDuration: (durationLabel: string) => `标准音频已就绪（${durationLabel}）`,
   audioUnavailable: "标准音频暂不可用",
   generatingAudio: "正在生成标准音频…",
+  playStandardAudio: "播放标准音频",
+  pauseStandardAudio: "暂停",
+  loadingAudio: "加载音频…",
+  playbackFailed: "无法播放标准音频",
 };
 
 export const pronunciationCopy = {
-  analyzing: "Analyzing pronunciation…",
-  skipped: "Skipped — no audio uploaded",
-  unavailable: "Pronunciation feedback unavailable",
-  ready: "Pronunciation feedback ready",
-  overall: (score: number) => `Overall ${Math.round(score)}`,
-  accuracy: (score: number) => `Accuracy ${Math.round(score)}`,
-  fluency: (score: number) => `Fluency ${Math.round(score)}`,
+  analyzing: "正在分析发音…",
+  skipped: "未上传音频，已跳过发音评估",
+  unavailable: "本轮发音评估暂不可用",
+  overall: (score: number) => `综合 ${Math.round(score)}`,
+  accuracy: (score: number) => `准确度 ${Math.round(score)}`,
+  fluency: (score: number) => `流畅度 ${Math.round(score)}`,
+  completeness: (score: number) => `完整度 ${Math.round(score)}`,
+  weakLegend: "橙色高亮表示该词发音较弱（得分低于 60）",
+  wordScore: (word: string, score: number) => `${word}：${score} 分`,
+  scoreNote: "评分基于本轮识别出的文本。",
 };
 
 export const taskCompletionCopy = {

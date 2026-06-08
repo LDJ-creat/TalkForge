@@ -90,7 +90,18 @@ export function ScenarioEntryPanel({ scenario, onStartPractice }: ScenarioEntryP
         {status === "ready" && reports.length > 0 ? (
           <div className="scenario-entry__history-list" data-testid="scenario-history-list">
             {reports.map((item) => (
-              <HistoricalReportCard key={item.sessionId} item={item} scenarioId={scenario.id} />
+              <HistoricalReportCard
+                key={item.sessionId}
+                item={item}
+                scenarioId={scenario.id}
+                onReportUpdated={(updated) => {
+                  setReports((current) =>
+                    current.map((entry) =>
+                      entry.sessionId === updated.sessionId ? updated : entry,
+                    ),
+                  );
+                }}
+              />
             ))}
           </div>
         ) : null}

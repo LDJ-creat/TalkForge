@@ -2,6 +2,7 @@
   "name": "talkforge",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "realtime-proxy": "tsx scripts/realtime-ws-proxy.ts",

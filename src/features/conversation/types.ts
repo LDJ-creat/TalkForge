@@ -38,6 +38,7 @@ export type TurnStatus = (typeof TURN_STATUSES)[number];
 export const ENDING_STATES = [
   "none",
   "user_requested",
+  "model_requested",
   "ai_suggested",
   "completed",
 ] as const;

@@ -104,6 +104,15 @@ export function createBullMQQueueAdapter(
     return snapshot as JobSnapshot<TName>;
   }
 
+  async function removeJob(jobId: string): Promise<void> {
+    const job = await queue.getJob(jobId);
+    if (!job) {
+      return;
+    }
+
+    await job.remove();
+  }
+
   async function getJob(jobId: string): Promise<JobSnapshot | null> {
     const job = await queue.getJob(jobId);
     if (!job) {
@@ -185,6 +194,7 @@ export function createBullMQQueueAdapter(
   return {
     enqueue,
     getJob,
+    removeJob,
     close,
     registerWorkerRegistry,
     startWorker,

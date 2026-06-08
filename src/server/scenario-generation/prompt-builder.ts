@@ -26,33 +26,33 @@ export function buildScenarioGeneratePrompt(
   input: ScenarioGenerateInput,
 ): ScenarioGeneratePrompt {
   const outputSchema = `{
-  "title": "string",
-  "description": "string",
+  "title": "string (Simplified Chinese UI title)",
+  "description": "string (Simplified Chinese one-sentence UI summary)",
   "level": "A1 | A2 | B1 | B2 | C1",
-  "userRole": "string",
-  "aiRole": "string",
-  "situation": "string",
-  "mission": "string",
+  "userRole": "string (English role id, e.g. customer)",
+  "aiRole": "string (English role id, e.g. barista)",
+  "situation": "string (English)",
+  "mission": "string (English)",
   "goals": [
     {
-      "id": "string",
-      "description": "string",
+      "id": "string (snake_case English)",
+      "description": "string (English)",
       "required": true,
-      "completedWhen": "string"
+      "completedWhen": "string (English)"
     }
   ],
   "stages": [
     {
-      "id": "string",
-      "name": "string",
-      "purpose": "string",
-      "aiBehavior": "string",
-      "expectedUserActions": ["string"]
+      "id": "string (snake_case English)",
+      "name": "string (English)",
+      "purpose": "string (English)",
+      "aiBehavior": "string (English)",
+      "expectedUserActions": ["string (English)"]
     }
   ],
-  "vocabulary": ["string"],
-  "targetExpressions": ["string"],
-  "constraints": ["string"],
+  "vocabulary": ["string (English)"],
+  "targetExpressions": ["string (English spoken lines)"],
+  "constraints": ["string (English)"],
   "exitPolicy": {
     "minTurns": 4,
     "maxTurns": 12,
@@ -70,6 +70,11 @@ export function buildScenarioGeneratePrompt(
   const system = [
     "You design structured English speaking practice scenarios for TalkForge.",
     "Each scenario must be a complete role-play task with goals, stages, exit policy, and evaluation rubric.",
+    "Language rules (strict):",
+    "- title and description MUST be in Simplified Chinese (简体中文). These are UI labels shown on the scenario library card.",
+    "- Every other string field MUST be in English, because they drive spoken role-play, goals, and teaching feedback.",
+    "- That includes: userRole, aiRole, situation, mission, goals, stages, vocabulary, targetExpressions, and constraints.",
+    "- goal ids and stage ids must be stable snake_case in English.",
     "Goals must use stable snake_case ids. Every required goal id must appear in exitPolicy.requiredGoals.",
     "Stages should progress naturally from opening to closing.",
     "Constraints must keep the AI in character and suitable for spoken dialogue.",

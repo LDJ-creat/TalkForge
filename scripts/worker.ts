@@ -2,6 +2,7 @@ import { loadEnvFile } from "./load-env";
 
 loadEnvFile();
 
+import { TEXT_LLM_REPORT_TIMEOUT_MS } from "@/providers/openai-compatible-text-llm/timeouts";
 import { checkInfrastructureHealth } from "@/server/infrastructure";
 import { maybeStartRealtimeWebSocketProxy } from "@/server/realtime/ws-proxy";
 import { startBullMQWorkerProcess } from "@/workers/start-bullmq-worker";
@@ -19,6 +20,9 @@ async function main() {
 
   const processHandle = startBullMQWorkerProcess();
   console.info("[talkforge:worker] BullMQ worker started.");
+  console.info(
+    `[talkforge:worker] llm.report timeout=${TEXT_LLM_REPORT_TIMEOUT_MS}ms`,
+  );
 
   const shutdown = async (signal: string) => {
     console.info(`[talkforge:worker] Received ${signal}, shutting down.`);

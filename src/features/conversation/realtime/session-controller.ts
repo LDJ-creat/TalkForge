@@ -39,7 +39,11 @@ export type RealtimeSessionControllerEventPayload =
     }
   | { type: "diagnostics"; diagnostics: RealtimeConnectionDiagnostics }
   | { type: "error"; message: string; recoverable: boolean; failed?: boolean }
-  | { type: "turn_persisted"; clientEntryId: string; serverTurnId: string };
+  | { type: "turn_persisted"; clientEntryId: string; serverTurnId: string }
+  | {
+      type: "session_end_requested";
+      reason: "goals_complete" | "user_requested" | "natural_closing";
+    };
 
 export type RealtimeSessionControllerEvent = {
   sessionEpoch: number;
@@ -258,6 +262,12 @@ function mapClientEvent(event: RealtimeClientEvent): void {
         markFailed(event.message);
       }
       break;
+    case "session_end_requested":
+      emit({
+        type: "session_end_requested",
+        reason: event.reason,
+      });
+      break;
     default:
       break;
   }
@@ -305,8 +315,7 @@ async function startQwenOmniAudioPipeline(
 
   controllerState.turnSync = new RealtimeTurnSync({
     onUserTurnPersisted: ({ clientEntryId, serverTurnId }) => {
-      options.onEvent({
-        sessionEpoch: controllerState.sessionEpoch,
+      emit({
         type: "turn_persisted",
         clientEntryId,
         serverTurnId,

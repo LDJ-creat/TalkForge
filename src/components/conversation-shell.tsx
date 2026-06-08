@@ -141,6 +141,7 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
   const isEnding =
     connectionStatus === "disconnecting" ||
     endingState === "user_requested" ||
+    endingState === "model_requested" ||
     realtimeLifecycleStatus === "ended";
   const isCompleted = session?.status === "completed" || endingState === "completed";
   const usageBlocked = usageLimits ? isSessionUsageBlocked(usageLimits) : false;
@@ -197,7 +198,9 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
         </div>
       </header>
 
-      <div className="conversation-main">
+      <div
+        className={`conversation-main${isCompleted ? " conversation-main--completed" : ""}`}
+      >
         <section className="conversation-panel">
           <h2 className="conversation-panel__title">{conversationCopy.voicePractice}</h2>
           <VoiceVisualizer turnStatus={turnStatus} />
@@ -278,7 +281,12 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
               {conversationCopy.sessionEnded}
             </p>
           ) : null}
-          {isCompleted ? (
+        </section>
+
+        <TranscriptPanel entries={transcripts} />
+
+        {isCompleted ? (
+          <section className="conversation-results" data-testid="conversation-results">
             <SessionReportPanel
               report={report}
               status={reportStatus}
@@ -288,13 +296,13 @@ export function ConversationShell({ scenario }: ConversationShellProps) {
                   : undefined
               }
             />
-          ) : null}
-          {isCompleted ? (
-            <ShadowingPracticePanel items={shadowingItems} status={shadowingStatus} />
-          ) : null}
-        </section>
-
-        <TranscriptPanel entries={transcripts} />
+            <ShadowingPracticePanel
+              sessionId={session?.id}
+              items={shadowingItems}
+              status={shadowingStatus}
+            />
+          </section>
+        ) : null}
       </div>
     </div>
   );

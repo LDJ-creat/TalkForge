@@ -6,6 +6,7 @@ export {
   type StandardAudioMetadataRepository,
 } from "./tts-provider";
 export {
+  buildDashScopeCosyVoiceSynthesisUrl,
   DEFAULT_DASHSCOPE_COSYVOICE_MODEL,
   DEFAULT_DASHSCOPE_COSYVOICE_SAMPLE_RATE,
   DEFAULT_DASHSCOPE_COSYVOICE_VOICE,

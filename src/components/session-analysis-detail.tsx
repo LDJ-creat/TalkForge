@@ -7,12 +7,14 @@ import type { Scenario } from "@/domain/scenario";
 import type { SessionAnalysis, SessionAnalysisTurn } from "@/domain/session-analysis";
 import { fetchSessionAnalysisFromServer } from "@/features/conversation/fetch-session-analysis-api";
 import { formatReportEvaluatedAt } from "@/features/conversation/fetch-scenario-reports-api";
-import { formatPronunciationFeedbackSummary } from "@/features/conversation/format-pronunciation-feedback";
+import { pollSessionShadowingFromServer } from "@/features/conversation/fetch-shadowing-api";
 import { loadingCopy, pronunciationCopy } from "@/lib/ui-copy";
+import type { ShadowingItem } from "@/domain/shadowing";
 import type { TranscriptEntry } from "@/features/conversation/types";
 
 import { BackLink } from "./back-link";
 import { LoadingState } from "./loading-state";
+import { PronunciationFeedbackView } from "./pronunciation-feedback-view";
 import { ShadowingPracticePanel } from "./shadowing-practice-panel";
 import { SessionReportDetails } from "./session-report-panel";
 import { TranscriptPanel } from "./transcript-panel";
@@ -78,7 +80,6 @@ function TurnCorrections({ corrections }: { corrections: Correction[] }) {
 }
 
 function UserTurnPronunciation({ turn }: { turn: SessionAnalysisTurn }) {
-  const summary = formatPronunciationFeedbackSummary(turn.pronunciationFeedback);
   const feedback = turn.pronunciationFeedback;
 
   if (!feedback || turn.role !== "user") {
@@ -106,32 +107,18 @@ function UserTurnPronunciation({ turn }: { turn: SessionAnalysisTurn }) {
   if (feedback.evaluationStatus !== "done") {
     return (
       <p className="turn-analysis__pronunciation turn-analysis__pronunciation--pending">
-        {summary ?? "Pronunciation analysis pending."}
+        {pronunciationCopy.analyzing}
       </p>
     );
   }
 
   return (
-    <div className="turn-analysis__pronunciation" data-testid="turn-pronunciation-detail">
-      {summary ? <p className="turn-analysis__pronunciation-summary">{summary}</p> : null}
-      {feedback.words && feedback.words.length > 0 ? (
-        <div className="transcript-entry__word-list">
-          {feedback.words.map((word) => (
-            <span
-              key={`${turn.id}-${word.word}`}
-              className={`transcript-entry__word${
-                word.status === "weak" ? " transcript-entry__word--weak" : ""
-              }`}
-            >
-              {word.word}
-            </span>
-          ))}
-        </div>
-      ) : null}
-      <p className="turn-analysis__pronunciation-note">
-        Scores are based on the realtime transcript for this turn.
-      </p>
-    </div>
+    <PronunciationFeedbackView
+      feedback={feedback}
+      idPrefix={turn.id}
+      className="turn-analysis__pronunciation"
+      testId="turn-pronunciation-detail"
+    />
   );
 }
 
@@ -166,6 +153,10 @@ function TurnAnalysisList({ turns }: { turns: SessionAnalysisTurn[] }) {
 
 export function SessionAnalysisDetail({ scenario, sessionId }: SessionAnalysisDetailProps) {
   const [analysis, setAnalysis] = useState<SessionAnalysis | null>(null);
+  const [shadowingItems, setShadowingItems] = useState<ShadowingItem[]>([]);
+  const [shadowingStatus, setShadowingStatus] = useState<
+    "idle" | "loading" | "ready" | "unavailable"
+  >("idle");
   const [status, setStatus] = useState<"loading" | "ready" | "error" | "mismatch">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -186,6 +177,30 @@ export function SessionAnalysisDetail({ scenario, sessionId }: SessionAnalysisDe
 
         setAnalysis(result);
         setStatus("ready");
+
+        if (result.shadowingItems.length > 0) {
+          setShadowingItems(result.shadowingItems);
+          setShadowingStatus("ready");
+          return;
+        }
+
+        if (result.report.shadowingRecommendations.length === 0) {
+          setShadowingStatus("unavailable");
+          return;
+        }
+
+        setShadowingStatus("loading");
+        const items = await pollSessionShadowingFromServer(sessionId, {
+          attempts: 40,
+          intervalMs: 1500,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        setShadowingItems(items);
+        setShadowingStatus(items.length > 0 ? "ready" : "unavailable");
       } catch (error) {
         if (!cancelled) {
           setStatus("error");
@@ -270,7 +285,11 @@ export function SessionAnalysisDetail({ scenario, sessionId }: SessionAnalysisDe
       </section>
 
       <section className="session-analysis__section-card">
-        <ShadowingPracticePanel items={analysis.shadowingItems} status="ready" />
+        <ShadowingPracticePanel
+          sessionId={sessionId}
+          items={shadowingItems}
+          status={shadowingStatus}
+        />
       </section>
     </main>
   );

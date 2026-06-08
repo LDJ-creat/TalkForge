@@ -2,6 +2,12 @@ import {
   recordSpeechStarted,
   recordSpeechStopped,
 } from "../audio/audio-diagnostics";
+import {
+  isEndPracticeSessionToolCall,
+  parseEndPracticeSessionReason,
+  type EndPracticeSessionReason,
+} from "@/providers/qwen-omni/end-practice-session-tool";
+
 import type { RealtimeClientEvent } from "../client-types";
 import type { RealtimeLifecycleStatus } from "../lifecycle";
 
@@ -19,6 +25,16 @@ type QwenRealtimeServerEvent = {
     message?: string;
     code?: string;
   };
+  name?: string;
+  arguments?: string;
+};
+
+export type QwenOmniEventParserState = {
+  lifecycle: RealtimeLifecycleStatus;
+  activeResponseId?: string;
+  activeUserItemId?: string;
+  sessionReady?: boolean;
+  pendingSessionEndReason?: EndPracticeSessionReason | null;
 };
 
 function createTranscriptId(prefix: string): string {
@@ -38,13 +54,8 @@ export function isNonRecoverableQwenOmniError(message: string, code?: string): b
 
 export function mapQwenOmniServerEvent(
   payload: unknown,
-  state: {
-    lifecycle: RealtimeLifecycleStatus;
-    activeResponseId?: string;
-    activeUserItemId?: string;
-    sessionReady?: boolean;
-  },
-): { events: RealtimeClientEvent[]; nextState: typeof state } {
+  state: QwenOmniEventParserState,
+): { events: RealtimeClientEvent[]; nextState: QwenOmniEventParserState } {
   const event = payload as QwenRealtimeServerEvent;
   const events: RealtimeClientEvent[] = [];
   const nextState = { ...state };
@@ -155,11 +166,27 @@ export function mapQwenOmniServerEvent(
       }
       break;
     }
-    case "response.done":
+    case "response.function_call_arguments.done": {
+      if (isEndPracticeSessionToolCall(event.name)) {
+        const reason = parseEndPracticeSessionReason(event.arguments) ?? "natural_closing";
+        nextState.pendingSessionEndReason = reason;
+      }
+      break;
+    }
+    case "response.done": {
       events.push({ type: "lifecycle", status: "listening" });
       nextState.lifecycle = "listening";
       nextState.activeResponseId = undefined;
+
+      if (nextState.pendingSessionEndReason) {
+        events.push({
+          type: "session_end_requested",
+          reason: nextState.pendingSessionEndReason,
+        });
+        nextState.pendingSessionEndReason = null;
+      }
       break;
+    }
     case "response.cancelled":
     case "response.interrupted":
       events.push({ type: "provider_audio_done" });

@@ -17,6 +17,8 @@ describe("buildScenarioGeneratePrompt", () => {
     });
 
     expect(prompt.system).toContain("TalkForge");
+    expect(prompt.system).toContain("title and description MUST be in Simplified Chinese");
+    expect(prompt.system).toContain("Every other string field MUST be in English");
     expect(prompt.user).toContain("Practice buying medicine at a pharmacy.");
     expect(prompt.user).toContain("Order Coffee at a Cafe");
     expect(prompt.outputSchema).toContain("exitPolicy");
