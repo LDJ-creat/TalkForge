@@ -75,6 +75,14 @@ describe("Qwen Omni session config", () => {
     expect(updateEvent.session.input_audio_transcription).toEqual({
       model: "qwen3-asr-flash-realtime",
     });
+    expect(updateEvent.session.tools).toEqual([
+      expect.objectContaining({
+        type: "function",
+        function: expect.objectContaining({
+          name: "end_practice_session",
+        }),
+      }),
+    ]);
   });
 
   it("defaults to server_vad for sensitive mic capture", () => {

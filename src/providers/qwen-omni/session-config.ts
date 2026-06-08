@@ -1,3 +1,8 @@
+import {
+  END_PRACTICE_SESSION_TOOL,
+  type QwenOmniFunctionTool,
+} from "./end-practice-session-tool";
+
 export type QwenOmniSessionConfig = {
   modalities: Array<"text" | "audio">;
   voice: string;
@@ -15,6 +20,7 @@ export type QwenOmniSessionConfig = {
     silence_duration_ms: number;
     prefix_padding_ms?: number;
   };
+  tools: QwenOmniFunctionTool[];
 };
 
 export type QwenOmniVadMode = "server_vad" | "semantic_vad";
@@ -57,6 +63,7 @@ export function buildQwenOmniSessionConfig(input: {
       silence_duration_ms: 800,
       prefix_padding_ms: 300,
     },
+    tools: [END_PRACTICE_SESSION_TOOL],
   };
 }
 

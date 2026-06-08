@@ -13,6 +13,15 @@ export {
   resolveQwenOmniEndpoints,
 } from "./config";
 export {
+  END_PRACTICE_SESSION_TOOL,
+  END_PRACTICE_SESSION_TOOL_NAME,
+  END_PRACTICE_SESSION_REASONS,
+  isEndPracticeSessionToolCall,
+  parseEndPracticeSessionReason,
+  type EndPracticeSessionReason,
+  type QwenOmniFunctionTool,
+} from "./end-practice-session-tool";
+export {
   buildQwenOmniOpeningSpeechEvents,
   buildQwenOmniOpeningUserItemEvent,
   buildQwenOmniResponseCreateEvent,
