@@ -12,6 +12,14 @@ vi.mock("@/features/conversation/fetch-shadowing-audio-api", () => ({
     `/api/sessions/${sessionId}/shadowing/${itemId}/audio`,
 }));
 
+vi.mock("@/features/conversation/submit-shadowing-practice-api", () => ({
+  submitShadowingPracticeRecording: vi.fn(),
+}));
+
+vi.mock("@/components/shadowing-practice-recorder", () => ({
+  ShadowingPracticeRecorder: () => <div data-testid="shadowing-practice-recorder" />,
+}));
+
 describe("formatShadowingAudioDuration", () => {
   it("formats reasonable durations and hides corrupted metadata", () => {
     expect(
@@ -98,6 +106,7 @@ describe("ShadowingPracticePanel", () => {
     expect(screen.getByText("Could I get a medium latte?")).toBeInTheDocument();
     expect(screen.getByText(/你的表达：I want coffee/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "播放标准音频" })).toBeInTheDocument();
+    expect(screen.getByTestId("shadowing-practice-recorder")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "播放标准音频" }));
 

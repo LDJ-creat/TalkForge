@@ -1,4 +1,6 @@
 export * from "./ensure-session-shadowing";
+export * from "./fetch-shadowing-item-audio";
+export * from "./submit-practice-evaluation";
 export * from "./constants";
 export * from "./enqueue-session-shadowing";
 export * from "./errors";

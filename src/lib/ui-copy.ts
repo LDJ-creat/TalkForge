@@ -75,6 +75,8 @@ export const conversationCopy = {
     "麦克风音量过低（峰值 < 0.01）。请检查 Windows 输入音量、选择正确的输入设备、使用耳机，或在 .env 中提高 NEXT_PUBLIC_REALTIME_MIC_GAIN=8。",
   bargeInHint: "清晰说话即可打断 AI，或使用「打断 AI」按钮。",
   sessionEnded: "练习已结束。处理完成后可在下方查看练习报告。",
+  endSessionBeforeLeave: "请先结束当前会话",
+  backToOverviewLabel: (scenarioTitle: string) => `返回「${scenarioTitle}」概览`,
   endingSuggestions: {
     goalsComplete: "你已完成主要场景目标，准备好了就可以结束练习。",
     maxTurns: "本次练习已达到回合上限，可以结束练习了。",
@@ -143,7 +145,7 @@ export const shadowingCopy = {
   loading: "正在准备推荐句子和标准音频…",
   unavailable: "跟读内容暂不可用。请等待练习报告处理完成后再试。",
   summary:
-    "跟着标准音频练习这些句子。服务端发音评分可通过跟读评估 API 使用；应用内录音与评分展示将在后续任务中上线。",
+    "跟着标准音频练习这些句子，然后点击麦克风录音跟读，系统会给出发音评分与弱项词提示。",
   yourPhrase: "你的表达",
   audioReady: "标准音频已就绪",
   audioReadyDuration: (durationLabel: string) => `标准音频已就绪（${durationLabel}）`,
@@ -153,6 +155,14 @@ export const shadowingCopy = {
   pauseStandardAudio: "暂停",
   loadingAudio: "加载音频…",
   playbackFailed: "无法播放标准音频",
+  startRecording: "开始跟读录音",
+  stopRecording: "结束录音",
+  evaluatingRecording: "正在评测发音…",
+  recordingHint: "正在录音，再次点击结束并提交评测。",
+  recorderPrompt: "请跟读：{text}",
+  microphoneUnavailable: "无法访问麦克风，请检查浏览器权限。",
+  recordingTooShort: "录音太短，请按住麦克风按钮稍久一些。",
+  evaluationFailed: "发音评测失败，请稍后重试。",
 };
 
 export const pronunciationCopy = {
