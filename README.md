@@ -564,4 +564,6 @@ TalkForge/
 
 ## License
 
-Private — 详见仓库设置。
+本项目采用 [MIT License](LICENSE) 开源。
+
+Copyright (c) 2026 LDJ
