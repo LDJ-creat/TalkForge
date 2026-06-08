@@ -29,4 +29,7 @@ jobs:
         run: npm run test
 
       - name: Build
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/talkforge
+          STORAGE_SIGNING_SECRET: ci-build-storage-signing-secret
         run: npm run build
