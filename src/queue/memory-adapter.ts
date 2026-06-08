@@ -125,6 +125,14 @@ export function createMemoryQueueAdapter(
     return record ? toSnapshot(record) : null;
   }
 
+  async function removeJob(jobId: string): Promise<void> {
+    jobs.delete(jobId);
+    const index = pendingJobIds.indexOf(jobId);
+    if (index >= 0) {
+      pendingJobIds.splice(index, 1);
+    }
+  }
+
   function pickNextJobId(): string | null {
     const currentTime = now().getTime();
 
@@ -231,6 +239,7 @@ export function createMemoryQueueAdapter(
   return {
     enqueue,
     getJob,
+    removeJob,
     close,
     registerWorkerRegistry(nextRegistry: WorkerRegistry) {
       registry = nextRegistry;

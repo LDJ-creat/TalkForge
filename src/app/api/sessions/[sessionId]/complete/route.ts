@@ -1,6 +1,10 @@
 import { jsonError, requireRequestUserId } from "@/server/api/http";
 import { getDb } from "@/server/db/client";
-import { completeSession, getSessionById } from "@/server/db/repositories";
+import {
+  completeSession,
+  getSessionById,
+  markReportGenerationInProgress,
+} from "@/server/db/repositories";
 import { getQueueAdapter } from "@/server/queue/provider";
 import { processEnqueuedJobsSafely } from "@/server/queue/dev-worker";
 import { logSessionLifecycle } from "@/server/observability/log";
@@ -38,6 +42,10 @@ export async function POST(
       userId,
       reportJobEnqueued: result.reportJobEnqueued,
     });
+
+    if (result.reportJobEnqueued) {
+      await markReportGenerationInProgress(db, sessionId);
+    }
 
     await processEnqueuedJobsSafely();
 

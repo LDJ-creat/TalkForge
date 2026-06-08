@@ -25,6 +25,7 @@ const activeSession: Session = {
 const getSessionById = vi.fn();
 const completeSession = vi.fn();
 const listTurnsBySessionId = vi.fn();
+const markReportGenerationInProgress = vi.fn();
 const getQueueAdapter = vi.fn();
 
 vi.mock("@/server/db/client", () => ({
@@ -38,6 +39,8 @@ vi.mock("@/server/db/repositories", async (importOriginal) => {
     getSessionById: (...args: unknown[]) => getSessionById(...args),
     completeSession: (...args: unknown[]) => completeSession(...args),
     listTurnsBySessionId: (...args: unknown[]) => listTurnsBySessionId(...args),
+    markReportGenerationInProgress: (...args: unknown[]) =>
+      markReportGenerationInProgress(...args),
   };
 });
 
@@ -102,6 +105,7 @@ describe("complete session service", () => {
 describe("complete session API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    markReportGenerationInProgress.mockResolvedValue(undefined);
   });
 
   it("returns 401 without a request user header", async () => {
@@ -142,6 +146,7 @@ describe("complete session API", () => {
     expect(body.session.status).toBe("completed");
     expect(body.reportJobEnqueued).toBe(true);
     expect(body.scenarioProgressJobEnqueued).toBe(true);
+    expect(markReportGenerationInProgress).toHaveBeenCalledWith({}, SESSION_ID);
 
     const job = await adapter.getJob(buildReportJobId(SESSION_ID));
     expect(job?.name).toBe("report.generate");

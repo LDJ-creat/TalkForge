@@ -10,6 +10,8 @@ export type QueueAdapter = {
     options?: EnqueueOptions,
   ): Promise<JobSnapshot<TName>>;
   getJob(jobId: string): Promise<JobSnapshot | null>;
+  /** Optional: remove a job by id (used to re-enqueue terminal report jobs). */
+  removeJob?(jobId: string): Promise<void>;
   close(): Promise<void>;
 };
 

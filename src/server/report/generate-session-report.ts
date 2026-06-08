@@ -91,15 +91,6 @@ export async function generateSessionReport(
     };
   }
 
-  if (preparation.status === "in_progress") {
-    throw new JobProcessingError({
-      code: "report_in_progress",
-      message: "Report generation is already in progress for this session.",
-      attempts: context.attempts,
-      retryable: true,
-    });
-  }
-
   const scenario = await deps.getScenarioById(session.scenarioId);
   if (!scenario) {
     throw new JobProcessingError({

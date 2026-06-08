@@ -40,7 +40,7 @@ import {
 } from "@/workers";
 
 const getSessionById = vi.fn();
-const getReportBySessionId = vi.fn();
+const findReportRowBySessionId = vi.fn();
 
 vi.mock("@/server/db/client", () => ({
   getDb: () => ({}),
@@ -51,7 +51,7 @@ vi.mock("@/server/db/repositories", async (importOriginal) => {
   return {
     ...actual,
     getSessionById: (...args: unknown[]) => getSessionById(...args),
-    getReportBySessionId: (...args: unknown[]) => getReportBySessionId(...args),
+    findReportRowBySessionId: (...args: unknown[]) => findReportRowBySessionId(...args),
   };
 });
 
@@ -195,7 +195,7 @@ function createInMemoryReportDeps(options?: {
 
       const ageMs = now().getTime() - new Date(existing.createdAt).getTime();
       if (ageMs < 5 * 60 * 1000) {
-        return { status: "in_progress" };
+        return { status: "resume", report: existing };
       }
 
       return { status: "resume", report: existing };
@@ -363,7 +363,7 @@ describe("report generation worker", () => {
     expect(createDbReportGenerateDeps({ db: {} as never }).getSessionById).toBeTypeOf("function");
   });
 
-  it("does not call the LLM when another worker already claimed generation", async () => {
+  it("resumes report generation when a generating placeholder already exists", async () => {
     const llmProvider = createMockLlmProvider();
     const generateReport = vi.spyOn(llmProvider, "generateReport");
     const { deps } = createInMemoryReportDeps({
@@ -374,14 +374,12 @@ describe("report generation worker", () => {
       llmProvider,
     });
 
-    await expect(
-      generateSessionReport({ sessionId: SESSION_ID }, deps, { attempts: 1 }),
-    ).rejects.toMatchObject({
-      code: "report_in_progress",
-      retryable: true,
+    const result = await generateSessionReport({ sessionId: SESSION_ID }, deps, {
+      attempts: 1,
     });
 
-    expect(generateReport).not.toHaveBeenCalled();
+    expect(generateReport).toHaveBeenCalledTimes(1);
+    expect(result.report.summary).not.toBe(REPORT_GENERATING_MARKER);
   });
 
   it("deduplicates report.generate jobs by session id when enqueuing", async () => {
@@ -445,7 +443,7 @@ describe("report API", () => {
     };
 
     getSessionById.mockResolvedValue(completedSession);
-    getReportBySessionId.mockResolvedValue(report);
+    findReportRowBySessionId.mockResolvedValue(report);
 
     const response = await getReportRoute(
       new Request(`http://localhost/api/sessions/${SESSION_ID}/report`, {
@@ -462,9 +460,9 @@ describe("report API", () => {
     expect(body.report.shadowingRecommendations[0]?.text).toBe("Could I get a medium latte?");
   });
 
-  it("returns 404 when the report has not been generated yet", async () => {
+  it("returns 404 when the report row does not exist yet", async () => {
     getSessionById.mockResolvedValue(completedSession);
-    getReportBySessionId.mockResolvedValue(null);
+    findReportRowBySessionId.mockResolvedValue(null);
 
     const response = await getReportRoute(
       new Request(`http://localhost/api/sessions/${SESSION_ID}/report`, {
@@ -477,6 +475,46 @@ describe("report API", () => {
 
     expect(response.status).toBe(404);
   });
+
+  it("returns 202 while the report is still generating", async () => {
+    getSessionById.mockResolvedValue(completedSession);
+    findReportRowBySessionId.mockResolvedValue(
+      createPlaceholderReport(SESSION_ID, new Date().toISOString()),
+    );
+
+    const response = await getReportRoute(
+      new Request(`http://localhost/api/sessions/${SESSION_ID}/report`, {
+        headers: {
+          [REQUEST_USER_ID_HEADER]: USER_ID,
+        },
+      }),
+      { params: Promise.resolve({ sessionId: SESSION_ID }) },
+    );
+
+    expect(response.status).toBe(202);
+    const body = await response.json();
+    expect(body.error.code).toBe("report_generating");
+  });
+
+  it("returns 503 when report generation failed and is stale", async () => {
+    getSessionById.mockResolvedValue(completedSession);
+    findReportRowBySessionId.mockResolvedValue(
+      createPlaceholderReport(SESSION_ID, "2026-06-01T00:00:00.000Z"),
+    );
+
+    const response = await getReportRoute(
+      new Request(`http://localhost/api/sessions/${SESSION_ID}/report`, {
+        headers: {
+          [REQUEST_USER_ID_HEADER]: USER_ID,
+        },
+      }),
+      { params: Promise.resolve({ sessionId: SESSION_ID }) },
+    );
+
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body.error.code).toBe("report_generation_failed");
+  });
 });
 
 describe("fetchSessionReportForUser", () => {
@@ -484,7 +522,7 @@ describe("fetchSessionReportForUser", () => {
     await expect(
       fetchSessionReportForUser(SESSION_ID, "other-user", {
         getSessionById: async () => completedSession,
-        getReportBySessionId: async () => null,
+        findReportBySessionId: async () => null,
       }),
     ).rejects.toMatchObject({
       code: "forbidden",

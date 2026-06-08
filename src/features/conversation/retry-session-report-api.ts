@@ -9,5 +9,6 @@ export async function retrySessionReportFromServer(sessionId: string, userId?: s
   return pollSessionReportFromServer(sessionId, {
     attempts: REPORT_RETRY_POLL_ATTEMPTS,
     intervalMs: REPORT_RETRY_POLL_INTERVAL_MS,
+    isRetry: true,
   });
 }

@@ -628,7 +628,7 @@ describe("P1 real-provider staging readiness (CI-safe mock loop)", () => {
 
     const reportView = await fetchSessionReportForUser(SESSION_ID, USER_ID, {
       getSessionById: async () => state.session,
-      getReportBySessionId: async () => state.getReport(),
+      findReportBySessionId: async () => state.getReport(),
     });
 
     expect(reportView.summary.length).toBeGreaterThan(0);

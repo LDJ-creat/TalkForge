@@ -278,7 +278,7 @@ describe("P0 mock happy path services", () => {
 
     const report = await fetchSessionReportForUser(SESSION_ID, DEV_USER_ID, {
       getSessionById,
-      getReportBySessionId,
+      findReportBySessionId: getReportBySessionId,
     });
 
     expect(report.summary).toContain("coffee");
