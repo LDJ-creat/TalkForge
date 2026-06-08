@@ -12,6 +12,7 @@ import type { StandardAudioAsset, UpsertStandardAudioAssetInput } from "@/domain
 import { parseWavMetadata } from "@/shared/wav-metadata";
 
 import {
+  DEFAULT_DASHSCOPE_COSYVOICE_MODEL,
   DEFAULT_DASHSCOPE_COSYVOICE_SAMPLE_RATE,
   DEFAULT_DASHSCOPE_COSYVOICE_VOICE,
   DASHSCOPE_COSYVOICE_PROVIDER_NAME,
@@ -74,7 +75,7 @@ export class DashScopeCosyVoiceTtsProvider implements TtsProvider {
     this.config = {
       apiKey: options.apiKey,
       apiBaseUrl: options.apiBaseUrl ?? "https://dashscope.aliyuncs.com",
-      model: options.model ?? "cosyvoice-v3-flash",
+      model: options.model ?? DEFAULT_DASHSCOPE_COSYVOICE_MODEL,
       defaultVoice: options.defaultVoice ?? DEFAULT_DASHSCOPE_COSYVOICE_VOICE,
       sampleRate: options.sampleRate ?? DEFAULT_DASHSCOPE_COSYVOICE_SAMPLE_RATE,
     };
