@@ -35,9 +35,9 @@ Copy `.env.example` to `.env`, then enable real infrastructure and providers.
 ### Core runtime
 
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5434/talkforge
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/talkforge
 QUEUE_PROVIDER=redis
-REDIS_URL=redis://localhost:6381
+REDIS_URL=redis://localhost:6379
 APP_BASE_URL=http://localhost:3000
 NEXT_PUBLIC_APP_BASE_URL=http://localhost:3000
 NEXT_PUBLIC_DEV_USER_ID=99999999-9999-4999-8999-999999999999

@@ -5,10 +5,17 @@
 > 设计哲学：**前台沉浸对话，后台静默教研。**  
 > 实时语音模型负责自然对话体验与 turn 级转写；异步教研链路负责纠错、评测与报告，不打断用户说话。
 
+## 演示视频
+
+观看 TalkForge 实时语音对话、课后纠错与 Shadowing 跟读等功能演示：
+
+**[Bilibili · TalkForge 英语口语陪练演示](https://www.bilibili.com/video/BV13aEK6nEXx/)**
+
 ---
 
 ## 目录
 
+- [演示视频](#演示视频)
 - [赛题背景](#赛题背景)
 - [核心功能](#核心功能)
 - [系统架构](#系统架构)
@@ -21,7 +28,6 @@
 - [开发脚本](#开发脚本)
 - [测试与验证](#测试与验证)
 - [项目结构](#项目结构)
-- [相关文档](#相关文档)
 - [已知限制](#已知限制)
 
 ---
@@ -147,7 +153,7 @@ TalkForge 采用 **主从双轨协同** 架构：
 | TTS    | DashScope CosyVoice                | Shadowing 标准音频                                |
 | 发音评测   | iFlytek ISE                        | 自由对话 + Shadowing 跟读                           |
 | 测试     | Vitest + Testing Library           | 单元 / 集成 / 组件测试                                |
-| 基础设施   | Docker Compose                     | 本地 PostgreSQL（5434）+ Redis（6381）              |
+| 基础设施   | Docker Compose                     | 本地 PostgreSQL（5432）+ Redis（6379）              |
 
 
 所有外部能力均通过 **Provider 抽象层**（`src/providers/`）隔离，便于切换供应商与独立演进。
@@ -183,7 +189,8 @@ TalkForge 采用 **主从双轨协同** 架构：
 ### 1. 克隆与安装
 
 ```bash
-git clone <your-repo-url> TalkForge
+git clone https://github.com/LDJ-creat/TalkForge.git
+# 或者 git clone git@github.com:LDJ-creat/TalkForge.git
 cd TalkForge
 npm install
 ```
@@ -198,19 +205,35 @@ cp .env.example .env
 
 ### 3. 启动基础设施
 
-Docker Compose 将 PostgreSQL 映射到 **5434**、Redis 映射到 **6381**，避免与本地默认端口冲突：
+Docker Compose 使用 PostgreSQL **5432**、Redis **6379** 标准端口，与 `.env.example` 及本机原生安装默认端口一致。任选其一即可：
+
+- **Docker Compose**（推荐新环境一键启动）：
 
 ```bash
 npm run infra:up
 npm run infra:check
 ```
 
+- **本机已安装 PostgreSQL / Redis**：确保服务已启动。Docker 方式会通过 `POSTGRES_DB` 自动创建 `talkforge` 库；本机原生安装需手动建库：
+
+```bash
+# 方式一：createdb（PostgreSQL 客户端工具，需在 PATH 中）
+createdb -U postgres talkforge
+
+# 方式二：psql
+psql -U postgres -c "CREATE DATABASE talkforge;"
+```
+
+若用户名、密码与 `.env.example` 不同，在 `.env` 中修改 `DATABASE_URL` / `REDIS_URL`。
+
+> 若本机已有服务占用 5432 / 6379，请先停止其一再启动 Docker，或只使用本机服务、跳过 `npm run infra:up`。
+
 在 `.env` 中确认以下变量（若使用 `.env.example` 默认值且已执行 `cp .env.example .env`，**可跳过此步**）：
 
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5434/talkforge
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/talkforge
 QUEUE_PROVIDER=redis
-REDIS_URL=redis://localhost:6381
+REDIS_URL=redis://localhost:6379
 ```
 
 ### 4. 初始化数据库
@@ -253,10 +276,10 @@ cp .env.example .env
 
 **带 `NEXT_PUBLIC_` 前缀的变量会暴露给浏览器，切勿放入密钥。**
 
-以下模块在 `.env.example` 中已给出可直接使用的本地参考值，复制后 **无需修改**（除非你使用非 Docker 的 PostgreSQL / Redis，或部署到远程环境）：
+以下模块在 `.env.example` 中已给出可直接使用的本地参考值，复制后 **无需修改**（使用本机原生 PostgreSQL / Redis 时，若凭据与示例不同请修改 `DATABASE_URL` / `REDIS_URL`；部署到远程环境时需替换为实际连接串）：
 
 - **应用与开发用户**
-- **数据库与队列**（默认对齐 `docker-compose.yml` 的 `5434` / `6381` 端口）
+- **数据库与队列**（PostgreSQL `5432` / Redis `6379`，与 `docker-compose.yml` 及本机默认端口一致）
 - **对象存储**（`STORAGE_PROVIDER=local` 本地开发模式）
 - **AI 追踪与会话限额**
 
@@ -294,9 +317,9 @@ TalkForge 的实时语音（含 turn 级转写）、文本 LLM、TTS 均使用 *
 | 变量 | 说明 | `.env.example` 参考值 |
 |------|------|----------------------|
 | `DATABASE_PROVIDER` | 数据库类型 | `postgres` |
-| `DATABASE_URL` | PostgreSQL 连接串 | `postgresql://postgres:postgres@localhost:5434/talkforge` |
+| `DATABASE_URL` | PostgreSQL 连接串 | `postgresql://postgres:postgres@localhost:5432/talkforge` |
 | `QUEUE_PROVIDER` | 队列后端 | `redis` |
-| `REDIS_URL` | Redis 连接串 | `redis://localhost:6381` |
+| `REDIS_URL` | Redis 连接串 | `redis://localhost:6379` |
 
 
 ### 对象存储
@@ -566,4 +589,4 @@ TalkForge/
 
 本项目采用 [MIT License](LICENSE) 开源。
 
-Copyright (c) 2026 LDJ
+Copyright (c) 2026 LDJ-creat

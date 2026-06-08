@@ -308,7 +308,7 @@ describe("GET /api/health detail mode", () => {
     loadRuntimeConfig({
       NODE_ENV: "production",
       OPS_HEALTH_DETAIL_TOKEN: "ops-secret",
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5434/talkforge",
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/talkforge",
       STORAGE_SIGNING_SECRET: "talkforge-test-storage-secret",
     });
 
